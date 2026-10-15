@@ -2,20 +2,12 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <base href="./">
-    <title>GymCopilot</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-
-    <!-- PWA Settings for iOS (iPhone/iPad) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GymCopilot - Sistema de Gestión de Gimnasios</title>
+    <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="GymCopilot">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#00151C">
-
-    <!-- Web App Manifest -->
-    <link rel="manifest" href="manifest.json">
-
     <style>
         html, body {
             width: 100%;
@@ -23,25 +15,17 @@
             margin: 0;
             padding: 0;
             background-color: #00151C;
-            color: #FFFFFF;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             overflow: hidden;
-            touch-action: manipulation;
-            -webkit-user-select: none;
-            user-select: none;
         }
-
         #ComposeTarget {
-            width: 100vw;
-            height: 100vh;
-            display: block;
-            outline: none;
+            width: 100%;
+            height: 100%;
         }
     </style>
-    <script src="skiko.js"></script>
 </head>
 <body>
     <canvas id="ComposeTarget"></canvas>
-    <script src="gymcopilot.js"></script>
+    <script src="skiko.js"></script>
+    <script src="shared.js"></script>
 </body>
 </html>

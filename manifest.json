@@ -1,22 +1,9 @@
 {
+  "name": "GymCopilot",
   "short_name": "GymCopilot",
-  "name": "GymCopilot - Gestión de Gimnasios",
-  "description": "Sistema de gestión de gimnasios, rutinas y asistencia",
-  "icons": [
-    {
-      "src": "icon-192.png",
-      "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "icon-512.png",
-      "type": "image/png",
-      "sizes": "512x512"
-    }
-  ],
-  "start_url": ".",
+  "start_url": "./",
+  "display": "standalone",
   "background_color": "#00151C",
   "theme_color": "#00151C",
-  "display": "standalone",
-  "orientation": "portrait"
+  "description": "Sistema de Gestión de Gimnasios y Asistencia"
 }
