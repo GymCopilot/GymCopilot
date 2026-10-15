@@ -96,10 +96,9 @@ class MainActivity : ComponentActivity() {
             }
             
             val apiService = remember { NetworkModule.getApiService("") }
-            val googleCloudService = remember { NetworkModule.getGoogleCloudService(dataStoreManager) }
             val attendanceRepository = remember { AttendanceRepository(apiService, dataStoreManager) }
             val scheduleRepository = remember { ScheduleRepository(apiService, dataStoreManager) }
-            val googleCloudRepository = remember { GoogleCloudRepository(googleCloudService, dataStoreManager, context) }
+            val googleCloudRepository = remember { GoogleCloudRepository(dataStoreManager) }
             val billingManager = remember { BillingManager(context) }
             val userRole by dataStoreManager.getUserRole().collectAsState(initial = null)
             val isSubscribed by billingManager.isSubscribed.collectAsState()

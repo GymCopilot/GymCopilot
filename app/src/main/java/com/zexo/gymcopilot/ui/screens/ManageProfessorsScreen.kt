@@ -74,6 +74,12 @@ fun ManageProfessorsScreen(
     val professors by dataStoreManager.getProfessors().collectAsState(initial = emptyList())
     val appLanguage by dataStoreManager.getAppLanguage().collectAsState(initial = "English")
     val gymApiUrl by dataStoreManager.getGymApiUrl().collectAsState(initial = "")
+    val attendanceRepository = remember(gymApiUrl) {
+        com.zexo.gymcopilot.repository.AttendanceRepository(
+            NetworkModule.getApiService(gymApiUrl),
+            dataStoreManager
+        )
+    }
     val gymName by dataStoreManager.getGymName().collectAsState(initial = "")
     val userEmail by dataStoreManager.getUserEmail().collectAsState(initial = "")
     val userName by dataStoreManager.getUserName().collectAsState(initial = "")
@@ -97,8 +103,14 @@ fun ManageProfessorsScreen(
 
     LaunchedEffect(gymApiUrl, myID, professors) {
         if (gymApiUrl.isBlank()) return@LaunchedEffect
+        val gymNameVal = dataStoreManager.getGymName().first()
+        val gymIdVal = gymNameVal.lowercase().replace(Regex("[^a-z0-9]"), "_")
+        val emailVal = dataStoreManager.getUserEmail().first()
+        val ssIdVal = dataStoreManager.getGymSpreadsheetId().first()
+        val paramChar = if (gymApiUrl.contains("?")) "&" else "?"
+        val ssParam = if (ssIdVal.isNotBlank()) "&spreadsheetId=$ssIdVal" else ""
+        val syncUrl = "$gymApiUrl${paramChar}type=chats&gymId=$gymIdVal&email=${java.net.URLEncoder.encode(emailVal, "UTF-8")}$ssParam"
         val apiServiceGet = NetworkModule.getApiServiceForGet(gymApiUrl)
-        val syncUrl = if (gymApiUrl.contains("?")) "$gymApiUrl&type=chats" else "$gymApiUrl?type=chats"
 
         while (isActive) {
             try {
@@ -261,6 +273,7 @@ fun ManageProfessorsScreen(
                     professorToDelete?.let { prof ->
                         coroutineScope.launch {
                             dataStoreManager.removeProfessor(prof.id)
+                            attendanceRepository.deleteProfessor(prof.id, prof.email, prof.firstName, prof.lastName)
                             professorToDelete = null
                             Toast.makeText(context, if (appLanguage == "Español") "Profesor eliminado" else "Professor deleted", Toast.LENGTH_SHORT).show()
                         }

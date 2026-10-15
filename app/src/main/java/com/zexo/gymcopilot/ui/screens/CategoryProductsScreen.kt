@@ -109,8 +109,14 @@ fun CategoryProductsScreen(
     // Sincronización de Chats y Tienda
     LaunchedEffect(gymApiUrl, myID, isProfessor) {
         if (!isProfessor || gymApiUrl.isBlank()) return@LaunchedEffect
+        val gymNameVal = dataStoreManager.getGymName().first()
+        val gymIdVal = gymNameVal.lowercase().replace(Regex("[^a-z0-9]"), "_")
+        val emailVal = dataStoreManager.getUserEmail().first()
+        val ssIdVal = dataStoreManager.getGymSpreadsheetId().first()
+        val paramChar = if (gymApiUrl.contains("?")) "&" else "?"
+        val ssParam = if (ssIdVal.isNotBlank()) "&spreadsheetId=$ssIdVal" else ""
+        val syncUrl = "$gymApiUrl${paramChar}type=chats&gymId=$gymIdVal&email=${java.net.URLEncoder.encode(emailVal, "UTF-8")}$ssParam"
         val apiServiceGet = NetworkModule.getApiServiceForGet(gymApiUrl)
-        val syncUrl = if (gymApiUrl.contains("?")) "$gymApiUrl&type=chats" else "$gymApiUrl?type=chats"
         while (isActive) {
             try {
                 val response = apiServiceGet.getChatsRaw(syncUrl, "Bearer session_active")
@@ -213,13 +219,22 @@ fun CategoryProductsScreen(
         allProducts.filter { it.categoryId == categoryId && it.name.contains(searchQuery, ignoreCase = true) }
     }
 
+    val attendanceRepository = remember { com.zexo.gymcopilot.repository.AttendanceRepository(NetworkModule.getApiService(""), dataStoreManager) }
+
     if (productToDelete != null) {
         AlertDialog(
             onDismissRequest = { productToDelete = null },
             title = { Text(if(appLanguage == "Español") "Eliminar Producto" else "Delete Product") },
             text = { Text(if(appLanguage == "Español") "¿Estás seguro de que deseas eliminar ${productToDelete?.name}?" else "Are you sure you want to delete ${productToDelete?.name}?") },
             confirmButton = {
-                TextButton(onClick = { scope.launch { dataStoreManager.deleteProduct(productToDelete!!.id); productToDelete = null } }) {
+                TextButton(onClick = {
+                    val prod = productToDelete!!
+                    scope.launch {
+                        dataStoreManager.deleteProduct(prod.id)
+                        attendanceRepository.syncProduct(prod, isDelete = true)
+                        productToDelete = null
+                    }
+                }) {
                     Text(if(appLanguage == "Español") "Eliminar" else "Delete", color = Color.Red)
                 }
             },

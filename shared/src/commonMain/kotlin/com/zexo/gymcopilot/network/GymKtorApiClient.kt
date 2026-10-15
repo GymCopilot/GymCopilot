@@ -1,6 +1,7 @@
 package com.zexo.gymcopilot.shared.network
 
 import io.ktor.client.*
+import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -20,6 +21,11 @@ object GymKtorApiClient {
         HttpClient {
             install(ContentNegotiation) {
                 json(jsonInstance)
+            }
+            install(HttpTimeout) {
+                requestTimeoutMillis = 90_000L
+                connectTimeoutMillis = 60_000L
+                socketTimeoutMillis = 90_000L
             }
             followRedirects = true
         }

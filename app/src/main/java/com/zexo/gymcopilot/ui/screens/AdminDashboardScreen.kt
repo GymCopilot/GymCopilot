@@ -100,6 +100,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 @Composable
 fun AdminDashboardScreen(
     onAppSettingsClick: () -> Unit = {},
+    onAppearanceClick: (String?) -> Unit = {},
     onStoreClick: () -> Unit = {},
     onMembersClick: (String?) -> Unit = {},
     onProfessorsClick: () -> Unit = {},
@@ -158,6 +159,8 @@ fun AdminDashboardScreen(
     var isSettingUp by remember { mutableStateOf(false) }
     var showAuthDialog by remember { mutableStateOf(false) }
     var connectionVerified by remember { mutableStateOf(false) }
+    var showGymNameRequiredDialog by remember { mutableStateOf(false) }
+    var showConfirmCreateBackendDialog by remember { mutableStateOf(false) }
 
     // PASO 1: Bienvenida
     LaunchedEffect(assistantEnabled, welcomeDismissed, lifecycleOwner) {
@@ -429,9 +432,11 @@ fun AdminDashboardScreen(
             while (isActive) {
                 val res1 = attendanceRepository?.syncWithRemote()
                 val res2 = attendanceRepository?.syncGymConfigFromServer()
-                val res3 = scheduleRepository?.syncSchedules()
+                val res3 = attendanceRepository?.syncMembersFromServer()
+                val res4 = attendanceRepository?.syncProfessorsFromServer()
+                val res5 = scheduleRepository?.syncSchedules()
 
-                val results = listOf(res1, res2, res3)
+                val results = listOf(res1, res2, res3, res4, res5)
                 val is403 = results.any { it?.exceptionOrNull()?.message?.contains("403") == true }
                 
                 if (is403) {
@@ -475,9 +480,9 @@ fun AdminDashboardScreen(
     val t = remember(appLanguage, memberDesignation) {
         if (appLanguage == "Español") {
             mapOf(
-                "title" to "Panel Admin", "occ" to "Aforo", "cloud_title" to "Nube",
+                "title" to "Panel Admin", "occ" to "Aforo", "cloud_title" to "Base de Datos",
                 "cloud_desc" to "Crea tu base de datos en Google Drive automáticamente.",
-                "cloud_auth" to "1. Vincular Google", "cloud_setup" to "2. Crear Backend",
+                "cloud_auth" to "1. Vincular Google", "cloud_setup" to "2. CREAR BASE DE DATOS",
                 "search" to "Buscar $memberDesignation...", "recent" to "Actividad Reciente",
                 "qr_title" to "QR del Gimnasio", "open" to "ABIERTO", "closed" to "CERRADO",
                 "total" to "TOTAL", "active" to "ACTIVOS", "debtors" to "DEUDORES",
@@ -510,9 +515,9 @@ fun AdminDashboardScreen(
             )
         } else {
             mapOf(
-                "title" to "Admin Panel", "occ" to "Occupancy", "cloud_title" to "Cloud",
+                "title" to "Admin Panel", "occ" to "Occupancy", "cloud_title" to "Database",
                 "cloud_desc" to "Create your database on Google Drive automatically.",
-                "cloud_auth" to "1. Link Google", "cloud_setup" to "2. Setup Backend",
+                "cloud_auth" to "1. Link Google", "cloud_setup" to "2. CREATE DATABASE",
                 "search" to "Search $memberDesignation...", "recent" to "Recent Activity",
                 "qr_title" to "Gym QR Code", "open" to "OPEN", "closed" to "CLOSED",
                 "total" to "TOTAL", "active" to "ACTIVE", "debtors" to "DEBTORS",
@@ -664,15 +669,10 @@ fun AdminDashboardScreen(
                                 } else {
                                     Button(
                                         onClick = {
-                                            coroutineScope.launch {
-                                                isSettingUp = true
-                                                val result = googleCloudRepository?.setupGymBackend(gymName)
-                                                isSettingUp = false
-                                                if (result?.isSuccess == true) {
-                                                    Toast.makeText(context, "¡Backend creado con éxito!", Toast.LENGTH_LONG).show()
-                                                } else {
-                                                    setupErrorMessage = result?.exceptionOrNull()?.message ?: "Error desconocido"
-                                                }
+                                            if (gymName.isBlank()) {
+                                                showGymNameRequiredDialog = true
+                                            } else {
+                                                showConfirmCreateBackendDialog = true
                                             }
                                         },
                                         enabled = !isSettingUp,
@@ -681,16 +681,21 @@ fun AdminDashboardScreen(
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
                                         if (isSettingUp) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
-                                        else Text(t["cloud_setup"] ?: "", color = Color.White, fontWeight = FontWeight.Black)
+                                        else Text(t["cloud_setup"] ?: "2. CREAR BASE DE DATOS", color = Color.White, fontWeight = FontWeight.Black)
                                     }
 
                                     TextButton(onClick = {
                                         coroutineScope.launch {
-                                            dataStoreManager.setGoogleAccessToken("")
-                                            dataStoreManager.setUserEmail("")
+                                            try {
+                                                googleCloudRepository?.resetGymBackend(gymName)
+                                            } catch (e: Exception) {
+                                                Log.e("AdminDashboard", "Error reseteando backend: ${e.message}")
+                                            }
+                                            dataStoreManager.clearAllData()
+                                            Toast.makeText(context, "Base de datos eliminada y cuenta desvinculada", Toast.LENGTH_SHORT).show()
                                         }
                                     }) {
-                                        Text("Desvincular cuenta", color = TextGray, fontSize = 12.sp)
+                                        Text("Desvincular cuenta y borrar datos", color = Color.Red.copy(alpha = 0.8f), fontSize = 12.sp)
                                     }
                                 }
                             }
@@ -1695,6 +1700,139 @@ fun AdminDashboardScreen(
     }
 
 
+    if (showGymNameRequiredDialog) {
+        AlertDialog(
+            onDismissRequest = { showGymNameRequiredDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFFFB74D))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Nombre del Gimnasio Requerido", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                }
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "Para crear la base de datos debes asignar primero el nombre de tu gimnasio.",
+                        color = TextWhite,
+                        fontSize = 14.sp
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2010)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFFB74D)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = "⚠️ Atención: El nombre con el que crees la base de datos quedará registrado permanentemente en ella, aunque posteriormente cambies el nombre del gimnasio en la app.",
+                            color = Color(0xFFFFE0B2),
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showGymNameRequiredDialog = false
+                        onAppearanceClick("name")
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                    shape = containerShape
+                ) {
+                    Text("Asignar Nombre", color = Color.Black, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showGymNameRequiredDialog = false }) {
+                    Text("Cancelar", color = TextGray)
+                }
+            },
+            containerColor = Color(0xFF1E2630)
+        )
+    }
+
+    if (showConfirmCreateBackendDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmCreateBackendDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.CloudQueue, contentDescription = null, tint = accentColor)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Crear Base de Datos", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                }
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "Se creará la base de datos para el gimnasio: \"$gymName\".",
+                        color = TextWhite,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2010)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFFB74D)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = "⚠️ Nota: El nombre \"$gymName\" quedará registrado permanentemente en la base de datos, aunque luego cambies el nombre del gimnasio en la app.",
+                            color = Color(0xFFFFE0B2),
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showConfirmCreateBackendDialog = false
+                        coroutineScope.launch {
+                            isSettingUp = true
+                            dataStoreManager.saveMembers(emptyList())
+                            dataStoreManager.saveProfessors(emptyList())
+                            dataStoreManager.saveSubscriptionPlans(emptyList())
+                            dataStoreManager.saveAllProducts(emptyList())
+
+                            val result = googleCloudRepository?.setupGymBackend(gymName)
+                            isSettingUp = false
+                            if (result?.isSuccess == true) {
+                                Toast.makeText(context, "¡Base de datos creada con éxito!", Toast.LENGTH_LONG).show()
+                                attendanceRepository?.syncGymInfo()
+                            } else {
+                                setupErrorMessage = result?.exceptionOrNull()?.message ?: "Error desconocido"
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+                    shape = containerShape
+                ) {
+                    Text("Confirmar y Crear", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = {
+                        showConfirmCreateBackendDialog = false
+                        onAppearanceClick("name")
+                    }) {
+                        Text("Cambiar Nombre", color = accentColor)
+                    }
+                    Spacer(Modifier.width(4.dp))
+                    TextButton(onClick = { showConfirmCreateBackendDialog = false }) {
+                        Text("Cancelar", color = TextGray)
+                    }
+                }
+            },
+            containerColor = Color(0xFF1E2630)
+        )
+    }
+
     if (showQrDialog) {
         QrDisplayDialog(onDismiss = { showQrDialog = false }, gymName = gymName, gymApiUrl = gymApiUrl, accentColor = accentColor, shape = containerShape, title = t["qr_title"] ?: "")
     }
@@ -1879,17 +2017,22 @@ fun AdminDashboardScreen(
 
     // Diálogo de Error de Setup
     if (setupErrorMessage != null) {
+        val uriHandler = LocalUriHandler.current
         AlertDialog(
             onDismissRequest = { setupErrorMessage = null },
             confirmButton = {
-                Button(onClick = { setupErrorMessage = null }) { Text("Entendido") }
+                Button(onClick = { setupErrorMessage = null }) { Text("Cerrar") }
             },
-            title = { Text("Fallo en el Backend", fontWeight = FontWeight.Bold) },
+            title = { Text("Error al Crear Base de Datos", fontWeight = FontWeight.Bold) },
             text = { 
                 Column {
                     Text(setupErrorMessage!!)
                     Spacer(Modifier.height(16.dp))
-                    Text("Nota: Si el error es 403, asegúrate de activar 'Google Apps Script API' en script.google.com/home/settings", fontSize = 12.sp, color = Color.Red)
+                    Text(
+                        "Verifica la conexión a internet e intenta presionar '2. CREAR BASE DE DATOS' nuevamente.",
+                        fontSize = 12.sp,
+                        color = Color.LightGray
+                    )
                 }
             },
             containerColor = Color(0xFF00222E),

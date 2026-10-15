@@ -111,13 +111,26 @@ fun MembersScreen(
         }
     }
 
+    LaunchedEffect(gymApiUrl) {
+        if (gymApiUrl.isNotBlank()) {
+            val repo = attendanceRepository ?: com.zexo.gymcopilot.repository.AttendanceRepository(NetworkModule.getApiService(gymApiUrl), dataStoreManager)
+            repo.syncMembersFromServer()
+        }
+    }
+
     val unreadMap = remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
     var globalUnreadCount by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(gymApiUrl, myID, members, isProfessor) {
         if (gymApiUrl.isBlank()) return@LaunchedEffect
+        val gymNameVal = dataStoreManager.getGymName().first()
+        val gymIdVal = gymNameVal.lowercase().replace(Regex("[^a-z0-9]"), "_")
+        val emailVal = dataStoreManager.getUserEmail().first()
+        val ssIdVal = dataStoreManager.getGymSpreadsheetId().first()
+        val paramChar = if (gymApiUrl.contains("?")) "&" else "?"
+        val ssParam = if (ssIdVal.isNotBlank()) "&spreadsheetId=$ssIdVal" else ""
+        val syncUrl = "$gymApiUrl${paramChar}type=chats&gymId=$gymIdVal&email=${java.net.URLEncoder.encode(emailVal, "UTF-8")}$ssParam"
         val apiServiceGet = NetworkModule.getApiServiceForGet(gymApiUrl)
-        val syncUrl = if (gymApiUrl.contains("?")) "$gymApiUrl&type=chats" else "$gymApiUrl?type=chats"
 
         while (isActive) {
             try {
@@ -595,7 +608,9 @@ fun MembersScreen(
                 TextButton(onClick = {
                     memberToDelete?.let { m ->
                         coroutineScope.launch {
-                            dataStoreManager.removeMember(m.email)
+                            dataStoreManager.removeMember(m.email, m.fullName)
+                            val repo = attendanceRepository ?: com.zexo.gymcopilot.repository.AttendanceRepository(NetworkModule.getApiService(gymApiUrl), dataStoreManager)
+                            repo.deleteMember(email = m.email, firstName = m.firstName, lastName = m.lastName)
                             memberToDelete = null
                         }
                     }

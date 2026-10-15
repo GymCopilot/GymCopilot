@@ -79,6 +79,7 @@ import java.io.FileOutputStream
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppearanceScreen(
+    initialExpandedSection: String? = null,
     onBack: () -> Unit,
     onHomeClick: () -> Unit = {},
     onStoreClick: () -> Unit = {},
@@ -123,6 +124,7 @@ fun AppearanceScreen(
     }
 
     val gymLogoUri by dataStoreManager.getGymLogoUri().collectAsState(initial = null)
+    val gymApiUrl by dataStoreManager.getGymApiUrl().collectAsState(initial = "")
     val gymNameFont by dataStoreManager.getGymNameFont().collectAsState(initial = "Default")
     val savedBtnColor by dataStoreManager.getButtonColor().collectAsState(initial = null)
     val accentColor = if (savedBtnColor != null) Color(savedBtnColor!!) else PrimaryTurquoise
@@ -130,7 +132,7 @@ fun AppearanceScreen(
     val showLogoBorder by dataStoreManager.getShowLogoBorder().collectAsState(initial = true)
     val containerShape = getButtonStyleShape(buttonStyle)
 
-    var expandedSection by remember { mutableStateOf<String?>(null) }
+    var expandedSection by remember { mutableStateOf<String?>(initialExpandedSection) }
 
     val logoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
@@ -340,6 +342,38 @@ fun AppearanceScreen(
                 item {
                     ExpandableAppearanceSection(title = t["gym_name"] ?: "Gym Name", icon = Icons.Default.Edit, isExpanded = expandedSection == "name", onToggle = { expandedSection = if (expandedSection == "name") null else "name" }, accentColor = accentColor, shape = containerShape) {
                         Column {
+                            if (gymApiUrl.isBlank()) {
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2010)),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFFB74D)),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 16.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Info,
+                                            contentDescription = null,
+                                            tint = Color(0xFFFFB74D),
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Text(
+                                            text = if (appLanguage == "Español")
+                                                "Aviso importante: El nombre con el que crees la base de datos quedará registrado permanentemente en ella, aunque posteriormente cambies el nombre en esta pantalla."
+                                            else
+                                                "Important notice: The name used when creating the database will be permanently registered in it, even if you change the name in this screen later.",
+                                            color = Color(0xFFFFE0B2),
+                                            fontSize = 12.sp,
+                                            lineHeight = 16.sp
+                                        )
+                                    }
+                                }
+                            }
                             if (isDataLoaded) {
                                 AppearanceTextField(value = nameState, onValueChange = {
                                     nameState = it

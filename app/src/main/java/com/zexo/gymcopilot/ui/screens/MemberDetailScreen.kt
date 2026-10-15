@@ -804,9 +804,11 @@ fun MemberDetailScreen(
             confirmButton = {
                 TextButton(onClick = {
                     coroutineScope.launch {
-                        dataStoreManager.removeMember(member.email)
+                        dataStoreManager.removeMember(member.email, member.fullName)
+                        val repo = attendanceRepository ?: com.zexo.gymcopilot.repository.AttendanceRepository(NetworkModule.getApiService(gymApiUrl), dataStoreManager)
+                        repo.deleteMember(email = member.email, firstName = member.firstName, lastName = member.lastName)
                         showDeleteDialog = false
-                        Toast.makeText(context, t["deleted"] ?: "", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, if (appLanguage == "Español") "Alumno eliminado" else "Student deleted", Toast.LENGTH_SHORT).show()
                         onBack()
                     }
                 }) {

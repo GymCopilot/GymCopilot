@@ -11,7 +11,8 @@ data class CheckInRequest(
     val action: String = "check_in",
     val gymId: String,
     val memberEmail: String,
-    val timestamp: Long
+    val timestamp: Long,
+    val spreadsheetId: String? = null
 )
 
 @Serializable
@@ -20,7 +21,8 @@ data class ScheduleSyncRequest(
     val gymId: String,
     val professorId: String,
     val schedulesJson: String,
-    val timestamp: Long = 0L
+    val timestamp: Long = 0L,
+    val spreadsheetId: String? = null
 )
 
 @Serializable
@@ -33,7 +35,8 @@ data class ProfileSyncRequest(
     val specialty: String,
     val profileColor: Int? = null,
     val photoUri: String? = null,
-    val timestamp: Long = 0L
+    val timestamp: Long = 0L,
+    val spreadsheetId: String? = null
 )
 
 @Serializable
@@ -52,14 +55,16 @@ data class MemberSyncRequest(
     val planId: String? = null,
     val planType: String? = null,
     val assignedTrainer: String? = null,
-    val timestamp: Long = 0L
+    val timestamp: Long = 0L,
+    val spreadsheetId: String? = null
 )
 
 @Serializable
 data class PlansSyncRequest(
     val action: String = "update_plans",
     val plans: List<SubscriptionPlan>,
-    val timestamp: Long = 0L
+    val timestamp: Long = 0L,
+    val spreadsheetId: String? = null
 )
 
 @Serializable
@@ -70,7 +75,8 @@ data class RoutineSyncRequest(
     val routine: String,
     val routineId: String = "",
     val status: String? = null,
-    val timestamp: Long = 0L
+    val timestamp: Long = 0L,
+    val spreadsheetId: String? = null
 )
 
 @Serializable
@@ -81,7 +87,8 @@ data class ChatSyncRequest(
     val recipient: String,
     val text: String = "",
     val timestamp: Long = 0L,
-    val senderRole: String = ""
+    val senderRole: String = "",
+    val spreadsheetId: String? = null
 )
 
 @Serializable
@@ -97,7 +104,8 @@ data class ProductSyncRequest(
     val contactPhone: String? = null,
     val bannerType: String? = null,
     val bannerText: String? = null,
-    val timestamp: Long = 0L
+    val timestamp: Long = 0L,
+    val spreadsheetId: String? = null
 )
 
 @Serializable
@@ -118,6 +126,7 @@ data class GymSyncRequest(
     val classInSession: Boolean? = null,
     val gymIsOpen: Boolean? = null,
     val wifiSsid: String? = null,
+    val spreadsheetId: String? = null,
     val wifiSsid2: String? = null,
     val wifiSsid3: String? = null,
     val timestamp: Long = 0L

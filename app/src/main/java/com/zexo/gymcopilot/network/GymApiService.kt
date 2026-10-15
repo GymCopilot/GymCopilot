@@ -9,7 +9,8 @@ data class CheckInRequest(
     val action: String = "check_in",
     val gymId: String,
     val memberEmail: String,
-    val timestamp: Long
+    val timestamp: Long,
+    val spreadsheetId: String? = null
 )
 
 data class ScheduleSyncRequest(
@@ -17,7 +18,8 @@ data class ScheduleSyncRequest(
     val gymId: String,
     val professorId: String,
     val schedulesJson: String,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val spreadsheetId: String? = null
 )
 
 data class ProfileSyncRequest(
@@ -29,7 +31,9 @@ data class ProfileSyncRequest(
     val specialty: String,
     val profileColor: Int? = null,
     val photoUri: String? = null,
-    val timestamp: Long = System.currentTimeMillis()
+    val gymId: String? = null,
+    val timestamp: Long = System.currentTimeMillis(),
+    val spreadsheetId: String? = null
 )
 
 data class MemberSyncRequest(
@@ -47,13 +51,18 @@ data class MemberSyncRequest(
     val planId: String? = null,
     val planType: String? = null,
     val assignedTrainer: String? = null,
-    val timestamp: Long = System.currentTimeMillis()
+    val gymId: String? = null,
+    val timestamp: Long = System.currentTimeMillis(),
+    val spreadsheetId: String? = null
 )
 
 data class PlansSyncRequest(
     val action: String = "update_plans",
     val plans: List<com.zexo.gymcopilot.ui.screens.SubscriptionPlan>,
-    val timestamp: Long = System.currentTimeMillis()
+    val gymId: String? = null,
+    val email: String? = null,
+    val timestamp: Long = System.currentTimeMillis(),
+    val spreadsheetId: String? = null
 )
 
 data class RoutineSyncRequest(
@@ -63,7 +72,9 @@ data class RoutineSyncRequest(
     val routine: String,
     val routineId: String = "",
     val status: String? = null,
-    val timestamp: Long = System.currentTimeMillis()
+    val gymId: String? = null,
+    val timestamp: Long = System.currentTimeMillis(),
+    val spreadsheetId: String? = null
 )
 
 data class ChatSyncRequest(
@@ -73,7 +84,8 @@ data class ChatSyncRequest(
     val recipient: String,
     val text: String = "",
     val timestamp: Long = System.currentTimeMillis(),
-    val senderRole: String = ""
+    val senderRole: String = "",
+    val spreadsheetId: String? = null
 )
 
 data class ProductSyncRequest(
@@ -88,7 +100,10 @@ data class ProductSyncRequest(
     val contactPhone: String? = null,
     val bannerType: String? = null,
     val bannerText: String? = null,
-    val timestamp: Long = System.currentTimeMillis()
+    val gymId: String? = null,
+    val email: String? = null,
+    val timestamp: Long = System.currentTimeMillis(),
+    val spreadsheetId: String? = null
 )
 
 data class ChatMessage(
@@ -118,7 +133,10 @@ data class GymSyncRequest(
     val wifiSsid: String? = null,
     val wifiSsid2: String? = null,
     val wifiSsid3: String? = null,
-    val timestamp: Long = System.currentTimeMillis()
+    val gymId: String? = null,
+    val email: String? = null,
+    val timestamp: Long = System.currentTimeMillis(),
+    val spreadsheetId: String? = null
 )
 
 data class AttendanceRecord(

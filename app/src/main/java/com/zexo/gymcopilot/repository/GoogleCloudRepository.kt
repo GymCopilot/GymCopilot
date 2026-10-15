@@ -1,165 +1,128 @@
 package com.zexo.gymcopilot.repository
 
-import android.content.Context
 import android.util.Log
-import com.google.android.gms.auth.GoogleAuthUtil
 import com.zexo.gymcopilot.DataStoreManager
-import com.zexo.gymcopilot.network.CreateProjectRequest
-import com.zexo.gymcopilot.network.DeploymentRequest
-import com.zexo.gymcopilot.network.DriveFileMetadata
-import com.zexo.gymcopilot.network.GoogleCloudService
-import com.zexo.gymcopilot.network.NetworkModule
-import com.zexo.gymcopilot.network.VersionRequest
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONArray
-import org.json.JSONObject
 
 class GoogleCloudRepository(
-    private val googleCloudService: GoogleCloudService,
-    private val dataStoreManager: DataStoreManager,
-    private val context: Context
+    private val dataStoreManager: DataStoreManager
 ) {
-    private suspend fun refreshGoogleToken(): String? {
-        return withContext(Dispatchers.IO) {
-            try {
-                val email = dataStoreManager.getUserEmail().first()
-                if (email.isBlank()) return@withContext null
-
-                val scope = "oauth2:https://www.googleapis.com/auth/drive.file " +
-                        "https://www.googleapis.com/auth/spreadsheets " +
-                        "https://www.googleapis.com/auth/script.projects " +
-                        "https://www.googleapis.com/auth/script.deployments " +
-                        "https://www.googleapis.com/auth/script.external_request"
-
-                val currentToken = dataStoreManager.getGoogleAccessToken().first()
-                if (currentToken.isNotBlank()) {
-                    try {
-                        GoogleAuthUtil.clearToken(context, currentToken)
-                    } catch (e: Exception) {}
-                }
-
-                val newToken = GoogleAuthUtil.getToken(context, email, scope)
-                dataStoreManager.setGoogleAccessToken(newToken)
-                newToken
-            } catch (e: Exception) {
-                Log.e("GoogleCloudRepo", "Error renovando credenciales: ${e.message}")
-                null
-            }
-        }
+    companion object {
+        var MASTER_BACKEND_URL = "https://script.google.com/macros/s/AKfycby0bEX37-HRGn9M8dbO8ZBGhHY2riK_AEVhby8ESmPWwiIgNRzqv5z0I78Lvg7Dwk0p/exec"
     }
 
-    suspend fun setupGymBackend(gymName: String): Result<String> {
+    suspend fun setupGymBackend(gymName: String, customUrl: String? = null): Result<String> {
         return try {
-            val token = refreshGoogleToken()
-            if (token.isNullOrBlank()) {
-                return Result.failure(Exception("NO HAY SESIÓN: Desvinculá y volvé a vincular tu cuenta de Google."))
+            val storedUrl = dataStoreManager.getGymApiUrl().first()
+            val url = customUrl?.takeIf { it.isNotBlank() }
+                ?: storedUrl.takeIf { it.isNotBlank() }
+                ?: MASTER_BACKEND_URL
+
+            if (url.isBlank()) {
+                return Result.failure(Exception("URL del Backend Maestro no configurada."))
             }
 
-            val cleanName = gymName.filter { it.isLetterOrDigit() }.take(15)
+            val gymId = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val email = dataStoreManager.getUserEmail().first().ifBlank { "admin@gymcopilot.com" }
+            val request = mapOf(
+                "action" to "create_gym",
+                "gymName" to gymName,
+                "email" to email,
+                "gymId" to gymId
+            )
 
-            // 0. Crear Planilla
-            val driveResponse = googleCloudService.createDriveFolder(
-                DriveFileMetadata(
-                    name = "GymCopilot_DB_$cleanName",
-                    mimeType = "application/vnd.google-apps.spreadsheet"
+            val encodedGymName = java.net.URLEncoder.encode(gymName, "UTF-8")
+            val encodedEmail = java.net.URLEncoder.encode(email, "UTF-8")
+            val encodedGymId = java.net.URLEncoder.encode(gymId, "UTF-8")
+            val paramChar = if (url.contains("?")) "&" else "?"
+            val requestUrl = "$url${paramChar}action=create_gym&gymName=$encodedGymName&email=$encodedEmail&gymId=$encodedGymId"
+
+            val responseText = withContext(Dispatchers.IO) {
+                com.zexo.gymcopilot.shared.network.GymKtorApiClient.postData(requestUrl, request)
+            }
+
+            Log.d("GoogleCloudRepo", "Respuesta de create_gym: $responseText")
+
+            val isHtmlError = responseText.trim().startsWith("<!DOCTYPE", ignoreCase = true) ||
+                    responseText.trim().startsWith("<html", ignoreCase = true) ||
+                    responseText.contains("Authorization required", ignoreCase = true) ||
+                    responseText.contains("DriveApp", ignoreCase = true)
+
+            if (isHtmlError) {
+                Log.e("GoogleCloudRepo", "Respuesta de error HTML/Autorización de Google: $responseText")
+                return Result.failure(
+                    Exception("Google requiere autorización de permisos de Drive. Ejecuta la función 'authorizeAndSetup' en Google Apps Script y realiza un 'Nuevo Despliegue'.")
                 )
-            )
-
-            if (!driveResponse.isSuccessful) {
-                val errorJson = driveResponse.errorBody()?.string() ?: ""
-                Log.e("GoogleCloudRepo", "Error creando planilla: $errorJson")
-                return Result.failure(Exception("Error al crear la planilla (403?). Habilita Google Apps Script API."))
             }
 
-            val spreadsheetId = driveResponse.body()?.id ?: return Result.failure(Exception("No se obtuvo ID de planilla."))
+            val isSuccess = responseText.contains("spreadsheetId", ignoreCase = true) ||
+                    responseText.contains("success", ignoreCase = true) ||
+                    responseText.contains("GymCopilot_DB", ignoreCase = true)
 
-            // 1. Crear Proyecto Script
-            val projectResponse = googleCloudService.createScriptProject(
-                CreateProjectRequest(title = "GymProject_$cleanName")
-            )
-
-            if (!projectResponse.isSuccessful) {
-                return Result.failure(Exception("Error al crear el proyecto de script."))
-            }
-
-            val scriptId = projectResponse.body()?.scriptId ?: return Result.failure(Exception("No se obtuvo ID de script."))
-            dataStoreManager.setGymScriptId(scriptId)
-
-            // 2. Subir Código
-            val rawScript = readScriptFromAssets()
-            val scriptContent = injectSpreadsheetId(rawScript, spreadsheetId)
-            
-            val updateBody = JSONObject().apply {
-                val files = JSONArray().apply {
-                    put(JSONObject().apply {
-                        put("name", "app")
-                        put("type", "SERVER_JS")
-                        put("source", scriptContent)
-                    })
-                    put(JSONObject().apply {
-                        put("name", "appsscript")
-                        put("type", "JSON")
-                        put("source", "{\"timeZone\":\"America/Argentina/Buenos_Aires\",\"exceptionLogging\":\"STACKDRIVER\",\"runtimeVersion\":\"V8\",\"webapp\":{\"access\":\"ANYONE_ANONYMOUS\",\"executeAs\":\"USER_DEPLOYING\"},\"oauthScopes\":[\"https://www.googleapis.com/auth/spreadsheets\",\"https://www.googleapis.com/auth/script.projects\",\"https://www.googleapis.com/auth/script.deployments\",\"https://www.googleapis.com/auth/script.scriptapp\",\"https://www.googleapis.com/auth/drive.file\",\"https://www.googleapis.com/auth/script.external_request\"]}")
-                    })
-                }
-                put("files", files)
-            }.toString().toRequestBody("application/json".toMediaTypeOrNull())
-
-            val updateResponse = googleCloudService.updateScriptContent(scriptId, updateBody)
-            if (!updateResponse.isSuccessful) return Result.failure(Exception("Error al subir el código."))
-
-            delay(2000)
-
-            // 3. Crear Versión
-            val versionResponse = googleCloudService.createVersion(scriptId, VersionRequest("V1"))
-            val vNum = versionResponse.body()?.versionNumber ?: 1
-
-            // 4. Desplegar
-            val deployResponse = googleCloudService.createDeployment(scriptId, DeploymentRequest(versionNumber = vNum))
-            if (deployResponse.isSuccessful) {
-                val url = deployResponse.body()?.entryPoints?.firstOrNull()?.webApp?.url ?: return Result.failure(Exception("No se generó la URL."))
+            if (isSuccess || (!responseText.contains("\"status\":\"error\"") && !responseText.contains("\"status\": \"error\""))) {
+                Log.i("GoogleCloudRepo", "¡Creación de backend exitosa! Guardando URL: $url")
                 dataStoreManager.setGymApiUrl(url)
-                
-                // 5. Inicialización Remota (Warm-up call para crear todas las pestañas)
-                withContext(Dispatchers.IO) {
-                    try {
-                        delay(5000) // Esperamos 5 segundos para propagación de Google
-                        val warmUpUrl = if (url.contains("?")) "$url&action=setup" else "$url?action=setup"
-                        NetworkModule.getApiServiceForGet(warmUpUrl).getAttendanceRaw(warmUpUrl, null)
-                        Log.d("GoogleCloudRepo", "Warm-up OK: Planilla inicializada")
-                    } catch (e: Exception) {
-                        Log.e("GoogleCloudRepo", "Error en warm-up: ${e.message}")
-                    }
+
+                val extractedSsId = try {
+                    val regex = Regex("\"spreadsheetId\"\\s*:\\s*\"([^\"]+)\"")
+                    regex.find(responseText)?.groupValues?.get(1) ?: ""
+                } catch (e: Exception) { "" }
+
+                if (extractedSsId.isNotBlank()) {
+                    dataStoreManager.setGymSpreadsheetId(extractedSsId)
                 }
 
-                Result.success(url)
-            } else {
-                Result.failure(Exception("Error al desplegar la Web App."))
+                return Result.success(url)
             }
+
+            Log.e("GoogleCloudRepo", "Error en create_gym: $responseText")
+            val extractedMessage = try {
+                val regex = Regex("\"message\"\\s*:\\s*\"([^\"]+)\"")
+                regex.find(responseText)?.groupValues?.get(1)
+            } catch (e: Exception) {
+                null
+            } ?: "Error al crear la planilla en la nube. Verifica el despliegue del script maestro en Google Apps Script."
+            return Result.failure(Exception(extractedMessage))
         } catch (e: Exception) {
+            Log.e("GoogleCloudRepo", "Error en setupGymBackend: ${e.message}")
             Result.failure(e)
         }
     }
 
-    private fun injectSpreadsheetId(rawScript: String, spreadsheetId: String): String {
-        val declarationRegex = Regex("""var\s+SS_ID_FROM_APP\s*=\s*'[^']*';""")
-        return if (declarationRegex.containsMatchIn(rawScript)) {
-            declarationRegex.replace(rawScript, "var SS_ID_FROM_APP = '$spreadsheetId';")
-        } else {
-            "var SS_ID_FROM_APP = '$spreadsheetId';\n$rawScript"
-        }
-    }
-
-    private fun readScriptFromAssets(): String {
+    suspend fun resetGymBackend(gymName: String): Result<Unit> {
         return try {
-            context.assets.open("appscript_backup.js").bufferedReader().use { it.readText() }
+            val storedUrl = dataStoreManager.getGymApiUrl().first()
+            val url = storedUrl.takeIf { it.isNotBlank() } ?: MASTER_BACKEND_URL
+            if (url.isBlank()) return Result.failure(Exception("URL del Backend Maestro no configurada."))
+
+            val gymId = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val email = dataStoreManager.getUserEmail().first().ifBlank { "admin@gymcopilot.com" }
+            val ssId = dataStoreManager.getGymSpreadsheetId().first()
+
+            val request = mapOf(
+                "action" to "reset_gym",
+                "gymId" to gymId,
+                "email" to email,
+                "spreadsheetId" to ssId
+            )
+
+            val encodedGymId = java.net.URLEncoder.encode(gymId, "UTF-8")
+            val encodedEmail = java.net.URLEncoder.encode(email, "UTF-8")
+            val encodedSsId = java.net.URLEncoder.encode(ssId, "UTF-8")
+            val paramChar = if (url.contains("?")) "&" else "?"
+            val requestUrl = "$url${paramChar}action=reset_gym&gymId=$encodedGymId&email=$encodedEmail&spreadsheetId=$encodedSsId"
+
+            val responseText = withContext(Dispatchers.IO) {
+                com.zexo.gymcopilot.shared.network.GymKtorApiClient.postData(requestUrl, request)
+            }
+
+            Log.d("GoogleCloudRepo", "Respuesta reset_gym: $responseText")
+            Result.success(Unit)
         } catch (e: Exception) {
-            "function doPost(e) { return ContentService.createTextOutput(JSON.stringify({status: 'ok'})).setMimeType(ContentService.MimeType.JSON); }"
+            Log.e("GoogleCloudRepo", "Error en resetGymBackend: ${e.message}")
+            Result.failure(e)
         }
     }
 }

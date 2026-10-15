@@ -43,6 +43,7 @@ import com.zexo.gymcopilot.ui.theme.PrimaryTurquoise
 import com.zexo.gymcopilot.ui.theme.TextWhite
 import com.zexo.gymcopilot.ui.theme.TextGray
 import com.zexo.gymcopilot.utils.SecurityUtils
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -256,10 +257,20 @@ fun NetworkConfigScreen(
                         confirmButton = {
                             Button(
                                 onClick = {
-                                    apiUrlText = ""
-                                    scope.launch { dataStoreManager.setGymApiUrl("") }
-                                    showDeleteConfirm = false
-                                    isLocked = true
+                                    scope.launch {
+                                        val gymName = dataStoreManager.getGymName().first()
+                                        val googleRepo = com.zexo.gymcopilot.repository.GoogleCloudRepository(dataStoreManager)
+                                        try {
+                                            googleRepo.resetGymBackend(gymName)
+                                        } catch (e: Exception) {
+                                            android.util.Log.e("NetworkConfigScreen", "Error reseteando gym backend: ${e.message}")
+                                        }
+                                        apiUrlText = ""
+                                        dataStoreManager.setGymApiUrl("")
+                                        dataStoreManager.setGymSpreadsheetId("")
+                                        showDeleteConfirm = false
+                                        isLocked = true
+                                    }
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
                             ) {

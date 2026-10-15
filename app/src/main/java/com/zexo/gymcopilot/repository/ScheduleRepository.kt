@@ -21,9 +21,16 @@ class ScheduleRepository(
             val gymUrl = dataStoreManager.getGymApiUrl().first()
             if (gymUrl.isBlank()) return Result.success(Unit)
 
-            val apiServiceGet = NetworkModule.getApiServiceForGet(gymUrl)
-            val syncUrl = if (gymUrl.contains("?")) "$gymUrl&type=schedules" else "$gymUrl?type=schedules"
+            val gymName = dataStoreManager.getGymName().first()
+            val gymId = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val userEmail = dataStoreManager.getUserEmail().first()
+            val ssId = dataStoreManager.getGymSpreadsheetId().first()
 
+            val baseParam = if (gymUrl.contains("?")) "&" else "?"
+            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+            val syncUrl = "$gymUrl${baseParam}type=schedules&gymId=$gymId&email=${java.net.URLEncoder.encode(userEmail, "UTF-8")}$ssParam"
+
+            val apiServiceGet = NetworkModule.getApiServiceForGet(gymUrl)
             val response = apiServiceGet.getSchedulesRaw(syncUrl, "Bearer session_active")
 
             if (response.isSuccessful) {
@@ -56,19 +63,28 @@ class ScheduleRepository(
             val gymUrl = dataStoreManager.getGymApiUrl().first()
             if (gymUrl.isBlank()) return Result.failure(Exception("Red no configurada"))
 
-            val gymId = dataStoreManager.getGymName().first()
+            val gymName = dataStoreManager.getGymName().first()
+            val gymId = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val userEmail = dataStoreManager.getUserEmail().first()
+            val ssId = dataStoreManager.getGymSpreadsheetId().first()
+
             val schedulesJson = Json.encodeToString(schedules)
 
             val request = ScheduleSyncRequest(
                 action = "update_schedule",
                 gymId = gymId,
                 professorId = professorId.trim(),
-                schedulesJson = schedulesJson
+                schedulesJson = schedulesJson,
+                spreadsheetId = ssId
             )
 
             val token = dataStoreManager.getAuthToken().first() ?: "session_active"
+            val paramChar = if (gymUrl.contains("?")) "&" else "?"
+            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+            val requestUrl = "$gymUrl${paramChar}action=update_schedule&gymId=$gymId&email=${java.net.URLEncoder.encode(userEmail, "UTF-8")}&professorId=${java.net.URLEncoder.encode(professorId.trim(), "UTF-8")}$ssParam"
+
             val apiServicePost = NetworkModule.getApiService(gymUrl)
-            val response = apiServicePost.postScheduleSync(gymUrl, "Bearer $token", request)
+            val response = apiServicePost.postScheduleSync(requestUrl, "Bearer $token", request)
 
             if (response.isSuccessful || response.code() == 302) {
                 syncSchedules()

@@ -13,8 +13,8 @@ android {
         applicationId = "com.zexo.gymcopilot"
         minSdk = 24
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = ((System.currentTimeMillis() / 1000) - 1767225600L).toInt()
+        versionName = "1.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

@@ -31,6 +31,9 @@ class AttendanceRepository(
         return try {
             val gymUrl = dataStoreManager.getGymApiUrl().first()
             if (gymUrl.isBlank()) return Result.failure(Exception("URL no configurada"))
+            val gymName = dataStoreManager.getGymName().first()
+            val gymId = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val ssId = dataStoreManager.getGymSpreadsheetId().first()
             val request = ProfileSyncRequest(
                 action = "update_profile",
                 professorId = professor.id,
@@ -40,14 +43,19 @@ class AttendanceRepository(
                 specialty = professor.specialty,
                 profileColor = professor.profileColor,
                 photoUri = professor.photoUri,
-                timestamp = System.currentTimeMillis()
+                gymId = gymId,
+                timestamp = System.currentTimeMillis(),
+                spreadsheetId = ssId
             )
+            val paramChar = if (gymUrl.contains("?")) "&" else "?"
+            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+            val requestUrl = "$gymUrl${paramChar}action=update_profile&gymId=$gymId&professorId=${professor.id}&email=${java.net.URLEncoder.encode(professor.email, "UTF-8")}&firstName=${java.net.URLEncoder.encode(professor.firstName, "UTF-8")}&lastName=${java.net.URLEncoder.encode(professor.lastName, "UTF-8")}$ssParam"
             try {
-                GymKtorApiClient.postData(gymUrl, request)
+                GymKtorApiClient.postData(requestUrl, request)
                 Result.success(Unit)
             } catch (e: Exception) {
                 val dynamicService = NetworkModule.getApiService(gymUrl)
-                val response = dynamicService.postProfileSync(gymUrl, null, request)
+                val response = dynamicService.postProfileSync(requestUrl, null, request)
                 if (response.isSuccessful || response.code() == 302) Result.success(Unit)
                 else Result.failure(Exception("Error syncing profile: ${response.code()}"))
             }
@@ -72,6 +80,9 @@ class AttendanceRepository(
         return try {
             val gymUrl = dataStoreManager.getGymApiUrl().first()
             if (gymUrl.isBlank()) return Result.failure(Exception("URL no configurada"))
+            val gymName = dataStoreManager.getGymName().first()
+            val gymId = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val ssId = dataStoreManager.getGymSpreadsheetId().first()
             val request = MemberSyncRequest(
                 action = "update_member",
                 firstName = firstName,
@@ -87,14 +98,19 @@ class AttendanceRepository(
                 planId = planId,
                 planType = planType,
                 assignedTrainer = assignedTrainer,
-                timestamp = System.currentTimeMillis()
+                gymId = gymId,
+                timestamp = System.currentTimeMillis(),
+                spreadsheetId = ssId
             )
+            val paramChar = if (gymUrl.contains("?")) "&" else "?"
+            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+            val requestUrl = "$gymUrl${paramChar}action=update_member&gymId=$gymId&email=${java.net.URLEncoder.encode(email, "UTF-8")}&firstName=${java.net.URLEncoder.encode(firstName, "UTF-8")}&lastName=${java.net.URLEncoder.encode(lastName, "UTF-8")}&membershipStatus=${java.net.URLEncoder.encode(membershipStatus ?: "DEUDOR", "UTF-8")}$ssParam"
             try {
-                GymKtorApiClient.postData(gymUrl, request)
+                GymKtorApiClient.postData(requestUrl, request)
                 Result.success(Unit)
             } catch (e: Exception) {
                 val dynamicService = NetworkModule.getApiService(gymUrl)
-                val response = dynamicService.postMemberSync(gymUrl, null, request)
+                val response = dynamicService.postMemberSync(requestUrl, null, request)
                 if (response.isSuccessful || response.code() == 302) Result.success(Unit)
                 else Result.failure(Exception("Error syncing member: ${response.code()}"))
             }
@@ -112,6 +128,9 @@ class AttendanceRepository(
         return try {
             val gymUrl = dataStoreManager.getGymApiUrl().first()
             if (gymUrl.isBlank()) return Result.failure(Exception("URL no configurada"))
+            val gymName = dataStoreManager.getGymName().first()
+            val gymId = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val ssId = dataStoreManager.getGymSpreadsheetId().first()
             
             val request = RoutineSyncRequest(
                 action = action,
@@ -120,14 +139,19 @@ class AttendanceRepository(
                 routine = routineJson,
                 routineId = routineId,
                 status = status,
-                timestamp = System.currentTimeMillis()
+                gymId = gymId,
+                timestamp = System.currentTimeMillis(),
+                spreadsheetId = ssId
             )
+            val paramChar = if (gymUrl.contains("?")) "&" else "?"
+            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+            val requestUrl = "$gymUrl${paramChar}action=$action&gymId=$gymId&memberEmail=${java.net.URLEncoder.encode(memberEmail, "UTF-8")}$ssParam"
             try {
-                GymKtorApiClient.postData(gymUrl, request)
+                GymKtorApiClient.postData(requestUrl, request)
                 Result.success(Unit)
             } catch (e: Exception) {
                 val dynamicService = NetworkModule.getApiService(gymUrl)
-                val response = dynamicService.postRoutineSync(gymUrl, null, request)
+                val response = dynamicService.postRoutineSync(requestUrl, null, request)
                 if (response.isSuccessful || response.code() == 302) Result.success(Unit)
                 else Result.failure(Exception("Error syncing routine: ${response.code()}"))
             }
@@ -157,15 +181,21 @@ class AttendanceRepository(
             val finalEmail = email?.lowercase(Locale.getDefault())?.trim() ?: ""
             if (finalEmail.isBlank()) return Result.failure(Exception("Email no encontrado"))
             
+            val ssId = dataStoreManager.getGymSpreadsheetId().first()
             val timestamp = System.currentTimeMillis()
             val request = CheckInRequest(
                 gymId = gymId,
                 memberEmail = finalEmail,
-                timestamp = timestamp
+                timestamp = timestamp,
+                spreadsheetId = ssId
             )
 
+            val paramChar = if (gymUrl.contains("?")) "&" else "?"
+            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+            val requestUrl = "$gymUrl${paramChar}action=check_in&gymId=$gymId&memberEmail=${java.net.URLEncoder.encode(finalEmail, "UTF-8")}$ssParam"
+
             val dynamicService = NetworkModule.getApiService(gymUrl)
-            val response = dynamicService.postCheckIn(gymUrl, null, request)
+            val response = dynamicService.postCheckIn(requestUrl, null, request)
 
             if (response.isSuccessful || response.code() == 302) {
                 updateLocalUserAttendance(finalEmail, timestamp)
@@ -241,8 +271,17 @@ class AttendanceRepository(
             val gymUrl = dataStoreManager.getGymApiUrl().first()
             if (gymUrl.isBlank()) return Result.success(Unit)
 
+            val gymName = dataStoreManager.getGymName().first()
+            val gymId = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val userEmail = dataStoreManager.getUserEmail().first()
+            val ssId = dataStoreManager.getGymSpreadsheetId().first()
+
+            val paramChar = if (gymUrl.contains("?")) "&" else "?"
+            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+            val syncUrl = "$gymUrl${paramChar}type=asistencia&gymId=$gymId&email=${java.net.URLEncoder.encode(userEmail, "UTF-8")}$ssParam"
+
             val apiServiceGet = NetworkModule.getApiServiceForGet(gymUrl)
-            val response = apiServiceGet.getAttendanceRaw(gymUrl, null)
+            val response = apiServiceGet.getAttendanceRaw(syncUrl, null)
 
             if (response.isSuccessful) {
                 val jsonElement = response.body() ?: return Result.success(Unit)
@@ -396,6 +435,10 @@ class AttendanceRepository(
         return try {
             val gymUrl = dataStoreManager.getGymApiUrl().first()
             if (gymUrl.isBlank()) return Result.failure(Exception("URL no configurada"))
+            val gymName = dataStoreManager.getGymName().first()
+            val userEmail = dataStoreManager.getUserEmail().first()
+            val gymId = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val ssId = dataStoreManager.getGymSpreadsheetId().first()
             val request = ProductSyncRequest(
                 action = if (isDelete) "delete_product" else "update_product",
                 id = product.id,
@@ -407,12 +450,25 @@ class AttendanceRepository(
                 contactMethod = product.contactMethod,
                 contactPhone = product.contactPhone,
                 bannerType = product.bannerType,
-                bannerText = product.bannerText
+                bannerText = product.bannerText,
+                gymId = gymId,
+                email = userEmail,
+                spreadsheetId = ssId
             )
-            val dynamicService = NetworkModule.getApiService(gymUrl)
-            val response = dynamicService.postProductSync(gymUrl, null, request)
-            if (response.isSuccessful || response.code() == 302) Result.success(Unit)
-            else Result.failure(Exception("Error syncing product: ${response.code()}"))
+            val paramChar = if (gymUrl.contains("?")) "&" else "?"
+            val actionStr = if (isDelete) "delete_product" else "update_product"
+            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+            val requestUrl = "$gymUrl${paramChar}action=$actionStr&gymId=$gymId&email=${java.net.URLEncoder.encode(userEmail, "UTF-8")}&id=${product.id}&name=${java.net.URLEncoder.encode(product.name ?: "", "UTF-8")}&price=${product.price}$ssParam"
+            
+            try {
+                GymKtorApiClient.postData(requestUrl, request)
+                Result.success(Unit)
+            } catch (eKtor: Exception) {
+                val dynamicService = NetworkModule.getApiService(gymUrl)
+                val response = dynamicService.postProductSync(requestUrl, null, request)
+                if (response.isSuccessful || response.code() == 302) Result.success(Unit)
+                else Result.failure(Exception("Error syncing product: ${response.code()}"))
+            }
         } catch (e: Exception) { Result.failure(e) }
     }
 
@@ -454,6 +510,9 @@ class AttendanceRepository(
         val ssid2 = dataStoreManager.getGymWifiSsid2().first()
         val ssid3 = dataStoreManager.getGymWifiSsid3().first()
 
+        val gymId = finalName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+        val userEmail = dataStoreManager.getUserEmail().first()
+
         val request = GymSyncRequest(
             action = "update_gym_info",
             name = finalName,
@@ -472,12 +531,34 @@ class AttendanceRepository(
             gymIsOpen = finalGymOpen,
             wifiSsid = ssid1,
             wifiSsid2 = ssid2,
-            wifiSsid3 = ssid3
+            wifiSsid3 = ssid3,
+            gymId = gymId,
+            email = userEmail
         )
+
+        val encName = java.net.URLEncoder.encode(finalName, "UTF-8")
+        val encPhone = java.net.URLEncoder.encode(finalPhone, "UTF-8")
+        val encAddress = java.net.URLEncoder.encode(finalAddress, "UTF-8")
+        val encCity = java.net.URLEncoder.encode(finalCity, "UTF-8")
+        val encZip = java.net.URLEncoder.encode(finalZip, "UTF-8")
+        val encCountry = java.net.URLEncoder.encode(finalCountry, "UTF-8")
+        val encMsg = java.net.URLEncoder.encode(finalMessage, "UTF-8")
+        val encEmail = java.net.URLEncoder.encode(userEmail, "UTF-8")
+
+        val ssId = dataStoreManager.getGymSpreadsheetId().first()
+        val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+        val paramChar = if (gymUrl.contains("?")) "&" else "?"
+        val requestUrl = "$gymUrl${paramChar}action=update_gym_info&gymId=$gymId&email=$encEmail&name=$encName&phone=$encPhone&address=$encAddress&city=$encCity&zip=$encZip&country=$encCountry&accentColor=$finalColor&backgroundColor=$finalBgColor&buttonStyle=$finalStyle&showLogoBorder=$finalShowBorder&classInSession=$finalClass&broadcastMessage=$encMsg&gymIsOpen=$finalGymOpen$ssParam"
+
+        try {
+            GymKtorApiClient.postData(requestUrl, request)
+            Result.success(Unit)
+        } catch (eKtor: Exception) {
             val dynamicService = NetworkModule.getApiService(gymUrl)
-            val response = dynamicService.postGymSync(gymUrl, null, request)
+            val response = dynamicService.postGymSync(requestUrl, null, request)
             if (response.isSuccessful || response.code() == 302) Result.success(Unit)
             else Result.failure(Exception("Error syncing gym info: ${response.code()}"))
+        }
         } catch (e: Exception) { Result.failure(e) }
     }
 
@@ -486,7 +567,14 @@ class AttendanceRepository(
             val gymUrl = dataStoreManager.getGymApiUrl().first()
             if (gymUrl.isBlank()) return Result.success(Unit)
             
-            val syncUrl = if (gymUrl.contains("?")) "$gymUrl&type=config" else "$gymUrl?type=config"
+            val gymName = dataStoreManager.getGymName().first()
+            val gymId = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val userEmail = dataStoreManager.getUserEmail().first()
+            val ssId = dataStoreManager.getGymSpreadsheetId().first()
+
+            val baseParam = if (gymUrl.contains("?")) "&" else "?"
+            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+            val syncUrl = "$gymUrl${baseParam}type=config&gymId=$gymId&email=$userEmail$ssParam"
             val apiServiceGet = NetworkModule.getApiServiceForGet(gymUrl)
             val response = apiServiceGet.getConfigRaw(syncUrl, null)
 
@@ -544,13 +632,40 @@ class AttendanceRepository(
             // Log de seguridad para depurar desplazamientos
             if (rawMessage.length > 50) Log.w("ConfigSync", "Mensaje sospechosamente largo, posible desplazamiento de columnas")
 
-            if (name.isNotBlank() && name != "null") dataStoreManager.setGymName(name)
-            if (logo.isNotBlank() && logo != "null") dataStoreManager.setGymLogoUri(logo)
-            if (phone.isNotBlank() && phone != "null") dataStoreManager.setGymPhone(phone)
-            if (address.isNotBlank() && address != "null") dataStoreManager.setGymAddress(address)
-            if (city.isNotBlank() && city != "null") dataStoreManager.setGymCity(city)
-            if (zip.isNotBlank() && zip != "null") dataStoreManager.setGymPostalCode(zip)
-            if (country.isNotBlank() && country != "null") dataStoreManager.setGymCountry(country)
+            val currentLocalName = dataStoreManager.getGymName().first()
+            if (currentLocalName.isNullOrBlank() && !name.isNullOrBlank() && name != "null") {
+                dataStoreManager.setGymName(name)
+            }
+
+            val currentLocalLogo = dataStoreManager.getGymLogoUri().first()
+            if (currentLocalLogo.isNullOrBlank() && !logo.isNullOrBlank() && logo != "null") {
+                dataStoreManager.setGymLogoUri(logo)
+            }
+
+            val currentLocalPhone = dataStoreManager.getGymPhone().first()
+            if (currentLocalPhone.isNullOrBlank() && !phone.isNullOrBlank() && phone != "null") {
+                dataStoreManager.setGymPhone(phone)
+            }
+
+            val currentLocalAddress = dataStoreManager.getGymAddress().first()
+            if (currentLocalAddress.isNullOrBlank() && !address.isNullOrBlank() && address != "null") {
+                dataStoreManager.setGymAddress(address)
+            }
+
+            val currentLocalCity = dataStoreManager.getGymCity().first()
+            if (currentLocalCity.isNullOrBlank() && !city.isNullOrBlank() && city != "null") {
+                dataStoreManager.setGymCity(city)
+            }
+
+            val currentLocalZip = dataStoreManager.getGymPostalCode().first()
+            if (currentLocalZip.isNullOrBlank() && !zip.isNullOrBlank() && zip != "null") {
+                dataStoreManager.setGymPostalCode(zip)
+            }
+
+            val currentLocalCountry = dataStoreManager.getGymCountry().first()
+            if (currentLocalCountry.isNullOrBlank() && !country.isNullOrBlank() && country != "null") {
+                dataStoreManager.setGymCountry(country)
+            }
             dataStoreManager.setClassInSessionManual(classInSessionStr.lowercase() == "true")
             dataStoreManager.setGymIsOpen(gymIsOpenStr.lowercase() != "false")
             dataStoreManager.setShowLogoBorder(showBorderStr.lowercase() != "false")
@@ -581,11 +696,24 @@ class AttendanceRepository(
         return try {
             val gymUrl = dataStoreManager.getGymApiUrl().first()
             if (gymUrl.isBlank()) return Result.failure(Exception("URL no configurada"))
-            val request = PlansSyncRequest(plans = plans)
-            val dynamicService = NetworkModule.getApiService(gymUrl)
-            val response = dynamicService.postPlansSync(gymUrl, null, request)
-            if (response.isSuccessful || response.code() == 302) Result.success(Unit)
-            else Result.failure(Exception("Error syncing plans: ${response.code()}"))
+            val gymName = dataStoreManager.getGymName().first()
+            val gymId = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val userEmail = dataStoreManager.getUserEmail().first()
+            val ssId = dataStoreManager.getGymSpreadsheetId().first()
+            val request = PlansSyncRequest(plans = plans, gymId = gymId, email = userEmail, spreadsheetId = ssId)
+            val paramChar = if (gymUrl.contains("?")) "&" else "?"
+            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+            val requestUrl = "$gymUrl${paramChar}action=update_plans&gymId=$gymId&email=${java.net.URLEncoder.encode(userEmail, "UTF-8")}$ssParam"
+            
+            try {
+                GymKtorApiClient.postData(requestUrl, request)
+                Result.success(Unit)
+            } catch (eKtor: Exception) {
+                val dynamicService = NetworkModule.getApiService(gymUrl)
+                val response = dynamicService.postPlansSync(requestUrl, null, request)
+                if (response.isSuccessful || response.code() == 302) Result.success(Unit)
+                else Result.failure(Exception("Error syncing plans: ${response.code()}"))
+            }
         } catch (e: Exception) { Result.failure(e) }
     }
 
@@ -594,7 +722,14 @@ class AttendanceRepository(
             val gymUrl = dataStoreManager.getGymApiUrl().first()
             if (gymUrl.isBlank()) return Result.success(Unit)
             
-            val syncUrl = if (gymUrl.contains("?")) "$gymUrl&type=plans" else "$gymUrl?type=plans"
+            val gymName = dataStoreManager.getGymName().first()
+            val gymId = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val userEmail = dataStoreManager.getUserEmail().first()
+            val ssId = dataStoreManager.getGymSpreadsheetId().first()
+
+            val baseParam = if (gymUrl.contains("?")) "&" else "?"
+            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+            val syncUrl = "$gymUrl${baseParam}type=plans&gymId=$gymId&email=${java.net.URLEncoder.encode(userEmail, "UTF-8")}$ssParam"
             val apiServiceGet = NetworkModule.getApiServiceForGet(gymUrl)
             val response = apiServiceGet.getConfigRaw(syncUrl, null)
 
@@ -642,7 +777,14 @@ class AttendanceRepository(
             val gymUrl = dataStoreManager.getGymApiUrl().first()
             if (gymUrl.isBlank()) return Result.success(Unit)
 
-            val syncUrl = if (gymUrl.contains("?")) "$gymUrl&type=members" else "$gymUrl?type=members"
+            val gymName = dataStoreManager.getGymName().first()
+            val gymId = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val userEmail = dataStoreManager.getUserEmail().first()
+            val ssId = dataStoreManager.getGymSpreadsheetId().first()
+
+            val baseParam = if (gymUrl.contains("?")) "&" else "?"
+            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+            val syncUrl = "$gymUrl${baseParam}type=members&gymId=$gymId&email=$userEmail$ssParam"
             val apiServiceGet = NetworkModule.getApiServiceForGet(gymUrl)
             val response = apiServiceGet.getAttendanceRaw(syncUrl, null)
 
@@ -672,76 +814,58 @@ class AttendanceRepository(
             if (row.size() >= 3) {
                 val fName = row[0].asString
                 val lName = row[1].asString
-                val email = row[2].asString
+                val email = row[2].asString.trim().lowercase()
 
-                val hasNewStructure = row.size() >= 11
-                val status = if (hasNewStructure) row[3].asString else "DEUDOR"
-                val offset = if (hasNewStructure) 1 else 0
-                
-                val phone = if (row.size() > 3 + offset) row[3 + offset].asString else ""
-                val address = if (row.size() > 4 + offset) row[4 + offset].asString else ""
-                val weight = if (row.size() > 5 + offset) row[5 + offset].asString else ""
-                val height = if (row.size() > 6 + offset) row[6 + offset].asString else ""
-                val photo = if (row.size() > 7 + offset) row[7 + offset].asString else ""
-                
-                val renewalTs = if (row.size() > 10) {
-                    val rStr = row[10].asString
-                    rStr.toLongOrNull() ?: rStr.toDoubleOrNull()?.toLong() ?: 0L
-                } else 0L
+                if (email.isNotBlank() && !email.contains("email", ignoreCase = true)) {
+                    val status = if (row.size() > 3) row[3].asString else "DEUDOR"
+                    val phone = if (row.size() > 4) row[4].asString else ""
+                    val address = if (row.size() > 5) row[5].asString else ""
+                    val weight = if (row.size() > 6) row[6].asString else ""
+                    val height = if (row.size() > 7) row[7].asString else ""
+                    val photo = if (row.size() > 8) row[8].asString else ""
 
-                val pId = if (row.size() > 11) row[11].asString else null
-                val pType = if (row.size() > 12) row[12].asString else "Mensual"
-                val profAssigned = if (row.size() > 13) row[13].asString else ""
+                    val renewalTs = if (row.size() > 10) {
+                        val rStr = row[10].asString
+                        rStr.toLongOrNull() ?: rStr.toDoubleOrNull()?.toLong() ?: 0L
+                    } else 0L
 
-                remoteMembers.add(Member(
-                    firstName = fName,
-                    lastName = lName,
-                    email = email,
-                    phone = phone,
-                    address = address,
-                    weight = weight,
-                    height = height,
-                    photoUri = if (photo.isBlank() || photo == "null") null else photo,
-                    membershipStatus = if (status.isBlank() || status == "null") "DEUDOR" else status,
-                    nextRenewalDate = if (renewalTs == 0L) System.currentTimeMillis() else renewalTs,
-                    planId = if (pId.isNullOrBlank() || pId == "null") null else pId,
-                    planType = pType,
-                    assignedTrainer = profAssigned,
-                    attendanceCount = 0, // Se actualizará en el sync de asistencias
-                    currentAttendanceCount = 0,
-                    monthAttendanceCount = 0
-                ))
+                    val pId = if (row.size() > 11) row[11].asString else null
+                    val pType = if (row.size() > 12) row[12].asString else "Mensual"
+                    val profAssigned = if (row.size() > 13) row[13].asString else ""
+
+                    remoteMembers.add(Member(
+                        firstName = fName,
+                        lastName = lName,
+                        email = email,
+                        phone = phone,
+                        address = address,
+                        weight = weight,
+                        height = height,
+                        photoUri = if (photo.isBlank() || photo == "null") null else photo,
+                        membershipStatus = if (status.isBlank() || status == "null") "DEUDOR" else status,
+                        nextRenewalDate = if (renewalTs == 0L) System.currentTimeMillis() else renewalTs,
+                        planId = if (pId.isNullOrBlank() || pId == "null") null else pId,
+                        planType = pType,
+                        assignedTrainer = profAssigned,
+                        attendanceCount = 0,
+                        currentAttendanceCount = 0,
+                        monthAttendanceCount = 0
+                    ))
+                }
             }
         }
 
         if (remoteMembers.isNotEmpty()) {
-            val currentMembers = dataStoreManager.getMembers().first()
-            val updatedList = currentMembers.map { local ->
-                val remote = remoteMembers.find { it.email.equals(local.email, ignoreCase = true) }
-                if (remote != null) {
-                    local.copy(
-                        membershipStatus = remote.membershipStatus,
-                        nextRenewalDate = remote.nextRenewalDate,
-                        planId = remote.planId,
-                        planType = remote.planType,
-                        firstName = if (remote.firstName.isNotBlank()) remote.firstName else local.firstName,
-                        lastName = if (remote.lastName.isNotBlank()) remote.lastName else local.lastName,
-                        phone = if (remote.phone.isNotBlank()) remote.phone else local.phone,
-                        address = if (remote.address.isNotBlank()) remote.address else local.address,
-                        weight = if (remote.weight.isNotBlank()) remote.weight else local.weight,
-                        height = if (remote.height.isNotBlank()) remote.height else local.height,
-                        photoUri = remote.photoUri ?: local.photoUri,
-                        assignedTrainer = if (remote.assignedTrainer.isNotBlank()) remote.assignedTrainer else local.assignedTrainer
-                    )
-                } else local
-            }.toMutableList()
-
+            val currentLocal = dataStoreManager.getMembers().first().toMutableList()
             remoteMembers.forEach { remote ->
-                if (updatedList.none { it.email.equals(remote.email, ignoreCase = true) }) {
-                    updatedList.add(remote)
+                val idx = currentLocal.indexOfFirst { it.email.equals(remote.email, ignoreCase = true) }
+                if (idx != -1) {
+                    currentLocal[idx] = remote
+                } else {
+                    currentLocal.add(remote)
                 }
             }
-            dataStoreManager.saveMembers(updatedList)
+            dataStoreManager.saveMembers(currentLocal)
         }
     }
 
@@ -750,7 +874,14 @@ class AttendanceRepository(
             val gymUrl = dataStoreManager.getGymApiUrl().first()
             if (gymUrl.isBlank()) return Result.failure(Exception("URL no configurada"))
 
-            val syncUrl = if (gymUrl.contains("?")) "$gymUrl&type=professors" else "$gymUrl?type=professors"
+            val gymName = dataStoreManager.getGymName().first()
+            val gymId = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val userEmail = dataStoreManager.getUserEmail().first()
+            val ssId = dataStoreManager.getGymSpreadsheetId().first()
+
+            val baseParam = if (gymUrl.contains("?")) "&" else "?"
+            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+            val syncUrl = "$gymUrl${baseParam}type=professors&gymId=$gymId&email=$userEmail$ssParam"
             val apiServiceGet = NetworkModule.getApiServiceForGet(gymUrl)
             val response = apiServiceGet.getRoutinesRaw(syncUrl, null)
 
@@ -765,6 +896,91 @@ class AttendanceRepository(
                 processProfessorRows(rows)
                 Result.success(Unit)
             } else Result.failure(Exception("Error servidor: ${response.code()}"))
+        } catch (e: Exception) { Result.failure(e) }
+    }
+
+    suspend fun deleteProfessor(professorId: String, email: String = "", firstName: String = "", lastName: String = ""): Result<Unit> {
+        return try {
+            val gymUrl = dataStoreManager.getGymApiUrl().first()
+            if (gymUrl.isBlank()) return Result.failure(Exception("URL no configurada"))
+            val gymName = dataStoreManager.getGymName().first()
+            val gymId = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val userEmail = dataStoreManager.getUserEmail().first()
+            val ssId = dataStoreManager.getGymSpreadsheetId().first()
+
+            val paramChar = if (gymUrl.contains("?")) "&" else "?"
+            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+            val encProfId = java.net.URLEncoder.encode(professorId, "UTF-8")
+            val encProfEmail = java.net.URLEncoder.encode(email, "UTF-8")
+            val encFName = java.net.URLEncoder.encode(firstName, "UTF-8")
+            val encLName = java.net.URLEncoder.encode(lastName, "UTF-8")
+            val encUserEmail = java.net.URLEncoder.encode(userEmail, "UTF-8")
+            val requestUrl = "$gymUrl${paramChar}action=delete_professor&gymId=$gymId&email=$encUserEmail&professorId=$encProfId&profEmail=$encProfEmail&firstName=$encFName&lastName=$encLName$ssParam"
+
+            val body = mapOf(
+                "action" to "delete_professor",
+                "gymId" to gymId,
+                "spreadsheetId" to ssId,
+                "email" to userEmail,
+                "professorId" to professorId,
+                "profEmail" to email,
+                "firstName" to firstName,
+                "lastName" to lastName
+            )
+
+            try {
+                GymKtorApiClient.postData(requestUrl, body)
+                Result.success(Unit)
+            } catch (e: Exception) {
+                try {
+                    GymKtorApiClient.getData(requestUrl)
+                    Result.success(Unit)
+                } catch (eGet: Exception) {
+                    Result.failure(eGet)
+                }
+            }
+        } catch (e: Exception) { Result.failure(e) }
+    }
+
+    suspend fun deleteMember(email: String, firstName: String = "", lastName: String = ""): Result<Unit> {
+        return try {
+            val gymUrl = dataStoreManager.getGymApiUrl().first()
+            if (gymUrl.isBlank()) return Result.failure(Exception("URL no configurada"))
+            val gymName = dataStoreManager.getGymName().first()
+            val gymId = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val userEmail = dataStoreManager.getUserEmail().first()
+            val ssId = dataStoreManager.getGymSpreadsheetId().first()
+
+            val paramChar = if (gymUrl.contains("?")) "&" else "?"
+            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+            val encMemberEmail = java.net.URLEncoder.encode(email, "UTF-8")
+            val encFName = java.net.URLEncoder.encode(firstName, "UTF-8")
+            val encLName = java.net.URLEncoder.encode(lastName, "UTF-8")
+            val encUserEmail = java.net.URLEncoder.encode(userEmail, "UTF-8")
+            val requestUrl = "$gymUrl${paramChar}action=delete_member&gymId=$gymId&email=$encUserEmail&memberEmail=$encMemberEmail&targetEmail=$encMemberEmail&firstName=$encFName&lastName=$encLName$ssParam"
+
+            val body = mapOf(
+                "action" to "delete_member",
+                "gymId" to gymId,
+                "spreadsheetId" to ssId,
+                "email" to userEmail,
+                "memberEmail" to email,
+                "targetEmail" to email,
+                "firstName" to firstName,
+                "lastName" to lastName
+            )
+
+            try {
+                GymKtorApiClient.postData(requestUrl, body)
+                Result.success(Unit)
+            } catch (e: Exception) {
+                try {
+                    GymKtorApiClient.getData(requestUrl)
+                    Result.success(Unit)
+                } catch (eGet: Exception) {
+                    Result.failure(eGet)
+                }
+            }
         } catch (e: Exception) { Result.failure(e) }
     }
 
@@ -835,7 +1051,14 @@ class AttendanceRepository(
             val gymUrl = dataStoreManager.getGymApiUrl().first()
             if (gymUrl.isBlank()) return Result.failure(Exception("URL no configurada"))
 
-            val syncUrl = if (gymUrl.contains("?")) "$gymUrl&type=routines" else "$gymUrl?type=routines"
+            val gymName = dataStoreManager.getGymName().first()
+            val gymId = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val userEmail = dataStoreManager.getUserEmail().first()
+            val ssId = dataStoreManager.getGymSpreadsheetId().first()
+
+            val baseParam = if (gymUrl.contains("?")) "&" else "?"
+            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+            val syncUrl = "$gymUrl${baseParam}type=routines&gymId=$gymId&email=${java.net.URLEncoder.encode(userEmail, "UTF-8")}$ssParam"
             val apiServiceGet = NetworkModule.getApiServiceForGet(gymUrl)
             val response = apiServiceGet.getRoutinesRaw(syncUrl, null)
 
@@ -933,7 +1156,14 @@ class AttendanceRepository(
             val gymUrl = dataStoreManager.getGymApiUrl().first()
             if (gymUrl.isBlank()) return Result.success(Unit)
 
-            val megaUrl = if (gymUrl.contains("?")) "$gymUrl&type=all" else "$gymUrl?type=all"
+            val gymName = dataStoreManager.getGymName().first()
+            val gymId = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val userEmail = dataStoreManager.getUserEmail().first()
+            val ssId = dataStoreManager.getGymSpreadsheetId().first()
+
+            val baseParam = if (gymUrl.contains("?")) "&" else "?"
+            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+            val megaUrl = "$gymUrl${baseParam}type=all&gymId=$gymId&email=${java.net.URLEncoder.encode(userEmail, "UTF-8")}$ssParam"
             val apiServiceGet = NetworkModule.getApiServiceForGet(gymUrl)
             val response = apiServiceGet.getMegaSyncRaw(megaUrl, null)
 

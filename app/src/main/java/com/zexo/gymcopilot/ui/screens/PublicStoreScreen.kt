@@ -88,8 +88,14 @@ fun PublicStoreScreen(
 
     LaunchedEffect(gymApiUrl) {
         if (gymApiUrl.isBlank()) return@LaunchedEffect
+        val gymNameVal = dataStoreManager.getGymName().first()
+        val gymIdVal = gymNameVal.lowercase().replace(Regex("[^a-z0-9]"), "_")
+        val emailVal = dataStoreManager.getUserEmail().first()
+        val ssIdVal = dataStoreManager.getGymSpreadsheetId().first()
+        val paramChar = if (gymApiUrl.contains("?")) "&" else "?"
+        val ssParam = if (ssIdVal.isNotBlank()) "&spreadsheetId=$ssIdVal" else ""
+        val storeSyncUrl = "$gymApiUrl${paramChar}type=store&gymId=$gymIdVal&email=${java.net.URLEncoder.encode(emailVal, "UTF-8")}$ssParam"
         val apiServiceGet = NetworkModule.getApiServiceForGet(gymApiUrl)
-        val storeSyncUrl = if (gymApiUrl.contains("?")) "$gymApiUrl&type=store" else "$gymApiUrl?type=store"
 
         while (isActive) {
             try {

@@ -36,6 +36,7 @@ class DataStoreManager(context: Context) {
         val GYM_LOGO_URI = stringPreferencesKey("GYM_LOGO_URI")
         val GYM_NAME = stringPreferencesKey("GYM_NAME")
         val GYM_NAME_FONT = stringPreferencesKey("GYM_NAME_FONT")
+        val GYM_SPREADSHEET_ID = stringPreferencesKey("GYM_SPREADSHEET_ID")
         val GYM_PHONE = stringPreferencesKey("GYM_PHONE")
         val GYM_BACKGROUND_URI = stringPreferencesKey("GYM_BACKGROUND_URI")
         val GYM_ADDRESS = stringPreferencesKey("GYM_ADDRESS")
@@ -154,6 +155,9 @@ class DataStoreManager(context: Context) {
 
     suspend fun setGymName(name: String) { dataStore.edit { it[GYM_NAME] = name } }
     fun getGymName(): Flow<String> = dataStore.data.map { it[GYM_NAME] ?: "" }
+
+    suspend fun setGymSpreadsheetId(id: String) { dataStore.edit { it[GYM_SPREADSHEET_ID] = id } }
+    fun getGymSpreadsheetId(): Flow<String> = dataStore.data.map { it[GYM_SPREADSHEET_ID] ?: "" }
 
     suspend fun setGymNameFont(font: String) { dataStore.edit { it[GYM_NAME_FONT] = font } }
     fun getGymNameFont(): Flow<String> = dataStore.data.map { it[GYM_NAME_FONT] ?: "Default" }
@@ -352,10 +356,15 @@ class DataStoreManager(context: Context) {
         }
     }
 
-    suspend fun removeMember(email: String) {
+    suspend fun removeMember(email: String, fullName: String = "") {
         dataStore.edit { preferences ->
             val current = try { Json.decodeFromString<MutableList<Member>>(preferences[GYM_MEMBERS] ?: "[]") } catch (e: Exception) { mutableListOf() }
-            current.removeAll { it.email == email }
+            current.removeAll { 
+                (email.isNotBlank() && it.email.trim().equals(email.trim(), ignoreCase = true)) ||
+                (email.isBlank() && fullName.isNotBlank() && it.fullName.trim().equals(fullName.trim(), ignoreCase = true)) ||
+                (email.isBlank() && fullName.isBlank() && it.email.isBlank() && it.fullName.isBlank()) ||
+                it.email == email
+            }
             preferences[GYM_MEMBERS] = Json.encodeToString(current)
         }
     }
@@ -567,6 +576,12 @@ class DataStoreManager(context: Context) {
 
     suspend fun saveSubscriptionPlans(plans: List<SubscriptionPlan>) {
         dataStore.edit { it[SUBSCRIPTION_PLANS] = Json.encodeToString(plans) }
+    }
+
+    suspend fun clearAllData() {
+        dataStore.edit { preferences ->
+            preferences.clear()
+        }
     }
 
     fun getPaymentRecords(): Flow<List<PaymentRecord>> = dataStore.data.map { preferences ->

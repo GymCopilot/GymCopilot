@@ -75,7 +75,10 @@ sealed class Screen(val route: String) {
     }
     object Cart : Screen("cart")
     object AppSettings : Screen("app_settings")
-    object Appearance : Screen("appearance")
+    object Appearance : Screen("appearance?expandSection={expandSection}") {
+        fun createRoute(expandSection: String? = null) =
+            if (expandSection != null) "appearance?expandSection=$expandSection" else "appearance"
+    }
     object Currency : Screen("currency")
     object GymConfig : Screen("gym_config")
     object NetworkConfig : Screen("network_config")
@@ -204,6 +207,7 @@ fun GymNavGraph(
         composable(Screen.AdminDashboard.route) {
             AdminDashboardScreen(
                 onAppSettingsClick = onAdminSettings,
+                onAppearanceClick = { section -> navController.navigate(Screen.Appearance.createRoute(section)) },
                 onStoreClick = onAdminStore,
                 onMembersClick = onAdminMembers,
                 onProfessorsClick = onAdminProfessors,
@@ -402,8 +406,13 @@ fun GymNavGraph(
                 onContactClick = { navController.navigate(Screen.Contact.route) }
             )
         }
-        composable(Screen.Appearance.route) {
+        composable(
+            route = Screen.Appearance.route,
+            arguments = listOf(navArgument("expandSection") { type = NavType.StringType; nullable = true; defaultValue = null })
+        ) { backStackEntry ->
+            val expandSection = backStackEntry.arguments?.getString("expandSection")
             AppearanceScreen(
+                initialExpandedSection = expandSection,
                 onBack = { navController.popBackStack() },
                 onHomeClick = onAdminHome,
                 onStoreClick = onAdminStore,

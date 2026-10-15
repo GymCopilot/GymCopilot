@@ -490,7 +490,7 @@ fun RoutineDashboardScreen(
                             val profId = if (rawProfId.isNullOrBlank()) userEmail.lowercase().trim() else rawProfId.trim()
                             val routineJson = Json.encodeToString(routine)
 
-                            if (userRole?.lowercase() == "professor") {
+                            if (routine.assignedMemberEmails.isNotEmpty()) {
                                 routine.assignedMemberEmails.forEach { email ->
                                     repository.syncMemberRoutine(
                                         professorId = profId,
@@ -500,6 +500,14 @@ fun RoutineDashboardScreen(
                                         action = "delete_routine"
                                     )
                                 }
+                            } else {
+                                repository.syncMemberRoutine(
+                                    professorId = profId,
+                                    memberEmail = "",
+                                    routineJson = routineJson,
+                                    routineId = routine.id,
+                                    action = "delete_routine"
+                                )
                             }
 
                             dataStoreManager.deleteRoutine(routine.id)
