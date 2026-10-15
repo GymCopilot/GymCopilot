@@ -1,0 +1,9 @@
+{
+  "name": "GymCopilot",
+  "short_name": "GymCopilot",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#00151C",
+  "theme_color": "#00151C",
+  "description": "Sistema de Gestión de Gimnasios y Asistencia"
+}

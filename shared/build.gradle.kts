@@ -15,10 +15,22 @@ kotlin {
         }
     }
 
-    // iOS Targets (iosX64, iosArm64, iosSimulatorArm64)
+    // iOS Targets
     iosX64()
     iosArm64()
     iosSimulatorArm64()
+
+    // JS Web Target for Safari / PWA
+    js(IR) {
+        browser {
+            commonWebpackConfig {
+                cssSupport {
+                    enabled = true
+                }
+            }
+        }
+        binaries.executable()
+    }
 
     targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget> {
         binaries.framework {
@@ -48,6 +60,12 @@ kotlin {
 
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
+        }
+
+        val jsMain by getting {
+            dependencies {
+                implementation(compose.html.svg)
+            }
         }
 
         commonTest.dependencies {
