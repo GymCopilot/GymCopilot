@@ -1,12 +1,13 @@
 package com.zexo.gymcopilot.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -404,6 +406,16 @@ fun RoleNavigationBar(
     ) {
         items.forEachIndexed { index, label ->
             val isSelected = selectedTab == index
+            val iconVector: ImageVector = when (label) {
+                "Home" -> Icons.Default.Home
+                "Store", "Tienda" -> Icons.Default.ShoppingCart
+                "Clientes", "Alumnos" -> Icons.Default.Person
+                "Profesores" -> Icons.Default.Person
+                "Horarios", "Clases" -> Icons.Default.DateRange
+                "Rutinas" -> Icons.Default.Star
+                "Chat" -> Icons.Default.Email
+                else -> Icons.Default.Settings
+            }
 
             Box(
                 modifier = Modifier
@@ -418,19 +430,13 @@ fun RoleNavigationBar(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Text(
-                        text = when (label) {
-                            "Home" -> "📊"
-                            "Store", "Tienda" -> "🛒"
-                            "Clientes", "Alumnos" -> "👥"
-                            "Profesores" -> "👨‍🏫"
-                            "Horarios", "Clases" -> "📅"
-                            "Rutinas" -> "🏋️"
-                            "Chat" -> "💬"
-                            else -> "⚙️"
-                        },
-                        fontSize = 18.sp
+                    Icon(
+                        imageVector = iconVector,
+                        contentDescription = label,
+                        tint = if (isSelected) PrimaryTurquoise else TextGray,
+                        modifier = Modifier.size(20.dp)
                     )
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = label,
                         fontSize = 8.sp,
