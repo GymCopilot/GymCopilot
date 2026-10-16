@@ -1,6 +1,5 @@
 package com.zexo.gymcopilot.ui
 
-import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,12 +11,15 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -27,7 +29,7 @@ import com.zexo.gymcopilot.model.*
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
 
 // ============================================================================
-// VISTA REAL DEL PANEL ADMINISTRADOR (IDÉNTICA A ANDROID)
+// VISTA REAL DEL PANEL ADMINISTRADOR (IDÉNTICA A ANDROID CON ICONOS VECTORIALES)
 // ============================================================================
 
 @Composable
@@ -117,7 +119,7 @@ fun RealAdminDashboardView(
                                     modifier = Modifier.size(28.dp).clickable { }
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
-                                        Text(text = "➤", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        Icon(Icons.Default.Send, null, tint = Color.Black, modifier = Modifier.size(14.dp))
                                     }
                                 }
                             }
@@ -138,30 +140,30 @@ fun RealAdminDashboardView(
                     }
                 }
 
-                // GRILLA DE BOTONES Y MÉTRICAS REALES
+                // GRILLA DE BOTONES Y MÉTRICAS REALES CON ICONOS VECTORIALES
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            RealGridButton("PLANES", "Suscripciones", "💳", PrimaryTurquoise, Modifier.weight(1f)) {}
-                            RealGridButton("****", "Ingresos", if (showMonthlyIncome) "👁️" else "🙈", Color(0xFF00C853), Modifier.weight(1f)) {
+                            RealGridButton("PLANES", "Suscripciones", Icons.Default.Star, PrimaryTurquoise, Modifier.weight(1f)) {}
+                            RealGridButton("****", "Ingresos", Icons.Default.Lock, Color(0xFF00C853), Modifier.weight(1f)) {
                                 showMonthlyIncome = !showMonthlyIncome
                             }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            RealGridButton("1", "TOTAL", "👥", PrimaryTurquoise, Modifier.weight(1f)) { onTabSelected(2) }
-                            RealGridButton("1", "Nuevos (Mes)", "👤+", Color(0xFFFFC107), Modifier.weight(1f)) {}
+                            RealGridButton("1", "TOTAL", Icons.Default.Person, PrimaryTurquoise, Modifier.weight(1f)) { onTabSelected(2) }
+                            RealGridButton("1", "Nuevos (Mes)", Icons.Default.Star, Color(0xFFFFC107), Modifier.weight(1f)) {}
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            RealGridButton("1", "DEUDORES", "⚠️", Color.Red, Modifier.weight(1f)) { onTabSelected(2) }
-                            RealGridButton("0", "ACTIVOS", "👤", Color(0xFF00C853), Modifier.weight(1f)) { onTabSelected(2) }
+                            RealGridButton("1", "DEUDORES", Icons.Default.Warning, Color.Red, Modifier.weight(1f)) { onTabSelected(2) }
+                            RealGridButton("0", "ACTIVOS", Icons.Default.Person, Color(0xFF00C853), Modifier.weight(1f)) { onTabSelected(2) }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            RealGridButton("0", "Asistencia Hoy", "📋", Color(0xFFAB47BC), Modifier.weight(1f)) {}
-                            RealGridButton("HORARIOS", "Gestión", "⏰", Color(0xFFEC407A), Modifier.weight(1f)) {}
+                            RealGridButton("0", "Asistencia Hoy", Icons.Default.CheckCircle, Color(0xFFAB47BC), Modifier.weight(1f)) {}
+                            RealGridButton("HORARIOS", "Gestión", Icons.Default.DateRange, Color(0xFFEC407A), Modifier.weight(1f)) {}
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            RealGridButton("ASISTENCIA", "QR Admin", "📱", PrimaryTurquoise, Modifier.weight(1f)) {}
-                            RealGridButton("SCAN", "Asistencia", "🔍", PrimaryTurquoise, Modifier.weight(1f)) {}
+                            RealGridButton("ASISTENCIA", "QR Admin", Icons.Default.Info, PrimaryTurquoise, Modifier.weight(1f)) {}
+                            RealGridButton("SCAN", "Asistencia", Icons.Default.Search, PrimaryTurquoise, Modifier.weight(1f)) {}
                         }
                     }
                 }
@@ -178,7 +180,7 @@ fun RealAdminDashboardView(
 fun RealGridButton(
     title: String,
     subtitle: String,
-    iconEmoji: String,
+    iconVector: ImageVector,
     color: Color,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
@@ -199,7 +201,7 @@ fun RealGridButton(
                 modifier = Modifier.size(36.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(text = iconEmoji, fontSize = 16.sp)
+                    Icon(imageVector = iconVector, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
                 }
             }
             Spacer(modifier = Modifier.width(10.dp))
@@ -241,8 +243,8 @@ fun RealPublicStoreView(onTabSelected: (Int) -> Unit) {
         ) {
             Text(text = "NUTRICIÓN Y SUPLEMENTOS", fontWeight = FontWeight.Black, fontSize = 18.sp, color = Color.Black)
             Row {
-                Text(text = "🔍", fontSize = 20.sp, modifier = Modifier.padding(end = 12.dp))
-                Text(text = "🛒 (1)", fontSize = 20.sp)
+                Icon(Icons.Default.Search, null, tint = Color.Black, modifier = Modifier.size(24.dp).padding(end = 8.dp))
+                Icon(Icons.Default.ShoppingCart, null, tint = Color.Black, modifier = Modifier.size(24.dp))
             }
         }
 
@@ -344,11 +346,15 @@ fun RealProductGridCard(product: StoreProductItem) {
                     modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
                 ) {
                     Surface(color = Color.Red, shape = CircleShape, modifier = Modifier.size(24.dp)) {
-                        Box(contentAlignment = Alignment.Center) { Text("🗑️", fontSize = 10.sp) }
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Delete, null, tint = Color.White, modifier = Modifier.size(12.dp))
+                        }
                     }
                     Spacer(modifier = Modifier.width(4.dp))
                     Surface(color = Color.Black, shape = CircleShape, modifier = Modifier.size(24.dp)) {
-                        Box(contentAlignment = Alignment.Center) { Text("✏️", fontSize = 10.sp) }
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Edit, null, tint = Color.White, modifier = Modifier.size(12.dp))
+                        }
                     }
                 }
 
@@ -379,11 +385,15 @@ fun RealProductGridCard(product: StoreProductItem) {
                     Text(text = product.price, fontWeight = FontWeight.Black, fontSize = 15.sp, color = Color.Black)
                     Row {
                         Surface(color = Color(0xFF25D366), shape = CircleShape, modifier = Modifier.size(32.dp)) {
-                            Box(contentAlignment = Alignment.Center) { Text("💬", fontSize = 14.sp) }
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Email, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                            }
                         }
                         Spacer(modifier = Modifier.width(4.dp))
                         Surface(color = Color(0xFFFFD600), shape = CircleShape, modifier = Modifier.size(32.dp)) {
-                            Box(contentAlignment = Alignment.Center) { Text("🛒", fontSize = 14.sp) }
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.ShoppingCart, null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                            }
                         }
                     }
                 }
@@ -416,7 +426,9 @@ fun RealMembersManagementView(onTabSelected: (Int) -> Unit) {
                 shape = CircleShape,
                 modifier = Modifier.size(36.dp).clickable { onTabSelected(0) }
             ) {
-                Box(contentAlignment = Alignment.Center) { Text("❮", color = Color.Black, fontWeight = FontWeight.Bold) }
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.ArrowBack, null, tint = Color.Black)
+                }
             }
             Spacer(modifier = Modifier.width(12.dp))
             Text(text = "Gestión de Alumno", fontSize = 22.sp, fontWeight = FontWeight.Black, color = TextWhite)
@@ -427,10 +439,10 @@ fun RealMembersManagementView(onTabSelected: (Int) -> Unit) {
             modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            FilterStatBlock("1", "TOTAL", "👥", PrimaryTurquoise, selectedFilter == "ALL", Modifier.weight(1f)) { selectedFilter = "ALL" }
-            FilterStatBlock("0", "ACTIVOS", "👤", Color(0xFF00C853), selectedFilter == "ACTIVE", Modifier.weight(1f)) { selectedFilter = "ACTIVE" }
-            FilterStatBlock("1", "DEUDORES", "⚠️", Color.Red, selectedFilter == "DEBTOR", Modifier.weight(1f)) { selectedFilter = "DEBTOR" }
-            FilterStatBlock("0", "DESERTORES", "🚫", Color(0xFFFF9800), selectedFilter == "DROPOUT", Modifier.weight(1f)) { selectedFilter = "DROPOUT" }
+            FilterStatBlock("1", "TOTAL", Icons.Default.Person, PrimaryTurquoise, selectedFilter == "ALL", Modifier.weight(1f)) { selectedFilter = "ALL" }
+            FilterStatBlock("0", "ACTIVOS", Icons.Default.Person, Color(0xFF00C853), selectedFilter == "ACTIVE", Modifier.weight(1f)) { selectedFilter = "ACTIVE" }
+            FilterStatBlock("1", "DEUDORES", Icons.Default.Warning, Color.Red, selectedFilter == "DEBTOR", Modifier.weight(1f)) { selectedFilter = "DEBTOR" }
+            FilterStatBlock("0", "DESERTORES", Icons.Default.Close, Color(0xFFFF9800), selectedFilter == "DROPOUT", Modifier.weight(1f)) { selectedFilter = "DROPOUT" }
         }
 
         // CAMPO DE BÚSQUEDA
@@ -438,6 +450,7 @@ fun RealMembersManagementView(onTabSelected: (Int) -> Unit) {
             value = searchQuery,
             onValueChange = { searchQuery = it },
             placeholder = { Text("Buscar Alumnos...", color = TextGray, fontSize = 13.sp) },
+            leadingIcon = { Icon(Icons.Default.Search, null, tint = PrimaryTurquoise) },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = TextWhite,
                 unfocusedTextColor = TextWhite,
@@ -484,15 +497,21 @@ fun RealMembersManagementView(onTabSelected: (Int) -> Unit) {
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(color = PrimaryTurquoise, shape = RoundedCornerShape(6.dp), modifier = Modifier.size(32.dp)) {
-                        Box(contentAlignment = Alignment.Center) { Text("💬", fontSize = 14.sp) }
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Email, null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                        }
                     }
                     Spacer(modifier = Modifier.width(6.dp))
                     Surface(color = PrimaryTurquoise, shape = RoundedCornerShape(6.dp), modifier = Modifier.size(32.dp)) {
-                        Box(contentAlignment = Alignment.Center) { Text("🏋️", fontSize = 14.sp) }
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Star, null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                        }
                     }
                     Spacer(modifier = Modifier.width(6.dp))
                     Surface(color = Color.Red, shape = RoundedCornerShape(6.dp), modifier = Modifier.size(32.dp)) {
-                        Box(contentAlignment = Alignment.Center) { Text("🗑️", fontSize = 14.sp) }
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Delete, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        }
                     }
                 }
             }
@@ -504,7 +523,7 @@ fun RealMembersManagementView(onTabSelected: (Int) -> Unit) {
 fun FilterStatBlock(
     count: String,
     label: String,
-    iconEmoji: String,
+    iconVector: ImageVector,
     color: Color,
     isSelected: Boolean,
     modifier: Modifier = Modifier,
@@ -520,7 +539,7 @@ fun FilterStatBlock(
             modifier = Modifier.padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = iconEmoji, fontSize = 16.sp)
+            Icon(imageVector = iconVector, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.height(2.dp))
             Text(text = count, fontWeight = FontWeight.Black, color = TextWhite, fontSize = 16.sp)
             Text(text = label, fontSize = 8.sp, color = TextGray, fontWeight = FontWeight.Bold)
