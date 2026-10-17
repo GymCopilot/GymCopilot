@@ -45,6 +45,24 @@ fun RealAdminDashboardView(
     var showMonthlyIncome by remember { mutableStateOf(false) }
     var broadcastMsg by remember { mutableStateOf("Hoy abrimos a las 8:00 AM") }
     var isGymOpen by remember { mutableStateOf(true) }
+    var showSubscriptionPlans by remember { mutableStateOf(false) }
+    var plansList by remember {
+        mutableStateOf(
+            listOf(
+                SubscriptionPlan(id = "1", name = "Mensual", price = 40.0, durationDays = 30, description = "Pase libre mensual de entrenamiento")
+            )
+        )
+    }
+
+    if (showSubscriptionPlans) {
+        SubscriptionPlansSharedScreen(
+            onBack = { showSubscriptionPlans = false },
+            plans = plansList,
+            onAddPlan = { newPlan -> plansList = plansList + newPlan },
+            onDeletePlan = { planId -> plansList = plansList.filter { it.id != planId } }
+        )
+        return
+    }
 
     when (currentTab) {
         0 -> { // PANEL PRINCIPAL ADMIN
@@ -153,7 +171,9 @@ fun RealAdminDashboardView(
                                 iconPainter = painterResource(Res.drawable.ic_plans),
                                 color = PrimaryTurquoise,
                                 modifier = Modifier.weight(1f)
-                            ) {}
+                            ) {
+                                showSubscriptionPlans = true
+                            }
                             RealGridButton(
                                 title = if (showMonthlyIncome) "$35.000" else "****",
                                 subtitle = "Ingresos",
@@ -471,8 +491,8 @@ fun RealMembersManagementView(onTabSelected: (Int) -> Unit) {
             modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            FilterStatBlock("1", "TOTAL", Icons.Default.Person, PrimaryTurquoise, selectedFilter == "ALL", Modifier.weight(1f)) { selectedFilter = "ALL" }
-            FilterStatBlock("0", "ACTIVOS", Icons.Default.Person, Color(0xFF00C853), selectedFilter == "ACTIVE", Modifier.weight(1f)) { selectedFilter = "ACTIVE" }
+            FilterStatBlock("1", "TOTAL", painterResource(Res.drawable.person), PrimaryTurquoise, selectedFilter == "ALL", Modifier.weight(1f)) { selectedFilter = "ALL" }
+            FilterStatBlock("0", "ACTIVOS", painterResource(Res.drawable.person), Color(0xFF00C853), selectedFilter == "ACTIVE", Modifier.weight(1f)) { selectedFilter = "ACTIVE" }
             FilterStatBlock("1", "DEUDORES", painterResource(Res.drawable.warning), Color.Red, selectedFilter == "DEBTOR", Modifier.weight(1f)) { selectedFilter = "DEBTOR" }
             FilterStatBlock("0", "DESERTORES", Icons.Default.Close, Color(0xFFFF9800), selectedFilter == "DROPOUT", Modifier.weight(1f)) { selectedFilter = "DROPOUT" }
         }
