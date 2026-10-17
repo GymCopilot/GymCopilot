@@ -66,8 +66,14 @@ fun RealAdminDashboardView(
             )
         )
     }
-    var professorsList by remember { mutableStateOf<List<Professor>>(emptyList()) }
-    var currentSubScreen by remember { mutableStateOf<String?>(null) } // null, "add_member", "detail_{email}"
+    var professorsList by remember {
+        mutableStateOf(
+            listOf(
+                Professor(id = "1", firstName = "aldio", lastName = "Bonzi", email = "aldio@gmail.com", specialty = "Musculación")
+            )
+        )
+    }
+    var currentSubScreen by remember { mutableStateOf<String?>(null) } // null, "add_member", "detail_{email}", "add_professor"
 
     if (showSubscriptionPlans) {
         SubscriptionPlansSharedScreen(
@@ -108,6 +114,14 @@ fun RealAdminDashboardView(
         }
     }
 
+    if (currentSubScreen == "add_professor") {
+        AddProfessorSharedScreen(
+            onBack = { currentSubScreen = null },
+            onSave = { newProf -> professorsList = professorsList + newProf }
+        )
+        return
+    }
+
     if (currentTab == 2) {
         MembersSharedScreen(
             onBack = { onTabSelected(0) },
@@ -117,6 +131,18 @@ fun RealAdminDashboardView(
             onAddMemberClick = { currentSubScreen = "add_member" },
             onMemberClick = { email -> currentSubScreen = "detail_$email" },
             onDeleteMember = { email -> membersList = membersList.filter { it.email != email } },
+            onChatClick = { email -> }
+        )
+        return
+    }
+
+    if (currentTab == 3) {
+        ManageProfessorsSharedScreen(
+            onBack = { onTabSelected(0) },
+            professors = professorsList,
+            onAddProfessorClick = { currentSubScreen = "add_professor" },
+            onEditProfessor = { id -> },
+            onDeleteProfessor = { id -> professorsList = professorsList.filter { it.id != id } },
             onChatClick = { email -> }
         )
         return
@@ -245,7 +271,7 @@ fun RealAdminDashboardView(
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             RealGridButton("${membersList.size}", "TOTAL", painterResource(Res.drawable.ic_clients), PrimaryTurquoise, Modifier.weight(1f)) { onTabSelected(2) }
-                            RealGridButton("1", "Nuevos (Mes)", painterResource(Res.drawable.ic_professors), Color(0xFFFFC107), Modifier.weight(1f)) {}
+                            RealGridButton("${professorsList.size}", "PROFESORES", painterResource(Res.drawable.ic_professors), Color(0xFFFFC107), Modifier.weight(1f)) { onTabSelected(3) }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             RealGridButton("${membersList.count { it.membershipStatus == "DEUDOR" }}", "DEUDORES", painterResource(Res.drawable.warning), Color.Red, Modifier.weight(1f)) { onTabSelected(2) }
@@ -274,7 +300,14 @@ fun RealAdminDashboardView(
             onDeleteMember = { email -> membersList = membersList.filter { it.email != email } },
             onChatClick = { email -> }
         )
-        3 -> RealProfessorsManagementView()
+        3 -> ManageProfessorsSharedScreen(
+            onBack = { onTabSelected(0) },
+            professors = professorsList,
+            onAddProfessorClick = { currentSubScreen = "add_professor" },
+            onEditProfessor = { id -> },
+            onDeleteProfessor = { id -> professorsList = professorsList.filter { it.id != id } },
+            onChatClick = { email -> }
+        )
         else -> FullSettingsSection()
     }
 }
