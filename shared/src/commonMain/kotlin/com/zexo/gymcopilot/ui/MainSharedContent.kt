@@ -15,13 +15,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
+import gymcopilot.shared.generated.resources.*
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.painterResource
 
 enum class AppScreenState {
     SPLASH,
@@ -406,15 +408,12 @@ fun RoleNavigationBar(
     ) {
         items.forEachIndexed { index, label ->
             val isSelected = selectedTab == index
-            val iconVector: ImageVector = when (label) {
-                "Home" -> Icons.Default.Home
-                "Store", "Tienda" -> Icons.Default.ShoppingCart
-                "Clientes", "Alumnos" -> Icons.Default.Person
-                "Profesores" -> Icons.Default.Person
-                "Horarios", "Clases" -> Icons.Default.DateRange
-                "Rutinas" -> Icons.Default.Star
-                "Chat" -> Icons.Default.Email
-                else -> Icons.Default.Settings
+            val iconPainter: Painter = when (label) {
+                "Home" -> painterResource(Res.drawable.ic_home)
+                "Store", "Tienda" -> painterResource(Res.drawable.ic_plans)
+                "Clientes", "Alumnos" -> painterResource(Res.drawable.ic_clients)
+                "Profesores" -> painterResource(Res.drawable.ic_professors)
+                else -> painterResource(Res.drawable.ic_home)
             }
 
             Box(
@@ -431,7 +430,7 @@ fun RoleNavigationBar(
                     verticalArrangement = Arrangement.Center
                 ) {
                     Icon(
-                        imageVector = iconVector,
+                        painter = iconPainter,
                         contentDescription = label,
                         tint = if (isSelected) PrimaryTurquoise else TextGray,
                         modifier = Modifier.size(20.dp)
