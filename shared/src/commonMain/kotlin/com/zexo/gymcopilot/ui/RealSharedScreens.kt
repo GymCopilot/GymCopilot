@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -27,6 +28,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.model.*
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
+import gymcopilot.shared.generated.resources.*
+import org.jetbrains.compose.resources.painterResource
 
 // ============================================================================
 // VISTA REAL DEL PANEL ADMINISTRADOR (IDÉNTICA A ANDROID CON ICONOS VECTORIALES)
@@ -140,30 +143,43 @@ fun RealAdminDashboardView(
                     }
                 }
 
-                // GRILLA DE BOTONES Y MÉTRICAS REALES CON ICONOS VECTORIALES
+                // GRILLA DE BOTONES Y MÉTRICAS REALES CON ICONOS VECTORIALES EXACTOS
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            RealGridButton("PLANES", "Suscripciones", Icons.Default.Star, PrimaryTurquoise, Modifier.weight(1f)) {}
-                            RealGridButton("****", "Ingresos", Icons.Default.Lock, Color(0xFF00C853), Modifier.weight(1f)) {
+                            RealGridButton(
+                                title = "PLANES",
+                                subtitle = "Suscripciones",
+                                iconPainter = painterResource(Res.drawable.ic_plans),
+                                color = PrimaryTurquoise,
+                                modifier = Modifier.weight(1f)
+                            ) {}
+                            RealGridButton(
+                                title = if (showMonthlyIncome) "$35.000" else "****",
+                                subtitle = "Ingresos",
+                                iconPainter = painterResource(Res.drawable.ic_wallet),
+                                color = Color(0xFF00C853),
+                                modifier = Modifier.weight(1f),
+                                trailingIconPainter = if (showMonthlyIncome) painterResource(Res.drawable.ic_visibility_on) else painterResource(Res.drawable.ic_visibility_off)
+                            ) {
                                 showMonthlyIncome = !showMonthlyIncome
                             }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            RealGridButton("1", "TOTAL", Icons.Default.Person, PrimaryTurquoise, Modifier.weight(1f)) { onTabSelected(2) }
-                            RealGridButton("1", "Nuevos (Mes)", Icons.Default.Star, Color(0xFFFFC107), Modifier.weight(1f)) {}
+                            RealGridButton("1", "TOTAL", painterResource(Res.drawable.ic_clients), PrimaryTurquoise, Modifier.weight(1f)) { onTabSelected(2) }
+                            RealGridButton("1", "Nuevos (Mes)", painterResource(Res.drawable.ic_professors), Color(0xFFFFC107), Modifier.weight(1f)) {}
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            RealGridButton("1", "DEUDORES", Icons.Default.Warning, Color.Red, Modifier.weight(1f)) { onTabSelected(2) }
-                            RealGridButton("0", "ACTIVOS", Icons.Default.Person, Color(0xFF00C853), Modifier.weight(1f)) { onTabSelected(2) }
+                            RealGridButton("1", "DEUDORES", painterResource(Res.drawable.ic_fact_check), Color.Red, Modifier.weight(1f)) { onTabSelected(2) }
+                            RealGridButton("0", "ACTIVOS", painterResource(Res.drawable.ic_clients), Color(0xFF00C853), Modifier.weight(1f)) { onTabSelected(2) }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            RealGridButton("0", "Asistencia Hoy", Icons.Default.CheckCircle, Color(0xFFAB47BC), Modifier.weight(1f)) {}
-                            RealGridButton("HORARIOS", "Gestión", Icons.Default.DateRange, Color(0xFFEC407A), Modifier.weight(1f)) {}
+                            RealGridButton("0", "Asistencia Hoy", painterResource(Res.drawable.ic_fact_check), Color(0xFFAB47BC), Modifier.weight(1f)) {}
+                            RealGridButton("HORARIOS", "Gestión", painterResource(Res.drawable.ic_schedule), Color(0xFFEC407A), Modifier.weight(1f)) {}
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            RealGridButton("ASISTENCIA", "QR Admin", Icons.Default.Info, PrimaryTurquoise, Modifier.weight(1f)) {}
-                            RealGridButton("SCAN", "Asistencia", Icons.Default.Search, PrimaryTurquoise, Modifier.weight(1f)) {}
+                            RealGridButton("ASISTENCIA", "QR Admin", painterResource(Res.drawable.ic_qr), PrimaryTurquoise, Modifier.weight(1f)) {}
+                            RealGridButton("SCAN", "Asistencia", painterResource(Res.drawable.ic_scan), PrimaryTurquoise, Modifier.weight(1f)) {}
                         }
                     }
                 }
@@ -180,9 +196,10 @@ fun RealAdminDashboardView(
 fun RealGridButton(
     title: String,
     subtitle: String,
-    iconVector: ImageVector,
+    iconPainter: Painter,
     color: Color,
     modifier: Modifier = Modifier,
+    trailingIconPainter: Painter? = null,
     onClick: () -> Unit
 ) {
     Card(
@@ -193,21 +210,36 @@ fun RealGridButton(
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Surface(
-                color = color.copy(alpha = 0.15f),
-                shape = CircleShape,
-                modifier = Modifier.size(36.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(imageVector = iconVector, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
+                Surface(
+                    color = color.copy(alpha = 0.15f),
+                    shape = CircleShape,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(painter = iconPainter, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
+                    }
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Text(text = title, fontWeight = FontWeight.Bold, color = TextWhite, fontSize = 15.sp)
+                    Text(text = subtitle, fontSize = 10.sp, color = TextGray)
                 }
             }
-            Spacer(modifier = Modifier.width(10.dp))
-            Column {
-                Text(text = title, fontWeight = FontWeight.Bold, color = TextWhite, fontSize = 15.sp)
-                Text(text = subtitle, fontSize = 10.sp, color = TextGray)
+
+            if (trailingIconPainter != null) {
+                Icon(
+                    painter = trailingIconPainter,
+                    contentDescription = null,
+                    tint = TextGray,
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }
