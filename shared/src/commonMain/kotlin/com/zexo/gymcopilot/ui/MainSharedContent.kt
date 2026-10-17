@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -409,11 +407,12 @@ fun RoleNavigationBar(
         items.forEachIndexed { index, label ->
             val isSelected = selectedTab == index
             val iconPainter: Painter = when (label) {
-                "Home" -> painterResource(Res.drawable.ic_home)
-                "Store", "Tienda" -> painterResource(Res.drawable.ic_plans)
-                "Clientes", "Alumnos" -> painterResource(Res.drawable.ic_clients)
-                "Profesores" -> painterResource(Res.drawable.ic_professors)
-                else -> painterResource(Res.drawable.ic_home)
+                "Home" -> painterResource(Res.drawable.dashboard)
+                "Store", "Tienda" -> painterResource(Res.drawable.storefront)
+                "Clientes", "Alumnos" -> painterResource(Res.drawable.groups)
+                "Profesores" -> painterResource(Res.drawable.assistant)
+                "Config" -> painterResource(Res.drawable.settings)
+                else -> painterResource(Res.drawable.dashboard)
             }
 
             Box(
