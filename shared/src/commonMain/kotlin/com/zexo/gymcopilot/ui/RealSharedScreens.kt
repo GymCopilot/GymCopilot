@@ -20,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -53,6 +52,22 @@ fun RealAdminDashboardView(
             )
         )
     }
+    var membersList by remember {
+        mutableStateOf(
+            listOf(
+                Member(
+                    firstName = "Pedro",
+                    lastName = "Picapiedras",
+                    email = "pe@gmail.com",
+                    phone = "123456789",
+                    membershipStatus = "DEUDOR",
+                    planType = "Monthly"
+                )
+            )
+        )
+    }
+    var professorsList by remember { mutableStateOf<List<Professor>>(emptyList()) }
+    var currentSubScreen by remember { mutableStateOf<String?>(null) } // null, "add_member", "detail_{email}"
 
     if (showSubscriptionPlans) {
         SubscriptionPlansSharedScreen(
@@ -60,6 +75,49 @@ fun RealAdminDashboardView(
             plans = plansList,
             onAddPlan = { newPlan -> plansList = plansList + newPlan },
             onDeletePlan = { planId -> plansList = plansList.filter { it.id != planId } }
+        )
+        return
+    }
+
+    if (currentSubScreen == "add_member") {
+        AddMemberSharedScreen(
+            onBack = { currentSubScreen = null },
+            plans = plansList,
+            professors = professorsList,
+            onSave = { newMember -> membersList = membersList + newMember }
+        )
+        return
+    }
+
+    if (currentSubScreen?.startsWith("detail_") == true) {
+        val email = currentSubScreen!!.substringAfter("detail_")
+        val member = membersList.find { it.email == email } ?: membersList.firstOrNull()
+        if (member != null) {
+            MemberDetailSharedScreen(
+                member = member,
+                onBack = { currentSubScreen = null },
+                onDelete = {
+                    membersList = membersList.filter { it.email != member.email }
+                    currentSubScreen = null
+                },
+                onUpdate = { updated ->
+                    membersList = membersList.map { if (it.email == updated.email) updated else it }
+                }
+            )
+            return
+        }
+    }
+
+    if (currentTab == 2) {
+        MembersSharedScreen(
+            onBack = { onTabSelected(0) },
+            members = membersList,
+            professors = professorsList,
+            plans = plansList,
+            onAddMemberClick = { currentSubScreen = "add_member" },
+            onMemberClick = { email -> currentSubScreen = "detail_$email" },
+            onDeleteMember = { email -> membersList = membersList.filter { it.email != email } },
+            onChatClick = { email -> }
         )
         return
     }
@@ -186,12 +244,12 @@ fun RealAdminDashboardView(
                             }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            RealGridButton("1", "TOTAL", painterResource(Res.drawable.ic_clients), PrimaryTurquoise, Modifier.weight(1f)) { onTabSelected(2) }
+                            RealGridButton("${membersList.size}", "TOTAL", painterResource(Res.drawable.ic_clients), PrimaryTurquoise, Modifier.weight(1f)) { onTabSelected(2) }
                             RealGridButton("1", "Nuevos (Mes)", painterResource(Res.drawable.ic_professors), Color(0xFFFFC107), Modifier.weight(1f)) {}
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            RealGridButton("1", "DEUDORES", painterResource(Res.drawable.warning), Color.Red, Modifier.weight(1f)) { onTabSelected(2) }
-                            RealGridButton("0", "ACTIVOS", painterResource(Res.drawable.person), Color(0xFF00C853), Modifier.weight(1f)) { onTabSelected(2) }
+                            RealGridButton("${membersList.count { it.membershipStatus == "DEUDOR" }}", "DEUDORES", painterResource(Res.drawable.warning), Color.Red, Modifier.weight(1f)) { onTabSelected(2) }
+                            RealGridButton("${membersList.count { it.membershipStatus == "ACTIVO" }}", "ACTIVOS", painterResource(Res.drawable.person), Color(0xFF00C853), Modifier.weight(1f)) { onTabSelected(2) }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             RealGridButton("0", "Asistencia Hoy", painterResource(Res.drawable.ic_fact_check), Color(0xFFAB47BC), Modifier.weight(1f)) {}
@@ -206,7 +264,16 @@ fun RealAdminDashboardView(
             }
         }
         1 -> RealPublicStoreView(onTabSelected = onTabSelected)
-        2 -> RealMembersManagementView(onTabSelected = onTabSelected)
+        2 -> MembersSharedScreen(
+            onBack = { onTabSelected(0) },
+            members = membersList,
+            professors = professorsList,
+            plans = plansList,
+            onAddMemberClick = { currentSubScreen = "add_member" },
+            onMemberClick = { email -> currentSubScreen = "detail_$email" },
+            onDeleteMember = { email -> membersList = membersList.filter { it.email != email } },
+            onChatClick = { email -> }
+        )
         3 -> RealProfessorsManagementView()
         else -> FullSettingsSection()
     }
@@ -450,180 +517,6 @@ fun RealProductGridCard(product: StoreProductItem) {
                     }
                 }
             }
-        }
-    }
-}
-
-// ============================================================================
-// VISTA REAL DE GESTIÓN DE ALUMNOS (IDÉNTICA A ANDROID)
-// ============================================================================
-
-@Composable
-fun RealMembersManagementView(onTabSelected: (Int) -> Unit) {
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedFilter by remember { mutableStateOf("ALL") }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = 12.dp, bottom = 80.dp)
-    ) {
-        // BARRA DE TÍTULO
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
-        ) {
-            Surface(
-                color = PrimaryTurquoise,
-                shape = CircleShape,
-                modifier = Modifier.size(36.dp).clickable { onTabSelected(0) }
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.ArrowBack, null, tint = Color.Black)
-                }
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(text = "Gestión de Alumno", fontSize = 22.sp, fontWeight = FontWeight.Black, color = TextWhite)
-        }
-
-        // BLOQUES DE FILTRO SUPERIOR
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            FilterStatBlock("1", "TOTAL", painterResource(Res.drawable.person), PrimaryTurquoise, selectedFilter == "ALL", Modifier.weight(1f)) { selectedFilter = "ALL" }
-            FilterStatBlock("0", "ACTIVOS", painterResource(Res.drawable.person), Color(0xFF00C853), selectedFilter == "ACTIVE", Modifier.weight(1f)) { selectedFilter = "ACTIVE" }
-            FilterStatBlock("1", "DEUDORES", painterResource(Res.drawable.warning), Color.Red, selectedFilter == "DEBTOR", Modifier.weight(1f)) { selectedFilter = "DEBTOR" }
-            FilterStatBlock("0", "DESERTORES", Icons.Default.Close, Color(0xFFFF9800), selectedFilter == "DROPOUT", Modifier.weight(1f)) { selectedFilter = "DROPOUT" }
-        }
-
-        // CAMPO DE BÚSQUEDA
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            placeholder = { Text("Buscar Alumnos...", color = TextGray, fontSize = 13.sp) },
-            leadingIcon = { Icon(Icons.Default.Search, null, tint = PrimaryTurquoise) },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = TextWhite,
-                unfocusedTextColor = TextWhite,
-                focusedContainerColor = Color(0xFF001F29),
-                unfocusedContainerColor = Color(0xFF001F29),
-                focusedBorderColor = PrimaryTurquoise,
-                unfocusedBorderColor = Color.Transparent
-            ),
-            shape = RoundedCornerShape(10.dp),
-            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
-        )
-
-        Text(text = "Profesores", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-        Text(text = "Sin profesores registrados", color = TextGray, fontSize = 12.sp, modifier = Modifier.padding(bottom = 12.dp))
-
-        // FILA DE ALUMNO REAL (IDÉNTICA)
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
-            shape = RoundedCornerShape(12.dp),
-            border = ButtonDefaults.outlinedButtonBorder(enabled = true),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        color = Color(0xFF3E2723),
-                        shape = CircleShape,
-                        modifier = Modifier.size(42.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(text = "R", color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(text = "r t", fontWeight = FontWeight.Bold, color = TextWhite, fontSize = 16.sp)
-                        Text(text = "DEUDOR", fontWeight = FontWeight.Bold, color = Color.Red, fontSize = 11.sp)
-                    }
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(color = PrimaryTurquoise, shape = RoundedCornerShape(6.dp), modifier = Modifier.size(32.dp)) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Email, null, tint = Color.Black, modifier = Modifier.size(16.dp))
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Surface(color = PrimaryTurquoise, shape = RoundedCornerShape(6.dp), modifier = Modifier.size(32.dp)) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Star, null, tint = Color.Black, modifier = Modifier.size(16.dp))
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Surface(color = Color.Red, shape = RoundedCornerShape(6.dp), modifier = Modifier.size(32.dp)) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Delete, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun FilterStatBlock(
-    count: String,
-    label: String,
-    iconPainter: Painter,
-    color: Color,
-    isSelected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
-        shape = RoundedCornerShape(8.dp),
-        border = if (isSelected) ButtonDefaults.outlinedButtonBorder(enabled = true) else null,
-        modifier = modifier.clickable { onClick() }
-    ) {
-        Column(
-            modifier = Modifier.padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(painter = iconPainter, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(text = count, fontWeight = FontWeight.Black, color = TextWhite, fontSize = 16.sp)
-            Text(text = label, fontSize = 8.sp, color = TextGray, fontWeight = FontWeight.Bold)
-        }
-    }
-}
-
-// Overload for ImageVector
-@Composable
-fun FilterStatBlock(
-    count: String,
-    label: String,
-    iconVector: ImageVector,
-    color: Color,
-    isSelected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
-        shape = RoundedCornerShape(8.dp),
-        border = if (isSelected) ButtonDefaults.outlinedButtonBorder(enabled = true) else null,
-        modifier = modifier.clickable { onClick() }
-    ) {
-        Column(
-            modifier = Modifier.padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(imageVector = iconVector, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(text = count, fontWeight = FontWeight.Black, color = TextWhite, fontSize = 16.sp)
-            Text(text = label, fontSize = 8.sp, color = TextGray, fontWeight = FontWeight.Bold)
         }
     }
 }
