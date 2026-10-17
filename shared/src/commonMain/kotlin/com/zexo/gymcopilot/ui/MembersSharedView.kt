@@ -512,6 +512,18 @@ fun MemberDetailSharedScreen(
     onDelete: () -> Unit,
     onUpdate: (Member) -> Unit
 ) {
+    var isEditing by remember { mutableStateOf(false) }
+    var firstName by remember { mutableStateOf(member.firstName) }
+    var lastName by remember { mutableStateOf(member.lastName) }
+    var phone by remember { mutableStateOf(member.phone) }
+    var address by remember { mutableStateOf(member.address) }
+    var weight by remember { mutableStateOf(member.weight) }
+    var height by remember { mutableStateOf(member.height) }
+    var planType by remember { mutableStateOf(member.planType) }
+    var routine by remember { mutableStateOf(member.routine) }
+    var assignedTrainer by remember { mutableStateOf(member.assignedTrainer) }
+    var notes by remember { mutableStateOf(member.notes) }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -534,7 +546,7 @@ fun MemberDetailSharedScreen(
                             shape = CircleShape,
                             modifier = Modifier
                                 .size(36.dp)
-                                .clickable { onBack() }
+                                .clickable { if (isEditing) isEditing = false else onBack() }
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.Black)
@@ -549,12 +561,39 @@ fun MemberDetailSharedScreen(
                         )
                     }
 
-                    Row {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = { }) {
                             Icon(Icons.Default.Info, contentDescription = "QR", tint = PrimaryTurquoise)
                         }
                         IconButton(onClick = onDelete) {
                             Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = Color.Red)
+                        }
+                        IconButton(onClick = {
+                            if (isEditing) {
+                                val updated = member.copy(
+                                    firstName = firstName,
+                                    lastName = lastName,
+                                    phone = phone,
+                                    address = address,
+                                    weight = weight,
+                                    height = height,
+                                    planType = planType,
+                                    routine = routine,
+                                    assignedTrainer = assignedTrainer,
+                                    notes = notes
+                                )
+                                onUpdate(updated)
+                                isEditing = false
+                            } else {
+                                isEditing = true
+                            }
+                        }) {
+                            Icon(
+                                imageVector = if (isEditing) Icons.Default.Check else Icons.Default.Edit,
+                                contentDescription = if (isEditing) "Guardar" else "Editar",
+                                tint = PrimaryTurquoise,
+                                modifier = Modifier.size(24.dp)
+                            )
                         }
                     }
                 }
@@ -585,7 +624,18 @@ fun MemberDetailSharedScreen(
                             Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(56.dp), tint = TextGray)
                         }
                         Spacer(Modifier.height(12.dp))
-                        Text(member.fullName, color = TextWhite, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                        if (isEditing) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Box(modifier = Modifier.weight(1f)) {
+                                    CustomSharedTextField(value = firstName, onValueChange = { firstName = it }, label = "Nombres")
+                                }
+                                Box(modifier = Modifier.weight(1f)) {
+                                    CustomSharedTextField(value = lastName, onValueChange = { lastName = it }, label = "Apellido")
+                                }
+                            }
+                        } else {
+                            Text(member.fullName, color = TextWhite, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                        }
                         Text(member.email, color = TextGray, fontSize = 13.sp)
                     }
                 }
@@ -593,15 +643,30 @@ fun MemberDetailSharedScreen(
                 // DATOS PERSONALES
                 item {
                     DetailSharedSection(title = "Datos Personales", icon = Icons.Default.Person) {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            InfoSharedRow(icon = Icons.Default.Phone, label = "WhatsApp/Tel:", value = member.phone.ifEmpty { "No especificado" })
-                            InfoSharedRow(icon = Icons.Default.LocationOn, label = "Dirección:", value = member.address.ifEmpty { "No especificada" })
-                            Row(modifier = Modifier.fillMaxWidth()) {
-                                Box(modifier = Modifier.weight(1f)) {
-                                    InfoSharedRow(icon = Icons.Default.Star, label = "Peso:", value = if (member.weight.isNotEmpty()) "${member.weight} kg" else "N/A")
+                        if (isEditing) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                CustomSharedTextField(value = phone, onValueChange = { phone = it }, label = "WhatsApp/Tel")
+                                CustomSharedTextField(value = address, onValueChange = { address = it }, label = "Dirección")
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        CustomSharedTextField(value = weight, onValueChange = { weight = it }, label = "Peso (kg)")
+                                    }
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        CustomSharedTextField(value = height, onValueChange = { height = it }, label = "Altura (cm)")
+                                    }
                                 }
-                                Box(modifier = Modifier.weight(1f)) {
-                                    InfoSharedRow(icon = Icons.Default.Star, label = "Altura:", value = if (member.height.isNotEmpty()) "${member.height} cm" else "N/A")
+                            }
+                        } else {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                InfoSharedRow(icon = Icons.Default.Phone, label = "WhatsApp/Tel:", value = member.phone.ifEmpty { "No especificado" })
+                                InfoSharedRow(icon = Icons.Default.LocationOn, label = "Dirección:", value = member.address.ifEmpty { "No especificada" })
+                                Row(modifier = Modifier.fillMaxWidth()) {
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        InfoSharedRow(icon = Icons.Default.Star, label = "Peso:", value = if (member.weight.isNotEmpty()) "${member.weight} kg" else "N/A")
+                                    }
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        InfoSharedRow(icon = Icons.Default.Star, label = "Altura:", value = if (member.height.isNotEmpty()) "${member.height} cm" else "N/A")
+                                    }
                                 }
                             }
                         }
@@ -611,24 +676,30 @@ fun MemberDetailSharedScreen(
                 // MEMBRESÍA
                 item {
                     DetailSharedSection(title = "Membresía", icon = Icons.Default.Star) {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color.Red))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(member.membershipStatus, color = Color.Red, fontWeight = FontWeight.Bold)
-                                }
-                                Button(
-                                    onClick = { },
-                                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise.copy(alpha = 0.2f)),
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                                    modifier = Modifier.height(32.dp)
-                                ) {
-                                    Text("Registrar Pago", color = PrimaryTurquoise, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                }
+                        if (isEditing) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                CustomSharedTextField(value = planType, onValueChange = { planType = it }, label = "Plan")
                             }
-                            Text("Próxima renovación: 16/11/2026", color = TextWhite, fontSize = 14.sp)
-                            Text("Plan: ${member.planType}", color = TextGray, fontSize = 13.sp)
+                        } else {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color.Red))
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(member.membershipStatus, color = Color.Red, fontWeight = FontWeight.Bold)
+                                    }
+                                    Button(
+                                        onClick = { },
+                                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise.copy(alpha = 0.2f)),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                        modifier = Modifier.height(32.dp)
+                                    ) {
+                                        Text("Registrar Pago", color = PrimaryTurquoise, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                Text("Próxima renovación: 16/11/2026", color = TextWhite, fontSize = 14.sp)
+                                Text("Plan: ${member.planType}", color = TextGray, fontSize = 13.sp)
+                            }
                         }
                     }
                 }
@@ -652,9 +723,16 @@ fun MemberDetailSharedScreen(
                 // RUTINA Y PROGRESO
                 item {
                     DetailSharedSection(title = "Rutina y Progreso", icon = Icons.Default.FitnessCenter) {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("Rutina: ${member.routine.ifEmpty { "No asignada" }}", color = TextWhite)
-                            Text("Entrenador: ${member.assignedTrainer.ifEmpty { "No asignado" }}", color = TextGray, fontSize = 13.sp)
+                        if (isEditing) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                CustomSharedTextField(value = routine, onValueChange = { routine = it }, label = "Rutina")
+                                CustomSharedTextField(value = assignedTrainer, onValueChange = { assignedTrainer = it }, label = "Entrenador")
+                            }
+                        } else {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("Rutina: ${member.routine.ifEmpty { "No asignada" }}", color = TextWhite)
+                                Text("Entrenador: ${member.assignedTrainer.ifEmpty { "No asignado" }}", color = TextGray, fontSize = 13.sp)
+                            }
                         }
                     }
                 }
