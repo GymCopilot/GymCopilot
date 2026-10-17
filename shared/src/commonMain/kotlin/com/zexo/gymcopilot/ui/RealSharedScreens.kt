@@ -170,8 +170,8 @@ fun RealAdminDashboardView(
                             RealGridButton("1", "Nuevos (Mes)", painterResource(Res.drawable.ic_professors), Color(0xFFFFC107), Modifier.weight(1f)) {}
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            RealGridButton("1", "DEUDORES", painterResource(Res.drawable.ic_fact_check), Color.Red, Modifier.weight(1f)) { onTabSelected(2) }
-                            RealGridButton("0", "ACTIVOS", painterResource(Res.drawable.ic_clients), Color(0xFF00C853), Modifier.weight(1f)) { onTabSelected(2) }
+                            RealGridButton("1", "DEUDORES", painterResource(Res.drawable.warning), Color.Red, Modifier.weight(1f)) { onTabSelected(2) }
+                            RealGridButton("0", "ACTIVOS", painterResource(Res.drawable.person), Color(0xFF00C853), Modifier.weight(1f)) { onTabSelected(2) }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             RealGridButton("0", "Asistencia Hoy", painterResource(Res.drawable.ic_fact_check), Color(0xFFAB47BC), Modifier.weight(1f)) {}
@@ -473,7 +473,7 @@ fun RealMembersManagementView(onTabSelected: (Int) -> Unit) {
         ) {
             FilterStatBlock("1", "TOTAL", Icons.Default.Person, PrimaryTurquoise, selectedFilter == "ALL", Modifier.weight(1f)) { selectedFilter = "ALL" }
             FilterStatBlock("0", "ACTIVOS", Icons.Default.Person, Color(0xFF00C853), selectedFilter == "ACTIVE", Modifier.weight(1f)) { selectedFilter = "ACTIVE" }
-            FilterStatBlock("1", "DEUDORES", Icons.Default.Warning, Color.Red, selectedFilter == "DEBTOR", Modifier.weight(1f)) { selectedFilter = "DEBTOR" }
+            FilterStatBlock("1", "DEUDORES", painterResource(Res.drawable.warning), Color.Red, selectedFilter == "DEBTOR", Modifier.weight(1f)) { selectedFilter = "DEBTOR" }
             FilterStatBlock("0", "DESERTORES", Icons.Default.Close, Color(0xFFFF9800), selectedFilter == "DROPOUT", Modifier.weight(1f)) { selectedFilter = "DROPOUT" }
         }
 
@@ -551,6 +551,35 @@ fun RealMembersManagementView(onTabSelected: (Int) -> Unit) {
     }
 }
 
+@Composable
+fun FilterStatBlock(
+    count: String,
+    label: String,
+    iconPainter: Painter,
+    color: Color,
+    isSelected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
+        shape = RoundedCornerShape(8.dp),
+        border = if (isSelected) ButtonDefaults.outlinedButtonBorder(enabled = true) else null,
+        modifier = modifier.clickable { onClick() }
+    ) {
+        Column(
+            modifier = Modifier.padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(painter = iconPainter, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(text = count, fontWeight = FontWeight.Black, color = TextWhite, fontSize = 16.sp)
+            Text(text = label, fontSize = 8.sp, color = TextGray, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+// Overload for ImageVector
 @Composable
 fun FilterStatBlock(
     count: String,
