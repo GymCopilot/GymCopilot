@@ -57,11 +57,6 @@ fun MembersSharedScreen(
         }
     }
 
-    val totalCount = members.size
-    val activeCount = members.count { it.membershipStatus == "ACTIVO" || it.membershipStatus == "ACTIVE" }
-    val debtorCount = members.count { it.membershipStatus == "DEUDOR" || it.membershipStatus == "VENCIDO" }
-    val dropoutCount = members.count { it.membershipStatus == "DESERTOR" || it.membershipStatus == "DROPOUT" }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -122,16 +117,16 @@ fun MembersSharedScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp)
             ) {
-                // 4 TARJETAS DE ESTADÍSTICA / FILTRO SUPERIORES CON VALORES REALES
+                // 4 TARJETAS DE ESTADÍSTICA / FILTRO SUPERIORES
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        MemberFilterStatBox("$totalCount", "TOTAL", Icons.Default.Person, PrimaryTurquoise, selectedFilter == "ALL", Modifier.weight(1f)) { selectedFilter = "ALL" }
-                        MemberFilterStatBox("$activeCount", "ACTIVOS", Icons.Default.Person, Color(0xFF00C853), selectedFilter == "ACTIVO", Modifier.weight(1f)) { selectedFilter = "ACTIVO" }
-                        MemberFilterStatBox("$debtorCount", "DEUDORES", Icons.Default.Warning, Color.Red, selectedFilter == "DEUDOR", Modifier.weight(1f)) { selectedFilter = "DEUDOR" }
-                        MemberFilterStatBox("$dropoutCount", "DESERTORES", Icons.Default.Close, Color(0xFFFF9800), selectedFilter == "DESERTOR", Modifier.weight(1f)) { selectedFilter = "DESERTOR" }
+                        MemberFilterStatBox("1", "TOTAL", Icons.Default.Person, PrimaryTurquoise, selectedFilter == "ALL", Modifier.weight(1f)) { selectedFilter = "ALL" }
+                        MemberFilterStatBox("0", "ACTIVOS", Icons.Default.Person, Color(0xFF00C853), selectedFilter == "ACTIVO", Modifier.weight(1f)) { selectedFilter = "ACTIVO" }
+                        MemberFilterStatBox("1", "DEUDORES", Icons.Default.Warning, Color.Red, selectedFilter == "DEUDOR", Modifier.weight(1f)) { selectedFilter = "DEUDOR" }
+                        MemberFilterStatBox("0", "DESERTORES", Icons.Default.Close, Color(0xFFFF9800), selectedFilter == "DESERTOR", Modifier.weight(1f)) { selectedFilter = "DESERTOR" }
                     }
                 }
 

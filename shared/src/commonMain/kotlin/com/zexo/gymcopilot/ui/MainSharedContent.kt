@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,35 +35,54 @@ enum class AppScreenState {
 fun RoleCard(
     title: String,
     description: String,
-    iconEmoji: String,
+    iconPainter: Painter,
     accentColor: Color,
     onClick: () -> Unit
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = SurfaceColor),
         shape = RoundedCornerShape(16.dp),
+        border = ButtonDefaults.outlinedButtonBorder(enabled = true),
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
     ) {
         Row(
-            modifier = Modifier.padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Surface(
-                color = accentColor.copy(alpha = 0.15f),
-                shape = CircleShape,
-                modifier = Modifier.size(50.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(text = iconEmoji, fontSize = 24.sp)
+                Surface(
+                    color = accentColor.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            painter = iconPainter,
+                            contentDescription = null,
+                            tint = PrimaryTurquoise,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(text = title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextWhite)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(text = description, fontSize = 12.sp, color = TextGray)
                 }
             }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column {
-                Text(text = title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextWhite)
-                Text(text = description, fontSize = 12.sp, color = TextGray)
-            }
+            Icon(
+                Icons.Default.ArrowForward,
+                contentDescription = null,
+                tint = PrimaryTurquoise,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }
@@ -249,7 +270,7 @@ fun LoginScreenView(
                 RoleCard(
                     title = "Administrador",
                     description = "Gestiona tu gimnasio, socios y planes",
-                    iconEmoji = "🛡️",
+                    iconPainter = painterResource(Res.drawable.admin_panel_settings),
                     accentColor = PrimaryTurquoise,
                     onClick = { onRoleSelected("admin") }
                 )
@@ -259,7 +280,7 @@ fun LoginScreenView(
                 RoleCard(
                     title = "Profesor",
                     description = "Acceso al panel de entrenamiento",
-                    iconEmoji = "💻",
+                    iconPainter = painterResource(Res.drawable.assistant),
                     accentColor = PrimaryTurquoise,
                     onClick = { onRoleSelected("profesor") }
                 )
@@ -269,7 +290,7 @@ fun LoginScreenView(
                 RoleCard(
                     title = "Socio del Gimnasio",
                     description = "Sigue tu progreso y tabla",
-                    iconEmoji = "👤",
+                    iconPainter = painterResource(Res.drawable.person),
                     accentColor = PrimaryTurquoise,
                     onClick = { onRoleSelected("member") }
                 )
