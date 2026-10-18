@@ -155,10 +155,11 @@ fun SplashScreenView(
                 color = PrimaryTurquoise.copy(alpha = 0.15f),
                 shape = RoundedCornerShape(24.dp)
             ) {
-                Text(
-                    text = "🏋️‍♂️",
-                    fontSize = 54.sp,
-                    modifier = Modifier.padding(24.dp)
+                Icon(
+                    painter = painterResource(Res.drawable.dashboard),
+                    contentDescription = "GymCopilot",
+                    tint = PrimaryTurquoise,
+                    modifier = Modifier.padding(24.dp).size(64.dp)
                 )
             }
 
@@ -199,7 +200,7 @@ fun SplashScreenView(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "🇦🇷 Las Malvinas son Argentinas",
+                text = "Las Malvinas son Argentinas",
                 color = TextWhite.copy(alpha = 0.7f),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
@@ -230,10 +231,11 @@ fun LoginScreenView(
                     color = PrimaryTurquoise.copy(alpha = 0.15f),
                     shape = RoundedCornerShape(24.dp)
                 ) {
-                    Text(
-                        text = "🦁",
-                        fontSize = 64.sp,
-                        modifier = Modifier.padding(20.dp)
+                    Icon(
+                        painter = painterResource(Res.drawable.admin_panel_settings),
+                        contentDescription = "Logo",
+                        tint = PrimaryTurquoise,
+                        modifier = Modifier.padding(20.dp).size(64.dp)
                     )
                 }
 
