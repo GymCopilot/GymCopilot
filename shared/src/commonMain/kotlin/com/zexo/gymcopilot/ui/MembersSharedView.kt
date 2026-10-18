@@ -23,6 +23,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.model.*
+import gymcopilot.shared.generated.resources.*
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun MembersSharedScreen(
@@ -98,7 +100,12 @@ fun MembersSharedScreen(
                     shape = CircleShape,
                     modifier = Modifier.padding(bottom = 80.dp)
                 ) {
-                    Icon(Icons.Default.Person, contentDescription = "Añadir Alumno", modifier = Modifier.size(32.dp))
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = "Añadir Alumno",
+                        tint = Color.Black,
+                        modifier = Modifier.size(28.dp)
+                    )
                 }
             }
         ) { padding ->
@@ -167,7 +174,9 @@ fun MembersSharedScreen(
                                             horizontalAlignment = Alignment.CenterHorizontally
                                         ) {
                                             Surface(color = PrimaryTurquoise.copy(alpha = 0.15f), shape = CircleShape, modifier = Modifier.size(40.dp)) {
-                                                Box(contentAlignment = Alignment.Center) { Text("👨‍🏫", fontSize = 18.sp) }
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    Icon(Icons.Default.Person, contentDescription = null, tint = PrimaryTurquoise, modifier = Modifier.size(24.dp))
+                                                }
                                             }
                                             Spacer(Modifier.height(6.dp))
                                             Text(text = prof.firstName, color = TextWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -316,7 +325,7 @@ fun MemberRowItem(
                         .clickable { onClick() }
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Star, contentDescription = "Rutina", tint = Color.Black, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Person, contentDescription = "Asignar Profesor", tint = Color.Black, modifier = Modifier.size(18.dp))
                     }
                 }
                 Spacer(modifier = Modifier.width(6.dp))
@@ -722,7 +731,7 @@ fun MemberDetailSharedScreen(
 
                 // RUTINA Y PROGRESO
                 item {
-                    DetailSharedSection(title = "Rutina y Progreso", icon = Icons.Default.FitnessCenter) {
+                    DetailSharedSection(title = "Rutina y Progreso", icon = Icons.Default.Star) {
                         if (isEditing) {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 CustomSharedTextField(value = routine, onValueChange = { routine = it }, label = "Rutina")
