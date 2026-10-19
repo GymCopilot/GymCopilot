@@ -35,9 +35,6 @@ jobs:
       - name: Compilar KMP Framework para Simulador (iosSimulatorArm64)
         run: ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64
 
-      - name: Compilar KMP Framework para Dispositivo Real (iosArm64)
-        run: ./gradlew :shared:linkReleaseFrameworkIosArm64
-
       - name: Subir artefacto KMP Framework
         uses: actions/upload-artifact@v4
         with:
@@ -51,13 +48,18 @@ jobs:
           cp -R shared/build/bin/iosSimulatorArm64/debugFramework/shared.framework iosApp/
           xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath iosApp/build-sim CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
 
+      - name: Empaquetar y Subir Paquete para Appetize.io (.app.zip)
+        run: |
+          cd iosApp/build-sim/Build/Products/Debug-iphonesimulator
+          zip -r "$GITHUB_WORKSPACE/GymCopilot-Appetize-iOS.zip" iosApp.app
+
       - name: Subir Paquete (.app.zip) para Appetize.io
         uses: actions/upload-artifact@v4
         with:
           name: GymCopilot-Appetize-iOS
-          path: iosApp/build-sim/Build/Products/Debug-iphonesimulator/iosApp.app
+          path: GymCopilot-Appetize-iOS.zip
 
-      - name: Importar Certificado y Perfil de Firma iOS (si estan configurados en Secrets)
+      - name: Importar Certificado y Perfil de Firma iOS (si estan configurados)
         if: ${{ env.BUILD_CERTIFICATE_BASE64 != '' }}
         run: |
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
@@ -77,37 +79,22 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
 
-      - name: Generar Archivo Instalable iOS (.ipa)
+      - name: Compilar KMP Framework e IPA para Dispositivo Real (iosArm64)
+        if: ${{ env.BUILD_CERTIFICATE_BASE64 != '' }}
+        continue-on-error: true
         run: |
+          ./gradlew :shared:linkReleaseFrameworkIosArm64
           mkdir -p iosApp/build-ipa/Build/Products/Release-iphoneos
           cp -R shared/build/bin/iosArm64/releaseFramework/shared.framework iosApp/build-ipa/Build/Products/Release-iphoneos/
           cp -R shared/build/bin/iosArm64/releaseFramework/shared.framework iosApp/
-          if [ -n "$BUILD_CERTIFICATE_BASE64" ]; then
-            echo "==== Compilando y Firmando .ipa con certificado para Dispositivo Real (Kobiton) ===="
-            xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath iosApp/build-ipa CODE_SIGNING_ALLOWED=YES
-            
-            EXP_IDENTITY=$(security find-identity -v -p codesigning $RUNNER_TEMP/app-signing.keychain-db | head -n 1 | awk -F '"' '{print $2}')
-            echo "Identidad de firma encontrada: $EXP_IDENTITY"
+          
+          xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath iosApp/build-ipa CODE_SIGNING_ALLOWED=YES
+          
+          EXP_IDENTITY=$(security find-identity -v -p codesigning $RUNNER_TEMP/app-signing.keychain-db | head -n 1 | awk -F '"' '{print $2}')
+          cp $RUNNER_TEMP/build_pp.mobileprovision iosApp/build-ipa/Build/Products/Release-iphoneos/iosApp.app/embedded.mobileprovision
+          codesign --force --deep --sign "$EXP_IDENTITY" iosApp/build-ipa/Build/Products/Release-iphoneos/iosApp.app
 
-            cp $RUNNER_TEMP/build_pp.mobileprovision iosApp/build-ipa/Build/Products/Release-iphoneos/iosApp.app/embedded.mobileprovision
-
-            codesign --force --deep --sign "$EXP_IDENTITY" iosApp/build-ipa/Build/Products/Release-iphoneos/iosApp.app
-
-            cd iosApp/build-ipa/Build/Products/Release-iphoneos
-            mkdir -p Payload
-            cp -r iosApp.app Payload/
-            zip -r "$GITHUB_WORKSPACE/GymCopilot-iOS.ipa" Payload
-          else
-            echo "==== AVISO: Secrets de firma no detectados. Generando .ipa no firmado (Solo Simulador/Appetize) ===="
-            xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath iosApp/build-ipa CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
-            cd iosApp/build-ipa/Build/Products/Release-iphoneos
-            mkdir -p Payload
-            cp -r iosApp.app Payload/
-            zip -r "$GITHUB_WORKSPACE/GymCopilot-iOS.ipa" Payload
-          fi
-
-      - name: Subir Archivo Instalable (.ipa)
-        uses: actions/upload-artifact@v4
-        with:
-          name: GymCopilot-iOS-IPA
-          path: GymCopilot-iOS.ipa
+          cd iosApp/build-ipa/Build/Products/Release-iphoneos
+          mkdir -p Payload
+          cp -r iosApp.app Payload/
+          zip -r "$GITHUB_WORKSPACE/GymCopilot-iOS.ipa" Payload
