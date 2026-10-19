@@ -135,15 +135,18 @@ fun SplashScreenView(
     gymName: String,
     onTimeout: () -> Unit
 ) {
+    val currentOnTimeout by rememberUpdatedState(onTimeout)
+
     LaunchedEffect(Unit) {
-        delay(2000)
-        onTimeout()
+        delay(1200)
+        currentOnTimeout()
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBackground),
+            .background(DarkBackground)
+            .clickable { currentOnTimeout() },
         contentAlignment = Alignment.Center
     ) {
         Column(
