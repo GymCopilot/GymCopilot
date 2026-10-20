@@ -28,6 +28,7 @@ fun SettingsSharedScreen(
     onBack: () -> Unit
 ) {
     var showHelpScreen by remember { mutableStateOf(false) }
+    var showSkinScreen by remember { mutableStateOf(false) }
     var selectedDialog by remember { mutableStateOf<String?>(null) }
     var appLanguage by remember { mutableStateOf("Español") }
     var appCurrency by remember { mutableStateOf("Peso Argentino") }
@@ -36,6 +37,11 @@ fun SettingsSharedScreen(
 
     if (showHelpScreen) {
         HelpSharedScreen(onBack = { showHelpScreen = false })
+        return
+    }
+
+    if (showSkinScreen) {
+        AppearanceSharedScreen(onBack = { showSkinScreen = false })
         return
     }
 
@@ -115,7 +121,7 @@ fun SettingsSharedScreen(
                         iconPainter = painterResource(Res.drawable.theater_comedy),
                         iconBg = Color(0xFF2E1C38),
                         iconTint = Color(0xFFAB47BC),
-                        onClick = { selectedDialog = "skin" }
+                        onClick = { showSkinScreen = true }
                     )
                 }
 
@@ -204,17 +210,6 @@ fun SettingsSharedScreen(
             confirmButton = {
                 Button(onClick = { selectedDialog = null }, colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise)) {
                     Text("CERRAR", color = Color.Black, fontWeight = FontWeight.Bold)
-                }
-            }
-        )
-        "skin" -> AlertDialog(
-            onDismissRequest = { selectedDialog = null },
-            title = { Text("Personalización de Skin", color = TextWhite, fontWeight = FontWeight.Bold) },
-            text = { Text("La apariencia visual y la paleta de colores corporativos se encuentran configuradas con el estilo turquesa Zexo predeterminado.", color = TextGray) },
-            containerColor = Color(0xFF081C24),
-            confirmButton = {
-                Button(onClick = { selectedDialog = null }, colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise)) {
-                    Text("ACEPTAR", color = Color.Black, fontWeight = FontWeight.Bold)
                 }
             }
         )
