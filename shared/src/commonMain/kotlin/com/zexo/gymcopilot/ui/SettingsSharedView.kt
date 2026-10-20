@@ -1,5 +1,6 @@
 package com.zexo.gymcopilot.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,7 +18,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import gymcopilot.shared.generated.resources.*
@@ -83,7 +83,8 @@ fun SettingsSharedScreen(
                         title = "Ayuda",
                         subtitle = "Instrucciones y guía del asistente",
                         iconPainter = painterResource(Res.drawable.ayuda),
-                        iconBg = Color(0xFF1A237E),
+                        iconBg = Color(0xFF1D2636),
+                        iconTint = Color(0xFF7986CB),
                         onClick = { selectedDialog = "help" }
                     )
                 }
@@ -94,7 +95,8 @@ fun SettingsSharedScreen(
                         title = "Últimas mejoras",
                         subtitle = "Historial de cambios y novedades",
                         iconPainter = painterResource(Res.drawable.report),
-                        iconBg = Color(0xFFFF5722),
+                        iconBg = Color(0xFF3D231A),
+                        iconTint = Color(0xFFFF7043),
                         onClick = { selectedDialog = "updates" }
                     )
                 }
@@ -105,7 +107,8 @@ fun SettingsSharedScreen(
                         title = "Skin",
                         subtitle = "Personalizar apariencia",
                         iconPainter = painterResource(Res.drawable.theater_comedy),
-                        iconBg = Color(0xFF7B1FA2),
+                        iconBg = Color(0xFF2E1C38),
+                        iconTint = Color(0xFFAB47BC),
                         onClick = { selectedDialog = "skin" }
                     )
                 }
@@ -116,7 +119,8 @@ fun SettingsSharedScreen(
                         title = "Código QR",
                         subtitle = "Generar QR para asistencia",
                         iconPainter = painterResource(Res.drawable.qr_code),
-                        iconBg = Color(0xFF00897B),
+                        iconBg = Color(0xFF113835),
+                        iconTint = PrimaryTurquoise,
                         onClick = { selectedDialog = "qr" }
                     )
                 }
@@ -127,7 +131,8 @@ fun SettingsSharedScreen(
                         title = "Contacto",
                         subtitle = "Soporte y canales de comunicación",
                         iconPainter = painterResource(Res.drawable.support_agent),
-                        iconBg = Color(0xFFC2185B),
+                        iconBg = Color(0xFF3B1B29),
+                        iconTint = Color(0xFFEC407A),
                         onClick = { selectedDialog = "contact" }
                     )
                 }
@@ -138,7 +143,8 @@ fun SettingsSharedScreen(
                         title = "Red",
                         subtitle = "Configurar servidor",
                         iconPainter = painterResource(Res.drawable.drive),
-                        iconBg = Color(0xFFE64A19),
+                        iconBg = Color(0xFF3D1F1A),
+                        iconTint = Color(0xFFFF5722),
                         onClick = { selectedDialog = "network" }
                     )
                 }
@@ -149,7 +155,8 @@ fun SettingsSharedScreen(
                         title = "Designación",
                         subtitle = memberDesignation,
                         iconPainter = painterResource(Res.drawable.badge),
-                        iconBg = Color(0xFF33691E),
+                        iconBg = Color(0xFF23361E),
+                        iconTint = Color(0xFF81C784),
                         onClick = { selectedDialog = "designation" }
                     )
                 }
@@ -160,7 +167,8 @@ fun SettingsSharedScreen(
                         title = "Idioma",
                         subtitle = appLanguage,
                         iconPainter = painterResource(Res.drawable.g_translate),
-                        iconBg = Color(0xFFF57F17),
+                        iconBg = Color(0xFF3B331A),
+                        iconTint = Color(0xFFFFD54F),
                         onClick = { selectedDialog = "language" }
                     )
                 }
@@ -171,7 +179,8 @@ fun SettingsSharedScreen(
                         title = "Moneda",
                         subtitle = appCurrency,
                         iconPainter = painterResource(Res.drawable.attach_money),
-                        iconBg = Color(0xFF0D47A1),
+                        iconBg = Color(0xFF1A2A38),
+                        iconTint = Color(0xFF64B5F6),
                         onClick = { selectedDialog = "currency" }
                     )
                 }
@@ -344,12 +353,13 @@ fun SettingsSharedCard(
     subtitle: String,
     iconPainter: Painter,
     iconBg: Color,
+    iconTint: Color,
     onClick: () -> Unit
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
         shape = RoundedCornerShape(16.dp),
-        border = ButtonDefaults.outlinedButtonBorder(enabled = true),
+        border = BorderStroke(1.dp, PrimaryTurquoise.copy(alpha = 0.5f)),
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
@@ -372,7 +382,7 @@ fun SettingsSharedCard(
                         Icon(
                             painter = iconPainter,
                             contentDescription = null,
-                            tint = Color.White,
+                            tint = iconTint,
                             modifier = Modifier.size(24.dp)
                         )
                     }
