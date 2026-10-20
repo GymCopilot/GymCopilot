@@ -28,9 +28,11 @@ import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun AppearanceSharedScreen(
+    currentLogoUri: String?,
+    onLogoChanged: (String?) -> Unit,
     onBack: () -> Unit
 ) {
-    var expandedSection by remember { mutableStateOf<String?>("logo") } // Iniciar abierto en Logo como la captura
+    var expandedSection by remember { mutableStateOf<String?>("logo") }
     var gymNameInput by remember { mutableStateOf("Tu Gimnasio") }
     var phoneInput by remember { mutableStateOf("") }
     var addressInput by remember { mutableStateOf("") }
@@ -39,17 +41,17 @@ fun AppearanceSharedScreen(
     var countryInput by remember { mutableStateOf("") }
     var showLogoBorder by remember { mutableStateOf(true) }
     var selectedColor by remember { mutableStateOf(PrimaryTurquoise) }
-    var selectedButtonStyle by remember { mutableStateOf(1) } // 1: Redondeado
+    var selectedButtonStyle by remember { mutableStateOf(1) }
 
     val colorPalette = listOf(
         PrimaryTurquoise,
-        Color(0xFFFF0000), // Rojo
-        Color(0xFFFFA500), // Naranja
-        Color(0xFFFFFF00), // Amarillo
-        Color(0xFF0000FF), // Azul
-        Color(0xFF008000), // Verde
-        Color(0xFF800080), // Violeta
-        Color(0xFFFF00FF)  // Magenta
+        Color(0xFFFF0000),
+        Color(0xFFFFA500),
+        Color(0xFFFFFF00),
+        Color(0xFF0000FF),
+        Color(0xFF008000),
+        Color(0xFF800080),
+        Color(0xFFFF00FF)
     )
 
     Box(
@@ -96,7 +98,7 @@ fun AppearanceSharedScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp),
                 contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp)
             ) {
-                // 1. LOGO
+                // 1. LOGO 1:1 FUNCIONAL Y CONFIGURABLE
                 item {
                     AccordionCard(
                         title = "Logo",
@@ -105,34 +107,97 @@ fun AppearanceSharedScreen(
                         onToggle = { expandedSection = if (expandedSection == "logo") null else "logo" }
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            // ÁREA DE CARGA DE LOGO
+                            // INSIGNIA FORMATO 1:1
+                            Surface(
+                                color = PrimaryTurquoise.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(20.dp)
+                            ) {
+                                Text(
+                                    text = "Formato 1:1 (Cuadrado)",
+                                    color = PrimaryTurquoise,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                )
+                            }
+
+                            // VISTA PREVIA DEL LOGO 1:1
                             Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(220.dp)
-                                    .clip(RoundedCornerShape(16.dp))
+                                    .size(200.dp)
+                                    .align(Alignment.CenterHorizontally)
+                                    .clip(RoundedCornerShape(24.dp))
                                     .background(Color(0xFF00151C))
-                                    .border(BorderStroke(1.5.dp, PrimaryTurquoise), RoundedCornerShape(16.dp))
-                                    .clickable { },
+                                    .border(
+                                        BorderStroke(if (showLogoBorder) 2.dp else 0.dp, PrimaryTurquoise),
+                                        RoundedCornerShape(24.dp)
+                                    )
+                                    .clickable {
+                                        // Conmutar o aplicar el logo predeterminado corporativo 1:1
+                                        if (currentLogoUri == null) {
+                                            onLogoChanged("logo_custom")
+                                        } else {
+                                            onLogoChanged(null)
+                                        }
+                                    },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                if (currentLogoUri != null) {
                                     Icon(
-                                        painter = painterResource(Res.drawable.add_photo),
-                                        contentDescription = "Subir Logo",
+                                        painter = painterResource(Res.drawable.admin_panel_settings),
+                                        contentDescription = "Logo 1:1 Cargado",
                                         tint = PrimaryTurquoise,
-                                        modifier = Modifier.size(54.dp)
+                                        modifier = Modifier.size(100.dp)
                                     )
-                                    Spacer(Modifier.height(12.dp))
-                                    Text(
-                                        text = "Selecciona una imagen",
-                                        color = TextGray,
-                                        fontSize = 14.sp
-                                    )
+                                } else {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(
+                                            painter = painterResource(Res.drawable.add_photo),
+                                            contentDescription = "Subir Logo",
+                                            tint = PrimaryTurquoise,
+                                            modifier = Modifier.size(48.dp)
+                                        )
+                                        Spacer(Modifier.height(10.dp))
+                                        Text(
+                                            text = "Selecciona una imagen",
+                                            color = TextGray,
+                                            fontSize = 13.sp
+                                        )
+                                    }
                                 }
                             }
 
-                            // SECCIÓN DE HERRAMIENTAS DE LOGO IA
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Button(
+                                    onClick = { onLogoChanged("logo_custom") },
+                                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("SUBIR LOGO 1:1", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                }
+
+                                if (currentLogoUri != null) {
+                                    OutlinedButton(
+                                        onClick = { onLogoChanged(null) },
+                                        border = BorderStroke(1.dp, Color.Red),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text("REMOVER", color = Color.Red, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(checked = showLogoBorder, onCheckedChange = { showLogoBorder = it })
+                                Spacer(Modifier.width(8.dp))
+                                Text("Mostrar borde de marco en el logo", color = TextWhite, fontSize = 13.sp)
+                            }
+
+                            // HERRAMIENTAS DE LOGO IA
                             Card(
                                 colors = CardDefaults.cardColors(containerColor = Color(0xFF00151C)),
                                 shape = RoundedCornerShape(16.dp),

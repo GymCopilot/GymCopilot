@@ -25,7 +25,9 @@ import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun SettingsSharedScreen(
-    onBack: () -> Unit
+    currentLogoUri: String? = null,
+    onLogoChanged: (String?) -> Unit = {},
+    onBack: () -> Unit = {}
 ) {
     var showHelpScreen by remember { mutableStateOf(false) }
     var showSkinScreen by remember { mutableStateOf(false) }
@@ -41,7 +43,11 @@ fun SettingsSharedScreen(
     }
 
     if (showSkinScreen) {
-        AppearanceSharedScreen(onBack = { showSkinScreen = false })
+        AppearanceSharedScreen(
+            currentLogoUri = currentLogoUri,
+            onLogoChanged = onLogoChanged,
+            onBack = { showSkinScreen = false }
+        )
         return
     }
 
