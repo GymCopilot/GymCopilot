@@ -711,58 +711,5 @@ fun FullChatSection() {
 
 @Composable
 fun FullSettingsSection() {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
-    ) {
-        item {
-            Text(text = "Ajustes y Configuración", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextWhite)
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = SurfaceColor),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = "🌐 Red Wi-Fi para Asistencia Automática", fontWeight = FontWeight.Bold, color = PrimaryTurquoise)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = "SSID Activo: GymCopilot_VIP_5G", color = TextWhite, fontSize = 14.sp)
-                    Text(text = "Estado: Conectado a la red del gimnasio", color = TextGray, fontSize = 12.sp)
-                }
-            }
-        }
-
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = SurfaceColor),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = "☁️ Sincronización Google Sheets Ktor API", fontWeight = FontWeight.Bold, color = PrimaryTurquoise)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = "Backend Compartido Activo", color = TextWhite, fontSize = 14.sp)
-                    Text(text = "Estado: Sincronizado en tiempo real (Multiplataforma)", color = TextGray, fontSize = 12.sp)
-                }
-            }
-        }
-
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = SurfaceColor),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = "🇦🇷 Información del Desarrollador", fontWeight = FontWeight.Bold, color = PrimaryTurquoise)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = "GymCopilot KMP • Edición Multiplataforma", color = TextWhite, fontSize = 14.sp)
-                    Text(text = "Las Malvinas son Argentinas", color = TextGray, fontSize = 12.sp)
-                }
-            }
-        }
-    }
+    SettingsSharedScreen(onBack = {})
 }
