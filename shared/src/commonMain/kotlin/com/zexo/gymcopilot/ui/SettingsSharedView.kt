@@ -27,11 +27,17 @@ import org.jetbrains.compose.resources.painterResource
 fun SettingsSharedScreen(
     onBack: () -> Unit
 ) {
+    var showHelpScreen by remember { mutableStateOf(false) }
     var selectedDialog by remember { mutableStateOf<String?>(null) }
     var appLanguage by remember { mutableStateOf("Español") }
     var appCurrency by remember { mutableStateOf("Peso Argentino") }
     var memberDesignation by remember { mutableStateOf("Alumno") }
     var serverUrl by remember { mutableStateOf("https://script.google.com/macros/s/...") }
+
+    if (showHelpScreen) {
+        HelpSharedScreen(onBack = { showHelpScreen = false })
+        return
+    }
 
     Box(
         modifier = Modifier
@@ -85,7 +91,7 @@ fun SettingsSharedScreen(
                         iconPainter = painterResource(Res.drawable.ayuda),
                         iconBg = Color(0xFF1D2636),
                         iconTint = Color(0xFF7986CB),
-                        onClick = { selectedDialog = "help" }
+                        onClick = { showHelpScreen = true }
                     )
                 }
 
@@ -190,17 +196,6 @@ fun SettingsSharedScreen(
 
     // DIÁLOGOS MODALES
     when (selectedDialog) {
-        "help" -> AlertDialog(
-            onDismissRequest = { selectedDialog = null },
-            title = { Text("Ayuda de GymCopilot", color = TextWhite, fontWeight = FontWeight.Bold) },
-            text = { Text("Bienvenido a GymCopilot. Utiliza el panel de administrador para gestionar tus socios, registrar pagos, crear planes de suscripción y controlar la asistencia mediante códigos QR de forma sencilla.", color = TextGray) },
-            containerColor = Color(0xFF081C24),
-            confirmButton = {
-                Button(onClick = { selectedDialog = null }, colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise)) {
-                    Text("ENTENDIDO", color = Color.Black, fontWeight = FontWeight.Bold)
-                }
-            }
-        )
         "updates" -> AlertDialog(
             onDismissRequest = { selectedDialog = null },
             title = { Text("Últimas Mejoras", color = TextWhite, fontWeight = FontWeight.Bold) },
