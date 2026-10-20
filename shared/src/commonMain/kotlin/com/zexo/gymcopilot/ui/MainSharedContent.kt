@@ -16,7 +16,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -36,7 +35,7 @@ enum class AppScreenState {
 fun RoleCard(
     title: String,
     description: String,
-    iconVector: ImageVector,
+    iconPainter: Painter,
     accentColor: Color,
     onClick: () -> Unit
 ) {
@@ -64,7 +63,7 @@ fun RoleCard(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = iconVector,
+                            painter = iconPainter,
                             contentDescription = null,
                             tint = PrimaryTurquoise,
                             modifier = Modifier.size(26.dp)
@@ -160,7 +159,7 @@ fun SplashScreenView(
                 shape = RoundedCornerShape(24.dp)
             ) {
                 Icon(
-                    painter = painterResource(Res.drawable.dashboard),
+                    painter = painterResource(Res.drawable.ic_home),
                     contentDescription = "GymCopilot",
                     tint = PrimaryTurquoise,
                     modifier = Modifier.padding(24.dp).size(64.dp)
@@ -236,7 +235,7 @@ fun LoginScreenView(
                     shape = RoundedCornerShape(24.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Lock,
+                        painter = painterResource(Res.drawable.admin_panel_settings),
                         contentDescription = "Logo",
                         tint = PrimaryTurquoise,
                         modifier = Modifier.padding(20.dp).size(64.dp)
@@ -276,7 +275,7 @@ fun LoginScreenView(
                 RoleCard(
                     title = "Administrador",
                     description = "Gestiona tu gimnasio, socios y planes",
-                    iconVector = Icons.Default.Lock,
+                    iconPainter = painterResource(Res.drawable.admin_panel_settings),
                     accentColor = PrimaryTurquoise,
                     onClick = { onRoleSelected("admin") }
                 )
@@ -286,7 +285,7 @@ fun LoginScreenView(
                 RoleCard(
                     title = "Profesor",
                     description = "Acceso al panel de entrenamiento",
-                    iconVector = Icons.Default.Person,
+                    iconPainter = painterResource(Res.drawable.assistant),
                     accentColor = PrimaryTurquoise,
                     onClick = { onRoleSelected("profesor") }
                 )
@@ -296,7 +295,7 @@ fun LoginScreenView(
                 RoleCard(
                     title = "Socio del Gimnasio",
                     description = "Sigue tu progreso y tabla",
-                    iconVector = Icons.Default.AccountCircle,
+                    iconPainter = painterResource(Res.drawable.person),
                     accentColor = PrimaryTurquoise,
                     onClick = { onRoleSelected("member") }
                 )
@@ -433,16 +432,13 @@ fun RoleNavigationBar(
     ) {
         items.forEachIndexed { index, label ->
             val isSelected = selectedTab == index
-            val iconVector: ImageVector = when (label) {
-                "Home" -> Icons.Default.Home
-                "Store", "Tienda" -> Icons.Default.ShoppingCart
-                "Clientes", "Alumnos" -> Icons.Default.Person
-                "Profesores" -> Icons.Default.Person
-                "Config" -> Icons.Default.Settings
-                "Horarios", "Clases" -> Icons.Default.DateRange
-                "Rutinas" -> Icons.Default.Menu
-                "Chat" -> Icons.Default.Email
-                else -> Icons.Default.Home
+            val iconPainter: Painter = when (label) {
+                "Home" -> painterResource(Res.drawable.ic_home)
+                "Store", "Tienda" -> painterResource(Res.drawable.storefront)
+                "Clientes", "Alumnos" -> painterResource(Res.drawable.groups)
+                "Profesores" -> painterResource(Res.drawable.assistant)
+                "Config" -> painterResource(Res.drawable.settings)
+                else -> painterResource(Res.drawable.ic_home)
             }
 
             Box(
@@ -459,7 +455,7 @@ fun RoleNavigationBar(
                     verticalArrangement = Arrangement.Center
                 ) {
                     Icon(
-                        imageVector = iconVector,
+                        painter = iconPainter,
                         contentDescription = label,
                         tint = if (isSelected) PrimaryTurquoise else TextGray,
                         modifier = Modifier.size(20.dp)
