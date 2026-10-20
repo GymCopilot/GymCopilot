@@ -1,6 +1,7 @@
 package com.zexo.gymcopilot.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,9 +21,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.zexo.gymcopilot.utils.decodeBase64ToBitmap
+import com.zexo.gymcopilot.utils.launchImagePicker
 import gymcopilot.shared.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
 
@@ -42,6 +46,10 @@ fun AppearanceSharedScreen(
     var showLogoBorder by remember { mutableStateOf(true) }
     var selectedColor by remember { mutableStateOf(PrimaryTurquoise) }
     var selectedButtonStyle by remember { mutableStateOf(1) }
+
+    val logoBitmap = remember(currentLogoUri) {
+        if (currentLogoUri != null) decodeBase64ToBitmap(currentLogoUri) else null
+    }
 
     val colorPalette = listOf(
         PrimaryTurquoise,
@@ -98,7 +106,7 @@ fun AppearanceSharedScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp),
                 contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp)
             ) {
-                // 1. LOGO 1:1 FUNCIONAL Y CONFIGURABLE
+                // 1. LOGO 1:1 FUNCIONAL CON NATIVE FILE PICKER
                 item {
                     AccordionCard(
                         title = "Logo",
@@ -121,7 +129,7 @@ fun AppearanceSharedScreen(
                                 )
                             }
 
-                            // VISTA PREVIA DEL LOGO 1:1
+                            // VISTA PREVIA DEL LOGO 1:1 CON PICKER
                             Box(
                                 modifier = Modifier
                                     .size(200.dp)
@@ -133,16 +141,20 @@ fun AppearanceSharedScreen(
                                         RoundedCornerShape(24.dp)
                                     )
                                     .clickable {
-                                        // Conmutar o aplicar el logo predeterminado corporativo 1:1
-                                        if (currentLogoUri == null) {
-                                            onLogoChanged("logo_custom")
-                                        } else {
-                                            onLogoChanged(null)
+                                        launchImagePicker { pickedBase64 ->
+                                            onLogoChanged(pickedBase64)
                                         }
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
-                                if (currentLogoUri != null) {
+                                if (logoBitmap != null) {
+                                    Image(
+                                        bitmap = logoBitmap,
+                                        contentDescription = "Logo 1:1 Cargado",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                } else if (currentLogoUri != null) {
                                     Icon(
                                         painter = painterResource(Res.drawable.admin_panel_settings),
                                         contentDescription = "Logo 1:1 Cargado",
@@ -172,7 +184,11 @@ fun AppearanceSharedScreen(
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 Button(
-                                    onClick = { onLogoChanged("logo_custom") },
+                                    onClick = {
+                                        launchImagePicker { pickedBase64 ->
+                                            onLogoChanged(pickedBase64)
+                                        }
+                                    },
                                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise),
                                     shape = RoundedCornerShape(12.dp),
                                     modifier = Modifier.weight(1f)
@@ -235,7 +251,11 @@ fun AppearanceSharedScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text("Personaliza el fondo de pantalla:", color = TextGray, fontSize = 13.sp)
                             Button(
-                                onClick = { },
+                                onClick = {
+                                    launchImagePicker { pickedBase64 ->
+                                        // Update background
+                                    }
+                                },
                                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
