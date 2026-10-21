@@ -42,8 +42,18 @@ fun MemberDashboardSharedScreen(
     var showQrDialog by remember { mutableStateOf(false) }
     var showCheckInDialog by remember { mutableStateOf(false) }
     var showTimerDialog by remember { mutableStateOf(false) }
-    var showProfileDialog by remember { mutableStateOf(false) }
     var showHelpScreen by remember { mutableStateOf(false) }
+    var showMemberProfileScreen by remember { mutableStateOf(false) }
+
+    // DATOS DINÁMICOS DEL PERFIL DEL SOCIO
+    var activeFirstName by remember { mutableStateOf("pe") }
+    var activeLastName by remember { mutableStateOf("lado") }
+    var activeEmail by remember { mutableStateOf(userEmail) }
+    var activePhone by remember { mutableStateOf("") }
+    var activeAddress by remember { mutableStateOf("") }
+    var activeWeight by remember { mutableStateOf("") }
+    var activeHeight by remember { mutableStateOf("") }
+    var activePhotoUri by remember { mutableStateOf<String?>(null) }
 
     val gymIsOpen = true
     val classInSession = false
@@ -54,6 +64,31 @@ fun MemberDashboardSharedScreen(
 
     if (showHelpScreen) {
         HelpSharedScreen(onBack = { showHelpScreen = false })
+        return
+    }
+
+    if (showMemberProfileScreen) {
+        MemberProfileSharedScreen(
+            initialFirstName = activeFirstName,
+            initialLastName = activeLastName,
+            initialEmail = activeEmail,
+            initialPhone = activePhone,
+            initialAddress = activeAddress,
+            initialWeight = activeWeight,
+            initialHeight = activeHeight,
+            initialPhotoUri = activePhotoUri,
+            onBack = { showMemberProfileScreen = false },
+            onSaveProfile = { fn, ln, em, ph, ad, wt, ht, photo ->
+                activeFirstName = fn
+                activeLastName = ln
+                activeEmail = em
+                activePhone = ph
+                activeAddress = ad
+                activeWeight = wt
+                activeHeight = ht
+                activePhotoUri = photo
+            }
+        )
         return
     }
 
@@ -87,7 +122,7 @@ fun MemberDashboardSharedScreen(
                                 .clip(RoundedCornerShape(20.dp))
                                 .background(Color(0xFF00151C))
                                 .border(BorderStroke(2.dp, PrimaryTurquoise), RoundedCornerShape(20.dp))
-                                .clickable { showProfileDialog = true },
+                                .clickable { showMemberProfileScreen = true },
                             contentAlignment = Alignment.Center
                         ) {
                             if (logoBitmap != null) {
@@ -117,17 +152,17 @@ fun MemberDashboardSharedScreen(
                                 fontWeight = FontWeight.Black
                             )
                             Text(
-                                text = "Socio del Gimnasio",
+                                text = if (activeFirstName.isNotBlank()) "$activeFirstName $activeLastName" else "Socio del Gimnasio",
                                 color = PrimaryTurquoise,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
 
                     // BOTONES SUPERIORES (PERFIL E INFO)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { showProfileDialog = true }) {
+                        IconButton(onClick = { showMemberProfileScreen = true }) {
                             Icon(
                                 Icons.Default.Person,
                                 contentDescription = "Perfil",
@@ -383,6 +418,14 @@ fun MemberDashboardSharedScreen(
                                 .border(BorderStroke(2.dp, PrimaryTurquoise), RoundedCornerShape(20.dp))
                                 .clickable {
                                     launchQrScanner { scannedCode ->
+                                        if (scannedCode.startsWith("MEMBER_LINK:")) {
+                                            val parts = scannedCode.split(":")
+                                            if (parts.size >= 5) {
+                                                activeEmail = parts[2]
+                                                activeFirstName = parts[3]
+                                                activeLastName = parts[4]
+                                            }
+                                        }
                                         checkInSuccess = true
                                     }
                                 },
@@ -404,6 +447,14 @@ fun MemberDashboardSharedScreen(
                         Button(
                             onClick = {
                                 launchQrScanner { scannedCode ->
+                                    if (scannedCode.startsWith("MEMBER_LINK:")) {
+                                        val parts = scannedCode.split(":")
+                                        if (parts.size >= 5) {
+                                            activeEmail = parts[2]
+                                            activeFirstName = parts[3]
+                                            activeLastName = parts[4]
+                                        }
+                                    }
                                     checkInSuccess = true
                                 }
                             },
@@ -438,26 +489,6 @@ fun MemberDashboardSharedScreen(
             confirmButton = {
                 Button(onClick = { showTimerDialog = false }, colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise)) {
                     Text("INICIAR", color = Color.Black, fontWeight = FontWeight.Bold)
-                }
-            }
-        )
-    }
-
-    if (showProfileDialog) {
-        AlertDialog(
-            onDismissRequest = { showProfileDialog = false },
-            title = { Text("Perfil del Socio", color = TextWhite, fontWeight = FontWeight.Bold) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Email: $userEmail", color = TextWhite, fontSize = 14.sp)
-                    Text("Plan: Plan Mensual", color = TextGray, fontSize = 13.sp)
-                    Text("Estado: Vigente", color = Color(0xFF00C853), fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                }
-            },
-            containerColor = Color(0xFF081C24),
-            confirmButton = {
-                Button(onClick = { showProfileDialog = false }, colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise)) {
-                    Text("CERRAR", color = Color.Black, fontWeight = FontWeight.Bold)
                 }
             }
         )
