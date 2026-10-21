@@ -440,59 +440,10 @@ fun MemberFullDashboard(
     currentTab: Int,
     onNavigate: (String) -> Unit
 ) {
-    var ex1 by remember { mutableStateOf(true) }
-    var ex2 by remember { mutableStateOf(false) }
-    var ex3 by remember { mutableStateOf(false) }
-    var ex4 by remember { mutableStateOf(false) }
-
     when (currentTab) {
-        0 -> { // HOME RUTINA
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
-            ) {
-                item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = PrimaryTurquoise.copy(alpha = 0.15f)),
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(text = "🔥", fontSize = 32.sp)
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(text = "Rutina Activa: Pecho & Tríceps", fontWeight = FontWeight.Bold, color = PrimaryTurquoise, fontSize = 16.sp)
-                                Text(text = "Progreso de hoy: 1 de 4 ejercicios completados", color = TextWhite, fontSize = 12.sp)
-                            }
-                        }
-                    }
-                }
-
-                item {
-                    Text(
-                        text = "Ejercicios Programados",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextWhite,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                }
-
-                item {
-                    RoutineCard("Press Inclinado con Mancuernas", "4", "10 - 12", "90 seg", ex1) { ex1 = !ex1 }
-                    RoutineCard("Aperturas en Polea Alta", "3", "15", "60 seg", ex2) { ex2 = !ex2 }
-                    RoutineCard("Fondos en Paralelas", "4", "10", "90 seg", ex3) { ex3 = !ex3 }
-                    RoutineCard("Extensión de Tríceps en Polea", "3", "12 - 15", "60 seg", ex4) { ex4 = !ex4 }
-                }
-            }
-        }
-        1 -> FullStoreSection()
-        2 -> FullClassesScheduleSection()
-        3 -> FullRoutinesSection()
-        else -> FullChatSection()
+        0 -> MemberDashboardSharedScreen("Gym 19", "socio@gymcopilot.com", null, apiClient, currentTab, {})
+        1 -> RealPublicStoreView(onTabSelected = {})
+        else -> MemberDashboardSharedScreen("Gym 19", "socio@gymcopilot.com", null, apiClient, currentTab, {})
     }
 }
 

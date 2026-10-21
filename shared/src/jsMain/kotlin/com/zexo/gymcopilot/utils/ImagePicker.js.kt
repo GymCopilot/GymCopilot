@@ -12,6 +12,8 @@ actual fun launchImagePicker(onImagePicked: (String) -> Unit) {
         val fileInput = document.createElement("input") as HTMLInputElement
         fileInput.type = "file"
         fileInput.accept = "image/*"
+        fileInput.style.display = "none"
+
         fileInput.onchange = {
             val files = fileInput.files
             if (files != null && files.length > 0) {
@@ -23,11 +25,18 @@ actual fun launchImagePicker(onImagePicked: (String) -> Unit) {
                         if (result != null) {
                             onImagePicked(result)
                         }
+                        try { document.body?.removeChild(fileInput) } catch (t: Throwable) {}
                     }
                     reader.readAsDataURL(file)
+                } else {
+                    try { document.body?.removeChild(fileInput) } catch (t: Throwable) {}
                 }
+            } else {
+                try { document.body?.removeChild(fileInput) } catch (t: Throwable) {}
             }
         }
+
+        document.body?.appendChild(fileInput)
         fileInput.click()
     } catch (e: Throwable) {
         // Fallback
