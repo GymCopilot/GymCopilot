@@ -48,16 +48,11 @@ jobs:
           cp -R shared/build/bin/iosSimulatorArm64/debugFramework/shared.framework iosApp/
           xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath iosApp/build-sim CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
 
-      - name: Empaquetar y Subir Paquete para Appetize.io (.app.zip)
-        run: |
-          cd iosApp/build-sim/Build/Products/Debug-iphonesimulator
-          zip -r "$GITHUB_WORKSPACE/GymCopilot-Appetize-iOS.zip" iosApp.app
-
       - name: Subir Paquete (.app.zip) para Appetize.io
         uses: actions/upload-artifact@v4
         with:
           name: GymCopilot-Appetize-iOS
-          path: GymCopilot-Appetize-iOS.zip
+          path: iosApp/build-sim/Build/Products/Debug-iphonesimulator/iosApp.app
 
       - name: Importar Certificado y Perfil de Firma iOS (si estan configurados)
         if: ${{ env.BUILD_CERTIFICATE_BASE64 != '' }}
