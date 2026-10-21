@@ -56,33 +56,85 @@
 
         window.openGymCopilotQrScanner = function(callback) {
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                var oldOverlay = document.getElementById('qr_camera_overlay');
+                if (oldOverlay) oldOverlay.remove();
+
+                var overlay = document.createElement('div');
+                overlay.id = 'qr_camera_overlay';
+                overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,15,22,0.96);z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:sans-serif;color:white;';
+
+                var title = document.createElement('div');
+                title.style.cssText = 'font-size:18px;font-weight:bold;color:#00e5ff;margin-bottom:16px;text-align:center;padding:0 16px;';
+                title.innerText = 'Escaneando Código QR con Cámara';
+
+                var videoContainer = document.createElement('div');
+                videoContainer.style.cssText = 'position:relative;width:280px;height:280px;border-radius:20px;overflow:hidden;border:3px solid #00e5ff;box-shadow:0 0 24px rgba(0,229,255,0.5);background:#000;';
+
+                var video = document.createElement('video');
+                video.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+                video.setAttribute('playsinline', 'true');
+                video.setAttribute('autoplay', 'true');
+
+                videoContainer.appendChild(video);
+
+                var hint = document.createElement('div');
+                hint.style.cssText = 'font-size:13px;color:#aaa;margin-top:16px;text-align:center;padding:0 20px;';
+                hint.innerText = 'Apunta la cámara trasera al código QR del gimnasio';
+
+                var closeBtn = document.createElement('button');
+                closeBtn.style.cssText = 'margin-top:24px;background:#00e5ff;color:#000;border:none;padding:12px 32px;font-size:14px;font-weight:bold;border-radius:24px;cursor:pointer;';
+                closeBtn.innerText = 'CANCELAR CÁMARA';
+
+                overlay.appendChild(title);
+                overlay.appendChild(videoContainer);
+                overlay.appendChild(hint);
+                overlay.appendChild(closeBtn);
+                document.body.appendChild(overlay);
+
+                var activeStream = null;
+                var intervalId = null;
+
+                function stopCamera() {
+                    if (intervalId) clearInterval(intervalId);
+                    if (activeStream) {
+                        activeStream.getTracks().forEach(function(track) { track.stop(); });
+                    }
+                    if (overlay && overlay.parentNode) {
+                        overlay.parentNode.removeChild(overlay);
+                    }
+                }
+
+                closeBtn.onclick = function() {
+                    stopCamera();
+                };
+
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } } })
                     .then(function(stream) {
-                        var video = document.createElement("video");
+                        activeStream = stream;
                         video.srcObject = stream;
-                        video.setAttribute("playsinline", true);
                         video.play();
 
                         if ('BarcodeDetector' in window) {
                             var detector = new BarcodeDetector({ formats: ['qr_code'] });
-                            var interval = setInterval(function() {
+                            intervalId = setInterval(function() {
                                 detector.detect(video).then(function(barcodes) {
                                     if (barcodes.length > 0) {
-                                        clearInterval(interval);
-                                        stream.getTracks().forEach(function(track) { track.stop(); });
-                                        if (callback) callback(barcodes[0].rawValue);
+                                        var code = barcodes[0].rawValue;
+                                        stopCamera();
+                                        if (callback) callback(code);
                                     }
                                 }).catch(function() {});
-                            }, 500);
+                            }, 400);
                         } else {
                             setTimeout(function() {
-                                stream.getTracks().forEach(function(track) { track.stop(); });
+                                stopCamera();
                                 if (callback) callback("ATTENDANCE:GymCopilot:CHECKIN_SUCCESS");
-                            }, 3000);
+                            }, 3500);
                         }
                     })
                     .catch(function(err) {
-                        var manualCode = prompt("Permiso de cámara o cámara trasera. Ingresa el código QR o Token manualmente:");
+                        stopCamera();
+                        var manualCode = prompt("Permiso de cámara o cámara no disponible. Ingresa el código QR o Token manualmente:");
                         if (manualCode && callback) callback(manualCode);
                     });
             } else {
@@ -93,6 +145,6 @@
     </script>
 
     <script src="skiko.js"></script>
-    <script src="shared.js?v=20261021_v1"></script>
+    <script src="shared.js?v=20261021_v4"></script>
 </body>
 </html>
