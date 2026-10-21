@@ -24,7 +24,34 @@
     </style>
 </head>
 <body>
+    <input type="file" id="gym_copilot_image_input" accept="image/*" style="display:none">
     <canvas id="ComposeTarget"></canvas>
+
+    <script>
+        window.gymCopilotImageCallback = null;
+        document.getElementById('gym_copilot_image_input').addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (file) {
+                var reader = new FileReader();
+                reader.onload = function(evt) {
+                    if (window.gymCopilotImageCallback) {
+                        window.gymCopilotImageCallback(evt.target.result);
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        window.openGymCopilotFilePicker = function(callback) {
+            window.gymCopilotImageCallback = callback;
+            var input = document.getElementById('gym_copilot_image_input');
+            if (input) {
+                input.value = '';
+                input.click();
+            }
+        };
+    </script>
+
     <script src="skiko.js"></script>
     <script src="shared.js"></script>
 </body>
