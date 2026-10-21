@@ -57,6 +57,11 @@ fun MembersSharedScreen(
         }
     }
 
+    val totalCount = members.size
+    val activeCount = members.count { it.membershipStatus == "ACTIVO" || it.membershipStatus == "ACTIVE" }
+    val debtorCount = members.count { it.membershipStatus == "DEUDOR" || it.membershipStatus == "VENCIDO" }
+    val dropoutCount = members.count { it.membershipStatus == "DESERTOR" || it.membershipStatus == "DROPOUT" }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -117,16 +122,16 @@ fun MembersSharedScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp)
             ) {
-                // 4 TARJETAS DE ESTADÍSTICA / FILTRO SUPERIORES
+                // 4 TARJETAS DE ESTADÍSTICA / FILTRO SUPERIORES CON VALORES REALES
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        MemberFilterStatBox("1", "TOTAL", Icons.Default.Person, PrimaryTurquoise, selectedFilter == "ALL", Modifier.weight(1f)) { selectedFilter = "ALL" }
-                        MemberFilterStatBox("0", "ACTIVOS", Icons.Default.Person, Color(0xFF00C853), selectedFilter == "ACTIVO", Modifier.weight(1f)) { selectedFilter = "ACTIVO" }
-                        MemberFilterStatBox("1", "DEUDORES", Icons.Default.Warning, Color.Red, selectedFilter == "DEUDOR", Modifier.weight(1f)) { selectedFilter = "DEUDOR" }
-                        MemberFilterStatBox("0", "DESERTORES", Icons.Default.Close, Color(0xFFFF9800), selectedFilter == "DESERTOR", Modifier.weight(1f)) { selectedFilter = "DESERTOR" }
+                        MemberFilterStatBox("$totalCount", "TOTAL", Icons.Default.Person, PrimaryTurquoise, selectedFilter == "ALL", Modifier.weight(1f)) { selectedFilter = "ALL" }
+                        MemberFilterStatBox("$activeCount", "ACTIVOS", Icons.Default.Person, Color(0xFF00C853), selectedFilter == "ACTIVO", Modifier.weight(1f)) { selectedFilter = "ACTIVO" }
+                        MemberFilterStatBox("$debtorCount", "DEUDORES", Icons.Default.Warning, Color.Red, selectedFilter == "DEUDOR", Modifier.weight(1f)) { selectedFilter = "DEUDOR" }
+                        MemberFilterStatBox("$dropoutCount", "DESERTORES", Icons.Default.Close, Color(0xFFFF9800), selectedFilter == "DESERTOR", Modifier.weight(1f)) { selectedFilter = "DESERTOR" }
                     }
                 }
 
@@ -522,6 +527,7 @@ fun MemberDetailSharedScreen(
     onUpdate: (Member) -> Unit
 ) {
     var isEditing by remember { mutableStateOf(false) }
+    var showStudentQrDialog by remember { mutableStateOf(false) }
     var firstName by remember { mutableStateOf(member.firstName) }
     var lastName by remember { mutableStateOf(member.lastName) }
     var phone by remember { mutableStateOf(member.phone) }
@@ -571,8 +577,8 @@ fun MemberDetailSharedScreen(
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { }) {
-                            Icon(Icons.Default.Info, contentDescription = "QR", tint = PrimaryTurquoise)
+                        IconButton(onClick = { showStudentQrDialog = true }) {
+                            Icon(painter = painterResource(Res.drawable.qr_code), contentDescription = "QR Alumno", tint = PrimaryTurquoise, modifier = Modifier.size(22.dp))
                         }
                         IconButton(onClick = onDelete) {
                             Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = Color.Red)
@@ -706,7 +712,7 @@ fun MemberDetailSharedScreen(
                                         Text("Registrar Pago", color = PrimaryTurquoise, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                     }
                                 }
-                                Text("Próxima renovación: 16/11/2026", color = TextWhite, fontSize = 14.sp)
+                                Text("Próxima renovación: 19/11/2026", color = TextWhite, fontSize = 14.sp)
                                 Text("Plan: ${member.planType}", color = TextGray, fontSize = 13.sp)
                             }
                         }
@@ -747,6 +753,65 @@ fun MemberDetailSharedScreen(
                 }
             }
         }
+    }
+
+    // DIÁLOGO CÓDIGO QR DEL ALUMNO
+    if (showStudentQrDialog) {
+        AlertDialog(
+            onDismissRequest = { showStudentQrDialog = false },
+            title = {
+                Text(
+                    text = "Código QR del Alumno",
+                    color = TextWhite,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            text = {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
+                ) {
+                    Surface(
+                        color = Color.White,
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.size(220.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.QrCode2,
+                                contentDescription = "QR Alumno",
+                                tint = Color.Black,
+                                modifier = Modifier.size(170.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "Pídele al Alumno que escanee este código para completar sus datos.",
+                        color = TextWhite,
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 20.sp
+                    )
+                }
+            },
+            containerColor = Color(0xFF081C24),
+            confirmButton = {
+                Button(
+                    onClick = { showStudentQrDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise),
+                    shape = RoundedCornerShape(24.dp),
+                    modifier = Modifier.fillMaxWidth().height(44.dp)
+                ) {
+                    Text("Cerrar", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                }
+            }
+        )
     }
 }
 
