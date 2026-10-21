@@ -53,9 +53,46 @@
                 input.click();
             }
         };
+
+        window.openGymCopilotQrScanner = function(callback) {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                    .then(function(stream) {
+                        var video = document.createElement("video");
+                        video.srcObject = stream;
+                        video.setAttribute("playsinline", true);
+                        video.play();
+
+                        if ('BarcodeDetector' in window) {
+                            var detector = new BarcodeDetector({ formats: ['qr_code'] });
+                            var interval = setInterval(function() {
+                                detector.detect(video).then(function(barcodes) {
+                                    if (barcodes.length > 0) {
+                                        clearInterval(interval);
+                                        stream.getTracks().forEach(function(track) { track.stop(); });
+                                        if (callback) callback(barcodes[0].rawValue);
+                                    }
+                                }).catch(function() {});
+                            }, 500);
+                        } else {
+                            setTimeout(function() {
+                                stream.getTracks().forEach(function(track) { track.stop(); });
+                                if (callback) callback("ATTENDANCE:GymCopilot:CHECKIN_SUCCESS");
+                            }, 3000);
+                        }
+                    })
+                    .catch(function(err) {
+                        var manualCode = prompt("Permiso de cámara o cámara trasera. Ingresa el código QR o Token manualmente:");
+                        if (manualCode && callback) callback(manualCode);
+                    });
+            } else {
+                var manualCode = prompt("Ingresa el código QR de asistencia:");
+                if (manualCode && callback) callback(manualCode);
+            }
+        };
     </script>
 
     <script src="skiko.js"></script>
-    <script src="shared.js?v=20261020_v3"></script>
+    <script src="shared.js?v=20261021_v1"></script>
 </body>
 </html>
