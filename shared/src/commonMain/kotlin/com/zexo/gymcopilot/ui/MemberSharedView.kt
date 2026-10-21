@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
 import com.zexo.gymcopilot.utils.decodeBase64ToBitmap
+import com.zexo.gymcopilot.utils.launchQrScanner
 import gymcopilot.shared.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
 
@@ -347,14 +348,73 @@ fun MemberDashboardSharedScreen(
     }
 
     if (showCheckInDialog) {
+        var checkInSuccess by remember { mutableStateOf(false) }
+
         AlertDialog(
             onDismissRequest = { showCheckInDialog = false },
-            title = { Text("Check-in de Asistencia", color = TextWhite, fontWeight = FontWeight.Bold) },
-            text = { Text("Aproxima la cámara al código QR del gimnasio para registrar tu asistencia automáticamente.", color = TextGray) },
+            title = { Text("Check-in con Cámara QR", color = TextWhite, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
+                ) {
+                    if (checkInSuccess) {
+                        Surface(
+                            color = Color(0xFF00C853).copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.5.dp, Color(0xFF00C853)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(16.dp)
+                            ) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF00C853), modifier = Modifier.size(48.dp))
+                                Spacer(Modifier.height(8.dp))
+                                Text("¡Asistencia Registrada Exitosamente!", color = Color(0xFF00C853), fontWeight = FontWeight.Black, fontSize = 15.sp, textAlign = TextAlign.Center)
+                            }
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(200.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(Color(0xFF00151C))
+                                .border(BorderStroke(2.dp, PrimaryTurquoise), RoundedCornerShape(20.dp))
+                                .clickable {
+                                    launchQrScanner { scannedCode ->
+                                        checkInSuccess = true
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.QrCodeScanner, contentDescription = "Escanear", tint = PrimaryTurquoise, modifier = Modifier.size(64.dp))
+                                Spacer(Modifier.height(12.dp))
+                                Text("Toca para abrir la cámara trasera", color = TextGray, fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+            },
             containerColor = Color(0xFF081C24),
             confirmButton = {
-                Button(onClick = { showCheckInDialog = false }, colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise)) {
-                    Text("ESCANEAR", color = Color.Black, fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (!checkInSuccess) {
+                        Button(
+                            onClick = {
+                                launchQrScanner { scannedCode ->
+                                    checkInSuccess = true
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise)
+                        ) {
+                            Text("ABRIR CÁMARA", color = Color.Black, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    TextButton(onClick = { showCheckInDialog = false }) {
+                        Text("CERRAR", color = TextWhite)
+                    }
                 }
             }
         )
