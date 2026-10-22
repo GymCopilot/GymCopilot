@@ -485,7 +485,7 @@ fun AddMemberSharedScreen(
 
                     CustomSharedTextField(value = planType, onValueChange = { planType = it }, label = "Plan de Suscripción")
                     Spacer(Modifier.height(12.dp))
-                    CustomSharedTextField(value = "16/11/2026", onValueChange = {}, label = "Vencimiento", enabled = false)
+                    CustomSharedTextField(value = "19/11/2026", onValueChange = {}, label = "Vencimiento", enabled = false)
                     Spacer(Modifier.height(12.dp))
                     CustomSharedTextField(value = routine, onValueChange = { routine = it }, label = "Rutina Asignada")
                     Spacer(Modifier.height(12.dp))
@@ -538,6 +538,8 @@ fun MemberDetailSharedScreen(
     var routine by remember { mutableStateOf(member.routine) }
     var assignedTrainer by remember { mutableStateOf(member.assignedTrainer) }
     var notes by remember { mutableStateOf(member.notes) }
+
+    val qrToken = "MEMBER_LINK:Gym 19:${member.email}:${member.firstName}:${member.lastName}:${member.planType}"
 
     Box(
         modifier = Modifier
@@ -797,6 +799,16 @@ fun MemberDetailSharedScreen(
                         fontSize = 14.sp,
                         textAlign = TextAlign.Center,
                         lineHeight = 20.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Token: ${member.email}",
+                        color = PrimaryTurquoise,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
                     )
                 }
             },
