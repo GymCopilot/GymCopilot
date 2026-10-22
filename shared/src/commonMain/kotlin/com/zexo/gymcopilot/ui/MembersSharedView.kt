@@ -1,5 +1,6 @@
 package com.zexo.gymcopilot.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -539,7 +540,8 @@ fun MemberDetailSharedScreen(
     var assignedTrainer by remember { mutableStateOf(member.assignedTrainer) }
     var notes by remember { mutableStateOf(member.notes) }
 
-    val qrToken = "MEMBER_LINK:Gym 19:${member.email}:${member.firstName}:${member.lastName}:${member.planType}"
+    val defaultApiUrl = "https://script.google.com/macros/s/AKfycbx_GymCopilot_Sync/exec"
+    val qrToken = "MEMBERLINK|${member.firstName}|${member.lastName}|${member.email}|$defaultApiUrl|Gym 19"
 
     Box(
         modifier = Modifier
@@ -757,7 +759,7 @@ fun MemberDetailSharedScreen(
         }
     }
 
-    // DIÁLOGO CÓDIGO QR DEL ALUMNO
+    // DIÁLOGO CÓDIGO QR DEL ALUMNO (MEMBERLINK PROTOCOL)
     if (showStudentQrDialog) {
         AlertDialog(
             onDismissRequest = { showStudentQrDialog = false },
@@ -801,15 +803,23 @@ fun MemberDetailSharedScreen(
                         lineHeight = 20.sp
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                    Text(
-                        text = "Token: ${member.email}",
-                        color = PrimaryTurquoise,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    )
+                    Surface(
+                        color = Color(0xFF00151C),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, PrimaryTurquoise.copy(alpha = 0.4f)),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                    ) {
+                        Text(
+                            text = qrToken,
+                            color = PrimaryTurquoise,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(8.dp)
+                        )
+                    }
                 }
             },
             containerColor = Color(0xFF081C24),
