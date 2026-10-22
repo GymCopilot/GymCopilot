@@ -39,14 +39,14 @@ fun MemberProfileSharedScreen(
     onBack: () -> Unit,
     onSaveProfile: (firstName: String, lastName: String, email: String, phone: String, address: String, weight: String, height: String, photoUri: String?) -> Unit
 ) {
-    var firstName by remember { mutableStateOf(initialFirstName) }
-    var lastName by remember { mutableStateOf(initialLastName) }
-    var email by remember { mutableStateOf(initialEmail) }
-    var phone by remember { mutableStateOf(initialPhone) }
-    var address by remember { mutableStateOf(initialAddress) }
-    var weight by remember { mutableStateOf(initialWeight) }
-    var height by remember { mutableStateOf(initialHeight) }
-    var photoUri by remember { mutableStateOf<String?>(initialPhotoUri) }
+    var firstName by remember(initialFirstName) { mutableStateOf(initialFirstName) }
+    var lastName by remember(initialLastName) { mutableStateOf(initialLastName) }
+    var email by remember(initialEmail) { mutableStateOf(initialEmail) }
+    var phone by remember(initialPhone) { mutableStateOf(initialPhone) }
+    var address by remember(initialAddress) { mutableStateOf(initialAddress) }
+    var weight by remember(initialWeight) { mutableStateOf(initialWeight) }
+    var height by remember(initialHeight) { mutableStateOf(initialHeight) }
+    var photoUri by remember(initialPhotoUri) { mutableStateOf<String?>(initialPhotoUri) }
 
     val photoBitmap = remember(photoUri) {
         if (photoUri != null) decodeBase64ToBitmap(photoUri!!) else null
