@@ -20,6 +20,10 @@
 	<string>1</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>GymCopilot requiere acceso a la cámara para escanear códigos QR de asistencia y perfil.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>GymCopilot requiere acceso a la galería para seleccionar el logo del gimnasio y foto de perfil.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

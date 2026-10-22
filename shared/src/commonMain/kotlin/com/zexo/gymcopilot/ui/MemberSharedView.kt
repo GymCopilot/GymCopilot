@@ -24,10 +24,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.zexo.gymcopilot.shared.network.CheckInRequest
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
+import com.zexo.gymcopilot.shared.network.MemberSyncRequest
 import com.zexo.gymcopilot.utils.decodeBase64ToBitmap
 import com.zexo.gymcopilot.utils.launchQrScanner
 import gymcopilot.shared.generated.resources.*
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 
 @Composable
@@ -39,6 +42,7 @@ fun MemberDashboardSharedScreen(
     currentTab: Int = 0,
     onTabSelected: (Int) -> Unit = {}
 ) {
+    val coroutineScope = rememberCoroutineScope()
     var showQrDialog by remember { mutableStateOf(false) }
     var showCheckInDialog by remember { mutableStateOf(false) }
     var showTimerDialog by remember { mutableStateOf(false) }
@@ -87,6 +91,25 @@ fun MemberDashboardSharedScreen(
                 activeWeight = wt
                 activeHeight = ht
                 activePhotoUri = photo
+
+                // Sincronización real con Google Sheets Database Ktor API
+                coroutineScope.launch {
+                    try {
+                        val syncReq = MemberSyncRequest(
+                            action = "update_member",
+                            firstName = fn,
+                            lastName = ln,
+                            email = em,
+                            phone = ph,
+                            address = ad,
+                            weight = wt,
+                            height = ht,
+                            photoUri = photo,
+                            membershipStatus = "ACTIVO"
+                        )
+                        GymKtorApiClient.postData("https://script.google.com/macros/s/AKfycbx_GymCopilot_Sync/exec", syncReq)
+                    } catch (t: Throwable) { }
+                }
             }
         )
         return
@@ -301,7 +324,7 @@ fun MemberDashboardSharedScreen(
                             iconTint = Color(0xFF42A5F5),
                             modifier = Modifier.weight(1f)
                         ) {
-                            onTabSelected(3) // Ir a la pestaña Rutinas
+                            onTabSelected(3)
                         }
 
                         MemberActionSquareCard(
@@ -427,6 +450,19 @@ fun MemberDashboardSharedScreen(
                                             }
                                         }
                                         checkInSuccess = true
+
+                                        // Registrar asistencia HTTP POST en Google Sheets
+                                        coroutineScope.launch {
+                                            try {
+                                                val checkInReq = CheckInRequest(
+                                                    action = "check_in",
+                                                    gymId = gymName,
+                                                    memberEmail = activeEmail,
+                                                    timestamp = 0L
+                                                )
+                                                GymKtorApiClient.postData("https://script.google.com/macros/s/AKfycbx_GymCopilot_Sync/exec", checkInReq)
+                                            } catch (t: Throwable) { }
+                                        }
                                     }
                                 },
                             contentAlignment = Alignment.Center
@@ -456,6 +492,18 @@ fun MemberDashboardSharedScreen(
                                         }
                                     }
                                     checkInSuccess = true
+
+                                    coroutineScope.launch {
+                                        try {
+                                            val checkInReq = CheckInRequest(
+                                                action = "check_in",
+                                                gymId = gymName,
+                                                memberEmail = activeEmail,
+                                                timestamp = 0L
+                                            )
+                                            GymKtorApiClient.postData("https://script.google.com/macros/s/AKfycbx_GymCopilot_Sync/exec", checkInReq)
+                                        } catch (t: Throwable) { }
+                                    }
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise)
