@@ -27,8 +27,11 @@ import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.shared.network.CheckInRequest
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
 import com.zexo.gymcopilot.shared.network.MemberSyncRequest
+import com.zexo.gymcopilot.utils.LocalMemberData
 import com.zexo.gymcopilot.utils.decodeBase64ToBitmap
 import com.zexo.gymcopilot.utils.launchQrScanner
+import com.zexo.gymcopilot.utils.readLocalMemberProfile
+import com.zexo.gymcopilot.utils.saveLocalMemberProfile
 import gymcopilot.shared.generated.resources.*
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
@@ -58,6 +61,21 @@ fun MemberDashboardSharedScreen(
     var activeWeight by remember { mutableStateOf("") }
     var activeHeight by remember { mutableStateOf("") }
     var activePhotoUri by remember { mutableStateOf<String?>(null) }
+
+    // CARGA PERSISTENTE DESDE LOCALSTORAGE EN WEB / DISPOSITIVO
+    LaunchedEffect(Unit) {
+        val localData = readLocalMemberProfile()
+        if (localData != null && localData.email.isNotBlank()) {
+            activeFirstName = localData.firstName
+            activeLastName = localData.lastName
+            activeEmail = localData.email
+            activePhone = localData.phone
+            activeAddress = localData.address
+            activeWeight = localData.weight
+            activeHeight = localData.height
+            if (localData.photoUri != null) activePhotoUri = localData.photoUri
+        }
+    }
 
     val gymIsOpen = true
     val classInSession = false
@@ -91,6 +109,20 @@ fun MemberDashboardSharedScreen(
                 activeWeight = wt
                 activeHeight = ht
                 activePhotoUri = photo
+
+                // Guardar en almacenamiento local persistente (LocalStorage)
+                saveLocalMemberProfile(
+                    LocalMemberData(
+                        firstName = fn,
+                        lastName = ln,
+                        email = em,
+                        phone = ph,
+                        address = ad,
+                        weight = wt,
+                        height = ht,
+                        photoUri = photo
+                    )
+                )
 
                 // Sincronización real con Google Sheets Database Ktor API
                 coroutineScope.launch {
@@ -441,19 +473,58 @@ fun MemberDashboardSharedScreen(
                                 .border(BorderStroke(2.dp, PrimaryTurquoise), RoundedCornerShape(20.dp))
                                 .clickable {
                                     launchQrScanner { scannedCode ->
-                                        if (scannedCode.startsWith("MEMBER_LINK:")) {
-                                            val parts = scannedCode.split(":")
+                                        val cleanCode = scannedCode.trim()
+                                        if (cleanCode.startsWith("MEMBERLINK|")) {
+                                            val parts = cleanCode.split("|")
+                                            if (parts.size >= 4) {
+                                                activeFirstName = parts[1]
+                                                activeLastName = parts[2]
+                                                activeEmail = parts[3]
+                                            }
+                                        } else if (cleanCode.startsWith("MEMBER_LINK:")) {
+                                            val parts = cleanCode.split(":")
                                             if (parts.size >= 5) {
                                                 activeEmail = parts[2]
                                                 activeFirstName = parts[3]
                                                 activeLastName = parts[4]
                                             }
+                                        } else if (cleanCode.contains("@")) {
+                                            activeEmail = cleanCode.trim()
                                         }
+
+                                        // Guardar en almacenamiento local persistente (LocalStorage)
+                                        saveLocalMemberProfile(
+                                            LocalMemberData(
+                                                firstName = activeFirstName,
+                                                lastName = activeLastName,
+                                                email = activeEmail,
+                                                phone = activePhone,
+                                                address = activeAddress,
+                                                weight = activeWeight,
+                                                height = activeHeight,
+                                                photoUri = activePhotoUri
+                                            )
+                                        )
+
                                         checkInSuccess = true
 
-                                        // Registrar asistencia HTTP POST en Google Sheets
+                                        // Registrar asistencia y actualizar miembro HTTP POST en Google Sheets
                                         coroutineScope.launch {
                                             try {
+                                                val syncReq = MemberSyncRequest(
+                                                    action = "update_member",
+                                                    firstName = activeFirstName,
+                                                    lastName = activeLastName,
+                                                    email = activeEmail,
+                                                    phone = activePhone,
+                                                    address = activeAddress,
+                                                    weight = activeWeight,
+                                                    height = activeHeight,
+                                                    photoUri = activePhotoUri,
+                                                    membershipStatus = "ACTIVO"
+                                                )
+                                                GymKtorApiClient.postData("https://script.google.com/macros/s/AKfycbx_GymCopilot_Sync/exec", syncReq)
+
                                                 val checkInReq = CheckInRequest(
                                                     action = "check_in",
                                                     gymId = gymName,
@@ -483,18 +554,56 @@ fun MemberDashboardSharedScreen(
                         Button(
                             onClick = {
                                 launchQrScanner { scannedCode ->
-                                    if (scannedCode.startsWith("MEMBER_LINK:")) {
-                                        val parts = scannedCode.split(":")
+                                    val cleanCode = scannedCode.trim()
+                                    if (cleanCode.startsWith("MEMBERLINK|")) {
+                                        val parts = cleanCode.split("|")
+                                        if (parts.size >= 4) {
+                                            activeFirstName = parts[1]
+                                            activeLastName = parts[2]
+                                            activeEmail = parts[3]
+                                        }
+                                    } else if (cleanCode.startsWith("MEMBER_LINK:")) {
+                                        val parts = cleanCode.split(":")
                                         if (parts.size >= 5) {
                                             activeEmail = parts[2]
                                             activeFirstName = parts[3]
                                             activeLastName = parts[4]
                                         }
+                                    } else if (cleanCode.contains("@")) {
+                                        activeEmail = cleanCode.trim()
                                     }
+
+                                    saveLocalMemberProfile(
+                                        LocalMemberData(
+                                            firstName = activeFirstName,
+                                            lastName = activeLastName,
+                                            email = activeEmail,
+                                            phone = activePhone,
+                                            address = activeAddress,
+                                            weight = activeWeight,
+                                            height = activeHeight,
+                                            photoUri = activePhotoUri
+                                        )
+                                    )
+
                                     checkInSuccess = true
 
                                     coroutineScope.launch {
                                         try {
+                                            val syncReq = MemberSyncRequest(
+                                                action = "update_member",
+                                                firstName = activeFirstName,
+                                                lastName = activeLastName,
+                                                email = activeEmail,
+                                                phone = activePhone,
+                                                address = activeAddress,
+                                                weight = activeWeight,
+                                                height = activeHeight,
+                                                photoUri = activePhotoUri,
+                                                membershipStatus = "ACTIVO"
+                                            )
+                                            GymKtorApiClient.postData("https://script.google.com/macros/s/AKfycbx_GymCopilot_Sync/exec", syncReq)
+
                                             val checkInReq = CheckInRequest(
                                                 action = "check_in",
                                                 gymId = gymName,
