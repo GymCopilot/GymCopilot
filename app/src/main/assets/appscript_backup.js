@@ -205,6 +205,10 @@ function getMasterSS() {
 
 function cleanMasterSS(masterSS) {
   try {
+    var regSheet = masterSS.getSheetByName("GymsRegistry");
+    if (!regSheet) {
+      regSheet = masterSS.insertSheet("GymsRegistry");
+    }
     var sheets = masterSS.getSheets();
     for (var i = 0; i < sheets.length; i++) {
       var sName = sheets[i].getName();
@@ -267,6 +271,21 @@ function getSS(e) {
         }
       }
     }
+
+    // SI NO HUBO COINCIDENCIA DIRECTA O GYMID/EMAIL ESTABA VACÍO, RETORNAR LA PLANILLA DEL ÚLTIMO GIMNASIO REGISTRADO
+    if (registrySheet.getLastRow() > 1) {
+      for (var j = registrySheet.getLastRow(); j >= 2; j--) {
+        var lastSsId = String(registrySheet.getRange(j, 2).getValue()).trim();
+        if (lastSsId) {
+          try {
+            var lastSS = SpreadsheetApp.openById(lastSsId);
+            if (lastSS && lastSS.getId() !== masterSS.getId()) {
+              return lastSS;
+            }
+          } catch (e) {}
+        }
+      }
+    }
   }
 
   return masterSS;
@@ -323,6 +342,16 @@ function executeCreateGym(data) {
 }
 
 function getOrCreateSheet(ss, name) {
+  try {
+    var prop = PropertiesService.getScriptProperties();
+    var masterSSId = prop.getProperty("MASTER_SS_ID");
+    if (masterSSId && ss.getId() === masterSSId && name !== "GymsRegistry") {
+      var regSheet = ss.getSheetByName("GymsRegistry");
+      if (!regSheet) regSheet = ss.insertSheet("GymsRegistry");
+      return regSheet;
+    }
+  } catch (eCheckMaster) {}
+
   var sheet = ss.getSheetByName(name);
   if (!sheet) {
     sheet = ss.insertSheet(name);
