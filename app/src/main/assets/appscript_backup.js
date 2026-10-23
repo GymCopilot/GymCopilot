@@ -211,7 +211,7 @@ function cleanMasterSS(masterSS) {
       regSheet.appendRow(["GymID", "SpreadsheetID", "Email", "Fecha"]);
     }
     var sheets = masterSS.getSheets();
-    for (var i = 0; i < sheets.length; i++) {
+    for (var i = sheets.length - 1; i >= 0; i--) {
       var sName = sheets[i].getName();
       if (sName !== "GymsRegistry" && sheets.length > 1) {
         masterSS.deleteSheet(sheets[i]);
@@ -244,7 +244,7 @@ function getSS(e) {
   if (spreadsheetId) {
     try {
       var target = SpreadsheetApp.openById(spreadsheetId);
-      if (target && target.getName().indexOf("Master") === -1) {
+      if (target && target.getName().indexOf("Master") === -1 && target.getName() !== "GymCopilot_Master_DB") {
         return target;
       }
     } catch (e) {}
@@ -270,7 +270,7 @@ function getSS(e) {
       if ((normGymId !== "" && rGymId === normGymId) || (normEmail !== "" && rEmail === normEmail)) {
         try {
           var foundSS = SpreadsheetApp.openById(rSpreadsheetId);
-          if (foundSS && foundSS.getName().indexOf("Master") === -1) {
+          if (foundSS && foundSS.getName().indexOf("Master") === -1 && foundSS.getName() !== "GymCopilot_Master_DB") {
             return foundSS;
           }
         } catch (e) {}
@@ -285,7 +285,7 @@ function getSS(e) {
       if (lastSsId) {
         try {
           var lastSS = SpreadsheetApp.openById(lastSsId);
-          if (lastSS && lastSS.getName().indexOf("Master") === -1) {
+          if (lastSS && lastSS.getName().indexOf("Master") === -1 && lastSS.getName() !== "GymCopilot_Master_DB") {
             return lastSS;
           }
         } catch (e) {}
@@ -350,7 +350,8 @@ function executeCreateGym(data) {
 }
 
 function getOrCreateSheet(ss, name) {
-  if (ss.getName().indexOf("Master") !== -1 || ss.getName() === "GymCopilot_Master_DB") {
+  var ssName = ss.getName();
+  if (ssName === "GymCopilot_Master_DB" || ssName.indexOf("Master") !== -1) {
     if (name !== "GymsRegistry") {
       var regSheet = ss.getSheetByName("GymsRegistry");
       if (!regSheet) {
