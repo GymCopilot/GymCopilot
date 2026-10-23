@@ -208,6 +208,7 @@ function cleanMasterSS(masterSS) {
     var regSheet = masterSS.getSheetByName("GymsRegistry");
     if (!regSheet) {
       regSheet = masterSS.insertSheet("GymsRegistry");
+      regSheet.appendRow(["GymID", "SpreadsheetID", "Email", "Fecha"]);
     }
     var sheets = masterSS.getSheets();
     for (var i = 0; i < sheets.length; i++) {
@@ -243,47 +244,51 @@ function getSS(e) {
   if (spreadsheetId) {
     try {
       var target = SpreadsheetApp.openById(spreadsheetId);
-      if (target && target.getId() !== masterSS.getId()) {
+      if (target && target.getName().indexOf("Master") === -1) {
         return target;
       }
     } catch (e) {}
   }
 
-  var registrySheet = getOrCreateSheet(masterSS, "GymsRegistry");
-  if (registrySheet) {
-    var values = registrySheet.getDataRange().getValues();
-    var normGymId = String(gymId).toLowerCase().replace(/[^a-z0-9]/g, "");
-    var normEmail = String(email).toLowerCase().trim();
+  var registrySheet = masterSS.getSheetByName("GymsRegistry");
+  if (!registrySheet) {
+    registrySheet = masterSS.insertSheet("GymsRegistry");
+    registrySheet.appendRow(["GymID", "SpreadsheetID", "Email", "Fecha"]);
+  }
 
-    if (normGymId !== "" || normEmail !== "") {
-      for (var i = 1; i < values.length; i++) {
-        var rGymId = String(values[i][0]).toLowerCase().replace(/[^a-z0-9]/g, "");
-        var rSpreadsheetId = String(values[i][1]).trim();
-        var rEmail = String(values[i][2]).trim().toLowerCase();
+  var values = registrySheet.getDataRange().getValues();
+  var normGymId = String(gymId).toLowerCase().replace(/[^a-z0-9]/g, "");
+  var normEmail = String(email).toLowerCase().trim();
 
-        if ((normGymId !== "" && rGymId === normGymId) || (normEmail !== "" && rEmail === normEmail)) {
-          try {
-            var foundSS = SpreadsheetApp.openById(rSpreadsheetId);
-            if (foundSS && foundSS.getId() !== masterSS.getId()) {
-              return foundSS;
-            }
-          } catch (e) {}
-        }
+  // 1. Coincidencia directa por GymID o Email registrado
+  if (normGymId !== "" || normEmail !== "") {
+    for (var i = 1; i < values.length; i++) {
+      var rGymId = String(values[i][0]).toLowerCase().replace(/[^a-z0-9]/g, "");
+      var rSpreadsheetId = String(values[i][1]).trim();
+      var rEmail = String(values[i][2]).trim().toLowerCase();
+
+      if ((normGymId !== "" && rGymId === normGymId) || (normEmail !== "" && rEmail === normEmail)) {
+        try {
+          var foundSS = SpreadsheetApp.openById(rSpreadsheetId);
+          if (foundSS && foundSS.getName().indexOf("Master") === -1) {
+            return foundSS;
+          }
+        } catch (e) {}
       }
     }
+  }
 
-    // SI NO HUBO COINCIDENCIA DIRECTA O GYMID/EMAIL ESTABA VACÍO, RETORNAR LA PLANILLA DEL ÚLTIMO GIMNASIO REGISTRADO
-    if (registrySheet.getLastRow() > 1) {
-      for (var j = registrySheet.getLastRow(); j >= 2; j--) {
-        var lastSsId = String(registrySheet.getRange(j, 2).getValue()).trim();
-        if (lastSsId) {
-          try {
-            var lastSS = SpreadsheetApp.openById(lastSsId);
-            if (lastSS && lastSS.getId() !== masterSS.getId()) {
-              return lastSS;
-            }
-          } catch (e) {}
-        }
+  // 2. Si no hubo coincidencia (o es una petición inicial), retornar la planilla del último gimnasio activo en GymsRegistry
+  if (values.length > 1) {
+    for (var j = values.length - 1; j >= 1; j--) {
+      var lastSsId = String(values[j][1]).trim();
+      if (lastSsId) {
+        try {
+          var lastSS = SpreadsheetApp.openById(lastSsId);
+          if (lastSS && lastSS.getName().indexOf("Master") === -1) {
+            return lastSS;
+          }
+        } catch (e) {}
       }
     }
   }
@@ -325,7 +330,10 @@ function executeCreateGym(data) {
 
   try {
     var masterSS = getMasterSS();
-    var registrySheet = getOrCreateSheet(masterSS, "GymsRegistry");
+    var registrySheet = masterSS.getSheetByName("GymsRegistry");
+    if (!registrySheet) {
+      registrySheet = masterSS.insertSheet("GymsRegistry");
+    }
     if (registrySheet.getLastRow() === 0 || (registrySheet.getLastRow() === 1 && registrySheet.getRange(1, 1).getValue() === "")) {
       registrySheet.clearContents();
       registrySheet.appendRow(["GymID", "SpreadsheetID", "Email", "Fecha"]);
@@ -342,15 +350,16 @@ function executeCreateGym(data) {
 }
 
 function getOrCreateSheet(ss, name) {
-  try {
-    var prop = PropertiesService.getScriptProperties();
-    var masterSSId = prop.getProperty("MASTER_SS_ID");
-    if (masterSSId && ss.getId() === masterSSId && name !== "GymsRegistry") {
+  if (ss.getName().indexOf("Master") !== -1 || ss.getName() === "GymCopilot_Master_DB") {
+    if (name !== "GymsRegistry") {
       var regSheet = ss.getSheetByName("GymsRegistry");
-      if (!regSheet) regSheet = ss.insertSheet("GymsRegistry");
+      if (!regSheet) {
+        regSheet = ss.insertSheet("GymsRegistry");
+        regSheet.appendRow(["GymID", "SpreadsheetID", "Email", "Fecha"]);
+      }
       return regSheet;
     }
-  } catch (eCheckMaster) {}
+  }
 
   var sheet = ss.getSheetByName(name);
   if (!sheet) {
@@ -416,6 +425,12 @@ function createJsonResponse(obj) {
 }
 
 function getMegaSyncData(ss) {
+  if (ss.getName().indexOf("Master") !== -1 || ss.getName() === "GymCopilot_Master_DB") {
+    return {
+      "asistencia": [], "alumnos": [], "profesores": [], "horarios": [], "chats": [], "rutinas": [], "planes": []
+    };
+  }
+
   return {
     "asistencia": getSheetData(ss, "Asistencia", fixAttendanceSheetStructure),
     "alumnos": getSheetData(ss, "Alumnos", fixMemberSheetStructure),
