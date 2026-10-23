@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
+import com.zexo.gymcopilot.utils.readLocalMemberProfile
 import gymcopilot.shared.generated.resources.*
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.painterResource
@@ -94,6 +95,14 @@ fun SharedGymCopilotApp(
 ) {
     var screenState by remember { mutableStateOf(AppScreenState.SPLASH) }
     var currentRole by remember { mutableStateOf(initialRole.lowercase()) }
+    var activeGymName by remember { mutableStateOf(gymName) }
+
+    LaunchedEffect(Unit) {
+        val localData = readLocalMemberProfile()
+        if (localData != null && localData.gymName.isNotBlank() && localData.gymName != "Tu Gimnasio") {
+            activeGymName = localData.gymName
+        }
+    }
 
     GymCopilotTheme {
         Box(
@@ -104,13 +113,13 @@ fun SharedGymCopilotApp(
             when (screenState) {
                 AppScreenState.SPLASH -> {
                     SplashScreenView(
-                        gymName = gymName,
+                        gymName = activeGymName,
                         onTimeout = { screenState = AppScreenState.LOGIN }
                     )
                 }
                 AppScreenState.LOGIN -> {
                     LoginScreenView(
-                        gymName = gymName,
+                        gymName = activeGymName,
                         onRoleSelected = { selectedRole ->
                             currentRole = selectedRole
                             screenState = AppScreenState.MAIN_APP
@@ -119,7 +128,7 @@ fun SharedGymCopilotApp(
                 }
                 AppScreenState.MAIN_APP -> {
                     MainAppView(
-                        gymName = gymName,
+                        gymName = activeGymName,
                         userRole = currentRole,
                         apiClient = GymKtorApiClient,
                         onChangeRole = { screenState = AppScreenState.LOGIN }

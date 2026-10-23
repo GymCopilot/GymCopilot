@@ -52,7 +52,7 @@ fun MemberDashboardSharedScreen(
     var showHelpScreen by remember { mutableStateOf(false) }
     var showMemberProfileScreen by remember { mutableStateOf(false) }
 
-    // DATOS DINÁMICOS DEL PERFIL DEL SOCIO
+    // DATOS DINÁMICOS DEL PERFIL DEL SOCIO Y GIMNASIO
     var activeFirstName by remember { mutableStateOf("pe") }
     var activeLastName by remember { mutableStateOf("lado") }
     var activeEmail by remember { mutableStateOf(userEmail) }
@@ -61,6 +61,8 @@ fun MemberDashboardSharedScreen(
     var activeWeight by remember { mutableStateOf("") }
     var activeHeight by remember { mutableStateOf("") }
     var activePhotoUri by remember { mutableStateOf<String?>(null) }
+    var activeGymName by remember { mutableStateOf(gymName) }
+    var activeGymUrl by remember { mutableStateOf("https://script.google.com/macros/s/AKfycbx_GymCopilot_Sync/exec") }
 
     // CARGA PERSISTENTE DESDE LOCALSTORAGE EN WEB / DISPOSITIVO
     LaunchedEffect(Unit) {
@@ -74,6 +76,8 @@ fun MemberDashboardSharedScreen(
             activeWeight = localData.weight
             activeHeight = localData.height
             if (localData.photoUri != null) activePhotoUri = localData.photoUri
+            if (localData.gymName.isNotBlank()) activeGymName = localData.gymName
+            if (localData.gymApiUrl.isNotBlank()) activeGymUrl = localData.gymApiUrl
         }
     }
 
@@ -120,7 +124,9 @@ fun MemberDashboardSharedScreen(
                         address = ad,
                         weight = wt,
                         height = ht,
-                        photoUri = photo
+                        photoUri = photo,
+                        gymName = activeGymName,
+                        gymApiUrl = activeGymUrl
                     )
                 )
 
@@ -139,7 +145,7 @@ fun MemberDashboardSharedScreen(
                             photoUri = photo,
                             membershipStatus = "ACTIVO"
                         )
-                        GymKtorApiClient.postData("https://script.google.com/macros/s/AKfycbx_GymCopilot_Sync/exec", syncReq)
+                        GymKtorApiClient.postData(activeGymUrl, syncReq)
                     } catch (t: Throwable) { }
                 }
             }
@@ -201,7 +207,7 @@ fun MemberDashboardSharedScreen(
 
                         Column {
                             Text(
-                                text = gymName.ifBlank { "Gym 19" },
+                                text = activeGymName.ifBlank { "Gym 19" },
                                 color = TextWhite,
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Black
@@ -480,6 +486,8 @@ fun MemberDashboardSharedScreen(
                                                 activeFirstName = parts[1]
                                                 activeLastName = parts[2]
                                                 activeEmail = parts[3]
+                                                if (parts.size >= 5 && parts[4].isNotBlank()) activeGymUrl = parts[4]
+                                                if (parts.size >= 6 && parts[5].isNotBlank()) activeGymName = parts[5]
                                             }
                                         } else if (cleanCode.startsWith("MEMBER_LINK:")) {
                                             val parts = cleanCode.split(":")
@@ -502,13 +510,15 @@ fun MemberDashboardSharedScreen(
                                                 address = activeAddress,
                                                 weight = activeWeight,
                                                 height = activeHeight,
-                                                photoUri = activePhotoUri
+                                                photoUri = activePhotoUri,
+                                                gymName = activeGymName,
+                                                gymApiUrl = activeGymUrl
                                             )
                                         )
 
                                         checkInSuccess = true
 
-                                        // Registrar asistencia y actualizar miembro HTTP POST en Google Sheets
+                                        // Registrar asistencia y actualizar miembro HTTP POST en Google Sheets DB
                                         coroutineScope.launch {
                                             try {
                                                 val syncReq = MemberSyncRequest(
@@ -523,15 +533,15 @@ fun MemberDashboardSharedScreen(
                                                     photoUri = activePhotoUri,
                                                     membershipStatus = "ACTIVO"
                                                 )
-                                                GymKtorApiClient.postData("https://script.google.com/macros/s/AKfycbx_GymCopilot_Sync/exec", syncReq)
+                                                GymKtorApiClient.postData(activeGymUrl, syncReq)
 
                                                 val checkInReq = CheckInRequest(
                                                     action = "check_in",
-                                                    gymId = gymName,
+                                                    gymId = activeGymName,
                                                     memberEmail = activeEmail,
                                                     timestamp = 0L
                                                 )
-                                                GymKtorApiClient.postData("https://script.google.com/macros/s/AKfycbx_GymCopilot_Sync/exec", checkInReq)
+                                                GymKtorApiClient.postData(activeGymUrl, checkInReq)
                                             } catch (t: Throwable) { }
                                         }
                                     }
@@ -561,6 +571,8 @@ fun MemberDashboardSharedScreen(
                                             activeFirstName = parts[1]
                                             activeLastName = parts[2]
                                             activeEmail = parts[3]
+                                            if (parts.size >= 5 && parts[4].isNotBlank()) activeGymUrl = parts[4]
+                                            if (parts.size >= 6 && parts[5].isNotBlank()) activeGymName = parts[5]
                                         }
                                     } else if (cleanCode.startsWith("MEMBER_LINK:")) {
                                         val parts = cleanCode.split(":")
@@ -582,7 +594,9 @@ fun MemberDashboardSharedScreen(
                                             address = activeAddress,
                                             weight = activeWeight,
                                             height = activeHeight,
-                                            photoUri = activePhotoUri
+                                            photoUri = activePhotoUri,
+                                            gymName = activeGymName,
+                                            gymApiUrl = activeGymUrl
                                         )
                                     )
 
@@ -602,15 +616,15 @@ fun MemberDashboardSharedScreen(
                                                 photoUri = activePhotoUri,
                                                 membershipStatus = "ACTIVO"
                                             )
-                                            GymKtorApiClient.postData("https://script.google.com/macros/s/AKfycbx_GymCopilot_Sync/exec", syncReq)
+                                            GymKtorApiClient.postData(activeGymUrl, syncReq)
 
                                             val checkInReq = CheckInRequest(
                                                 action = "check_in",
-                                                gymId = gymName,
+                                                gymId = activeGymName,
                                                 memberEmail = activeEmail,
                                                 timestamp = 0L
                                             )
-                                            GymKtorApiClient.postData("https://script.google.com/macros/s/AKfycbx_GymCopilot_Sync/exec", checkInReq)
+                                            GymKtorApiClient.postData(activeGymUrl, checkInReq)
                                         } catch (t: Throwable) { }
                                     }
                                 }
