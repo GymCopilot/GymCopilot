@@ -14,6 +14,8 @@ expect suspend fun postAppsScriptNative(url: String, jsonBody: String): String
 
 object GymKtorApiClient {
 
+    const val MASTER_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby0bEX37-HRGn9M8dbO8ZBGhHY2riK_AEVhby8ESmPWwiIgNRzqv5z0I78Lvg7Dwk0p/exec"
+
     val jsonInstance = Json {
         ignoreUnknownKeys = true
         isLenient = true
@@ -42,7 +44,7 @@ object GymKtorApiClient {
         email: String? = null
     ): String {
         return try {
-            val targetUrl = url.ifBlank { "https://script.google.com/macros/s/AKfycbx_GymCopilot_Sync/exec" }
+            val targetUrl = if (url.isBlank() || url.contains("AKfycbx_GymCopilot_Sync")) MASTER_SCRIPT_URL else url
             val paramChar = if (targetUrl.contains("?")) "&" else "?"
             val queryParams = StringBuilder("$targetUrl${paramChar}")
             if (!action.isNullOrBlank()) queryParams.append("action=$action&")
@@ -61,7 +63,7 @@ object GymKtorApiClient {
         body: T,
         token: String? = null
     ): String {
-        val targetUrl = url.ifBlank { "https://script.google.com/macros/s/AKfycbx_GymCopilot_Sync/exec" }
+        val targetUrl = if (url.isBlank() || url.contains("AKfycbx_GymCopilot_Sync")) MASTER_SCRIPT_URL else url
         return try {
             val jsonPayload = jsonInstance.encodeToString(serializer<T>(), body)
             if (targetUrl.contains("script.google.com")) {
@@ -85,7 +87,7 @@ object GymKtorApiClient {
         url: String,
         token: String? = null
     ): String {
-        val targetUrl = url.ifBlank { "https://script.google.com/macros/s/AKfycbx_GymCopilot_Sync/exec" }
+        val targetUrl = if (url.isBlank() || url.contains("AKfycbx_GymCopilot_Sync")) MASTER_SCRIPT_URL else url
         return try {
             val response = httpClient.get(targetUrl) {
                 if (!token.isNullOrBlank()) {

@@ -31,7 +31,10 @@ actual fun readLocalMemberProfile(): LocalMemberData? {
         val height = localStorage.getItem("gymcopilot_member_height") ?: ""
         val photo = localStorage.getItem("gymcopilot_member_photo")
         val gymName = localStorage.getItem("gymcopilot_gym_name") ?: "Gym 19"
-        val gymUrl = localStorage.getItem("gymcopilot_gym_url") ?: "https://script.google.com/macros/s/AKfycbx_GymCopilot_Sync/exec"
+        var gymUrl = localStorage.getItem("gymcopilot_gym_url") ?: "https://script.google.com/macros/s/AKfycby0bEX37-HRGn9M8dbO8ZBGhHY2riK_AEVhby8ESmPWwiIgNRzqv5z0I78Lvg7Dwk0p/exec"
+        if (gymUrl.contains("AKfycbx_GymCopilot_Sync")) {
+            gymUrl = "https://script.google.com/macros/s/AKfycby0bEX37-HRGn9M8dbO8ZBGhHY2riK_AEVhby8ESmPWwiIgNRzqv5z0I78Lvg7Dwk0p/exec"
+        }
         val ssid = localStorage.getItem("gymcopilot_wifi_ssid") ?: ""
         val ssid2 = localStorage.getItem("gymcopilot_wifi_ssid2") ?: ""
         val ssid3 = localStorage.getItem("gymcopilot_wifi_ssid3") ?: ""
