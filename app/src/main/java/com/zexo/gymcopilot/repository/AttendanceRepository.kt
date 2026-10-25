@@ -190,18 +190,25 @@ class AttendanceRepository(
                 spreadsheetId = ssId
             )
 
+            val normalizedGymId = gymId.lowercase(Locale.getDefault()).replace(Regex("[^a-z0-9]"), "_")
             val paramChar = if (gymUrl.contains("?")) "&" else "?"
             val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
-            val requestUrl = "$gymUrl${paramChar}action=check_in&gymId=$gymId&memberEmail=${java.net.URLEncoder.encode(finalEmail, "UTF-8")}$ssParam"
+            val requestUrl = "$gymUrl${paramChar}action=check_in&gymId=$normalizedGymId&email=${java.net.URLEncoder.encode(finalEmail, "UTF-8")}&memberEmail=${java.net.URLEncoder.encode(finalEmail, "UTF-8")}&timestamp=$timestamp$ssParam"
 
-            val dynamicService = NetworkModule.getApiService(gymUrl)
-            val response = dynamicService.postCheckIn(requestUrl, null, request)
-
-            if (response.isSuccessful || response.code() == 302) {
+            try {
+                GymKtorApiClient.getData(requestUrl)
                 updateLocalUserAttendance(finalEmail, timestamp)
                 Result.success(Unit)
+            } catch (eKtor: Exception) {
+                val dynamicService = NetworkModule.getApiService(gymUrl)
+                val response = dynamicService.postCheckIn(requestUrl, null, request)
+
+                if (response.isSuccessful || response.code() == 302) {
+                    updateLocalUserAttendance(finalEmail, timestamp)
+                    Result.success(Unit)
+                }
+                else Result.failure(Exception("Error servidor: ${response.code()}"))
             }
-            else Result.failure(Exception("Error servidor: ${response.code()}"))
         } catch (e: Exception) { Result.failure(e) }
     }
 
@@ -860,7 +867,13 @@ class AttendanceRepository(
             remoteMembers.forEach { remote ->
                 val idx = currentLocal.indexOfFirst { it.email.equals(remote.email, ignoreCase = true) }
                 if (idx != -1) {
-                    currentLocal[idx] = remote
+                    val existing = currentLocal[idx]
+                    currentLocal[idx] = remote.copy(
+                        attendanceCount = maxOf(existing.attendanceCount, remote.attendanceCount),
+                        currentAttendanceCount = maxOf(existing.currentAttendanceCount, remote.currentAttendanceCount),
+                        monthAttendanceCount = maxOf(existing.monthAttendanceCount, remote.monthAttendanceCount),
+                        lastVisit = if ((existing.lastVisit ?: 0L) > (remote.lastVisit ?: 0L)) existing.lastVisit else remote.lastVisit
+                    )
                 } else {
                     currentLocal.add(remote)
                 }

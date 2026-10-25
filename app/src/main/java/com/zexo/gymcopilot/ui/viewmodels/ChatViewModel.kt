@@ -40,11 +40,11 @@ class ChatViewModel(
                     val userEmail = dataStoreManager.getUserEmail().first()
                     val userName = dataStoreManager.getUserName().first()
                     val userRole = dataStoreManager.getUserRole().first()
+                    val linkedMemberEmail = dataStoreManager.getLinkedMemberEmail().first()
 
                     if (gymApiUrl.isNotBlank()) {
                         val myID = if (userRole?.lowercase() == "admin") "Admin" else {
-                            val id = userEmail.ifBlank { userName }.trim()
-                            if (id.isEmpty()) "Usuario" else id
+                            userEmail.ifBlank { linkedMemberEmail.orEmpty() }.ifBlank { userName }.ifBlank { "Estudiante" }.trim()
                         }
                         
                         pollMessages(gymApiUrl, myID)

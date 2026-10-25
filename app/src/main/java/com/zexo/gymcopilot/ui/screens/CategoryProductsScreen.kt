@@ -186,7 +186,11 @@ fun CategoryProductsScreen(
                             ))
                         }
                     }
-                    if (remoteProducts.isNotEmpty()) dataStoreManager.saveAllProducts(remoteProducts)
+                    if (remoteProducts.isNotEmpty()) {
+                        val currentLocal = dataStoreManager.getProducts().first()
+                        val merged = (currentLocal + remoteProducts).distinctBy { it.id }
+                        dataStoreManager.saveAllProducts(merged)
+                    }
                 }
             } catch (e: Exception) { }
             delay(5000)

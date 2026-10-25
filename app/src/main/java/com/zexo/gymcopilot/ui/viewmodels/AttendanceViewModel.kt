@@ -38,28 +38,42 @@ class AttendanceViewModel(private val repository: AttendanceRepository) : ViewMo
 
                 // 2. Proceso de Asistencia (Check-in)
                 var gymId = ""
+                var emailOverride: String? = null
                 var isIntegration = false
-                
-                try {
-                    val json = JSONObject(qrContent)
-                    gymId = json.optString("gym_id", json.optString("id", ""))
-                    
-                    val networkUrl = json.optString("gym_api_url", "")
-                    val gymName = json.optString("gym_name", "")
-                    
-                    if (networkUrl.isNotBlank() || gymName.isNotBlank()) {
-                        repository.setupGymFromAdminQr(gymId, gymName, networkUrl)
-                        isIntegration = true
+
+                if (qrContent.startsWith("ATTENDANCE:")) {
+                    val parts = qrContent.split(":")
+                    if (parts.size >= 3) {
+                        gymId = parts[1]
+                        emailOverride = parts[2]
+                    } else if (parts.size >= 2) {
+                        emailOverride = parts[1]
                     }
-                } catch (e: Exception) {
-                    // Fallback: Si no es JSON, el contenido es el ID
-                    gymId = qrContent.trim()
+                } else {
+                    try {
+                        val json = JSONObject(qrContent)
+                        gymId = json.optString("gym_id", json.optString("id", ""))
+                        emailOverride = if (json.has("email")) json.optString("email") else if (json.has("memberEmail")) json.optString("memberEmail") else null
+                        
+                        val networkUrl = json.optString("gym_api_url", "")
+                        val gymName = json.optString("gym_name", "")
+                        
+                        if (networkUrl.isNotBlank() || gymName.isNotBlank()) {
+                            repository.setupGymFromAdminQr(gymId, gymName, networkUrl)
+                            isIntegration = true
+                        }
+                    } catch (e: Exception) {
+                        if (qrContent.contains("@")) {
+                            emailOverride = qrContent.trim()
+                        } else {
+                            gymId = qrContent.trim()
+                        }
+                    }
                 }
                 
-                // Si después de todo sigue vacío, usamos un ID genérico para no romper el flujo
                 if (gymId.isBlank()) gymId = "Gym_Default"
 
-                val result = repository.performCheckIn(gymId)
+                val result = repository.performCheckIn(gymId, emailOverride = emailOverride)
 
                 result.fold(
                     onSuccess = { 

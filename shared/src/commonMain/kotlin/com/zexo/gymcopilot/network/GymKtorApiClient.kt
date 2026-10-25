@@ -8,6 +8,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.serializer
 
 object GymKtorApiClient {
 
@@ -31,32 +32,72 @@ object GymKtorApiClient {
         }
     }
 
+    suspend fun postAppsScriptData(
+        url: String,
+        jsonBody: String,
+        action: String? = null,
+        gymId: String? = null,
+        email: String? = null
+    ): String {
+        return try {
+            val targetUrl = url.ifBlank { "https://script.google.com/macros/s/AKfycbx_GymCopilot_Sync/exec" }
+            val paramChar = if (targetUrl.contains("?")) "&" else "?"
+            val queryParams = StringBuilder("$targetUrl${paramChar}")
+            if (!action.isNullOrBlank()) queryParams.append("action=$action&")
+            if (!gymId.isNullOrBlank()) queryParams.append("gymId=${gymId.encodeURLParameter()}&")
+            if (!email.isNullOrBlank()) queryParams.append("memberEmail=${email.encodeURLParameter()}&email=${email.encodeURLParameter()}&")
+
+            val finalUrl = queryParams.toString().removeSuffix("&").removeSuffix("?")
+
+            val response = httpClient.post(finalUrl) {
+                contentType(ContentType.Text.Plain)
+                setBody(jsonBody)
+            }
+            response.bodyAsText()
+        } catch (e: Throwable) {
+            ""
+        }
+    }
+
     suspend inline fun <reified T : Any> postData(
         url: String,
         body: T,
         token: String? = null
     ): String {
-        val response = httpClient.post(url) {
-            contentType(ContentType.Application.Json)
-            setBody(body)
-            header("User-Agent", "Mozilla/5.0 (GymCopilot KMP; iOS/Android)")
-            if (!token.isNullOrBlank()) {
-                header("Authorization", if (token.startsWith("Bearer ")) token else "Bearer $token")
+        val targetUrl = url.ifBlank { "https://script.google.com/macros/s/AKfycbx_GymCopilot_Sync/exec" }
+        return try {
+            if (targetUrl.contains("script.google.com")) {
+                val jsonPayload = jsonInstance.encodeToString(serializer<T>(), body)
+                postAppsScriptData(targetUrl, jsonPayload)
+            } else {
+                val response = httpClient.post(targetUrl) {
+                    contentType(ContentType.Application.Json)
+                    setBody(body)
+                    if (!token.isNullOrBlank()) {
+                        header("Authorization", if (token.startsWith("Bearer ")) token else "Bearer $token")
+                    }
+                }
+                response.bodyAsText()
             }
+        } catch (e: Throwable) {
+            ""
         }
-        return response.bodyAsText()
     }
 
     suspend fun getData(
         url: String,
         token: String? = null
     ): String {
-        val response = httpClient.get(url) {
-            header("User-Agent", "Mozilla/5.0 (GymCopilot KMP; iOS/Android)")
-            if (!token.isNullOrBlank()) {
-                header("Authorization", if (token.startsWith("Bearer ")) token else "Bearer $token")
+        val targetUrl = url.ifBlank { "https://script.google.com/macros/s/AKfycbx_GymCopilot_Sync/exec" }
+        return try {
+            val response = httpClient.get(targetUrl) {
+                if (!token.isNullOrBlank()) {
+                    header("Authorization", if (token.startsWith("Bearer ")) token else "Bearer $token")
+                }
             }
+            response.bodyAsText()
+        } catch (e: Throwable) {
+            ""
         }
-        return response.bodyAsText()
     }
 }

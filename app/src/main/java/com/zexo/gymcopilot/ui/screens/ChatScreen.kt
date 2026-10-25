@@ -78,13 +78,14 @@ fun ChatScreen(
     var currentRecipient by remember { mutableStateOf(recipientName) }
     var showSelector by remember { mutableStateOf(false) }
 
+    val linkedMemberEmail by dataStoreManager.getLinkedMemberEmail().collectAsState(initial = null)
+
     // Identidad del remitente mejorada con fallback
-    val myID = remember(userName, userEmail, userRole) {
+    val myID = remember(userName, userEmail, linkedMemberEmail, userRole) {
         val role = userRole?.lowercase() ?: ""
         if (role == "admin") "Admin"
         else {
-            val id = userEmail.ifBlank { userName }.trim()
-            if (id.isEmpty()) "Usuario" else id
+            userEmail.ifBlank { linkedMemberEmail.orEmpty() }.ifBlank { userName }.ifBlank { "Estudiante" }.trim()
         }
     }
 
@@ -241,18 +242,6 @@ fun ChatScreen(
                             val hasNewRemote = sortedRemote.size > currentCount || (sortedRemote.isNotEmpty() && messages.isNotEmpty() && sortedRemote.last().timestamp > messages.lastOrNull { !it.isPending }?.timestamp ?: 0L)
                             
                             if (hasNewRemote) {
-                                // Verificar si hay mensajes nuevos de la otra persona para sonar
-                                val oldLastTs = messages.filter { !it.isMine && !it.isPending }.lastOrNull()?.timestamp ?: 0L
-                                val newLastTs = sortedRemote.filter { !it.isMine }.lastOrNull()?.timestamp ?: 0L
-                                
-                                if (newLastTs > oldLastTs) {
-                                    try {
-                                        val mediaPlayer = MediaPlayer.create(context, R.raw.mensaje)
-                                        mediaPlayer.setOnCompletionListener { it.release() }
-                                        mediaPlayer.start()
-                                    } catch (e: Exception) {}
-                                }
-
                                 messages.clear()
                                 messages.addAll(sortedRemote)
                                 dataStoreManager.saveChatCache(chatKey, messages.toList())
@@ -304,8 +293,13 @@ fun ChatScreen(
                             try {
                                 messages.clear()
                                 dataStoreManager.clearChatCache(chatKey)
+                                val gymIdVal = gymNameStore.lowercase().replace(Regex("[^a-z0-9]"), "_")
+                                val ssIdVal = dataStoreManager.getGymSpreadsheetId().first()
+                                val paramChar = if (gymApiUrl.contains("?")) "&" else "?"
+                                val ssParam = if (ssIdVal.isNotBlank()) "&spreadsheetId=$ssIdVal" else ""
+                                val deleteUrl = "$gymApiUrl${paramChar}action=delete_chat&gymId=$gymIdVal&sender=${java.net.URLEncoder.encode(myID, "UTF-8")}&recipient=${java.net.URLEncoder.encode(otherInfo.second, "UTF-8")}$ssParam"
                                 val apiService = NetworkModule.getApiService(gymApiUrl)
-                                apiService.postChatMessage(gymApiUrl, "Bearer active", ChatSyncRequest("delete_chat", gymNameStore, myID, otherInfo.second, senderRole = userRole ?: ""))
+                                apiService.postChatMessage(deleteUrl, "Bearer active", ChatSyncRequest("delete_chat", gymIdVal, myID, otherInfo.second, senderRole = userRole ?: "", spreadsheetId = ssIdVal))
                             } catch (e: Exception) { pauseSyncUntil = 0L } finally { isDeleting = false }
                         }
                     },
@@ -455,7 +449,14 @@ fun ChatScreen(
                             val txt = messageText; val ts = System.currentTimeMillis(); messageText = ""
                             messages.add(ChatMessage(myID, otherInfo.second, txt, ts, true, isPending = true))
                             coroutineScope.launch {
-                                try { NetworkModule.getApiService(gymApiUrl).postChatMessage(gymApiUrl, "Bearer active", ChatSyncRequest(gymId = gymNameStore, sender = myID, recipient = otherInfo.second, text = txt, timestamp = ts, senderRole = userRole ?: "")) } catch (e: Exception) {}
+                                try {
+                                    val gymIdVal = gymNameStore.lowercase().replace(Regex("[^a-z0-9]"), "_")
+                                    val ssIdVal = dataStoreManager.getGymSpreadsheetId().first()
+                                    val paramChar = if (gymApiUrl.contains("?")) "&" else "?"
+                                    val ssParam = if (ssIdVal.isNotBlank()) "&spreadsheetId=$ssIdVal" else ""
+                                    val chatUrl = "$gymApiUrl${paramChar}action=send_chat_message&gymId=$gymIdVal&sender=${java.net.URLEncoder.encode(myID, "UTF-8")}&recipient=${java.net.URLEncoder.encode(otherInfo.second, "UTF-8")}&text=${java.net.URLEncoder.encode(txt, "UTF-8")}&timestamp=$ts$ssParam"
+                                    NetworkModule.getApiService(gymApiUrl).postChatMessage(chatUrl, "Bearer active", ChatSyncRequest(gymId = gymIdVal, sender = myID, recipient = otherInfo.second, text = txt, timestamp = ts, senderRole = userRole ?: "", spreadsheetId = ssIdVal))
+                                } catch (e: Exception) {}
                             }
                         }
                     }, enabled = messageText.isNotBlank() && !isDeleting) { Icon(Icons.Default.Send, null, tint = if (messageText.isNotBlank()) PrimaryTurquoise else TextGray) }

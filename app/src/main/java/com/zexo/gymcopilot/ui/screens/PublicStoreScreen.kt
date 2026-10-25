@@ -130,7 +130,9 @@ fun PublicStoreScreen(
                                 if (catId.isNotEmpty()) remoteCategoryIds.add(catId)
                             }
                         }
-                        dataStoreManager.saveAllProducts(remoteProducts)
+                        val currentLocal = dataStoreManager.getProducts().first()
+                        val merged = (currentLocal + remoteProducts).distinctBy { it.id }
+                        dataStoreManager.saveAllProducts(merged)
                         val currentActive = dataStoreManager.getStoreCategories().first()
                         val newActive = currentActive.toMutableSet()
                         var changed = false
