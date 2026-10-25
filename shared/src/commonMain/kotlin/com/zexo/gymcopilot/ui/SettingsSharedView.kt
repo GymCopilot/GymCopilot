@@ -31,11 +31,11 @@ fun SettingsSharedScreen(
 ) {
     var showHelpScreen by remember { mutableStateOf(false) }
     var showSkinScreen by remember { mutableStateOf(false) }
+    var showNetworkScreen by remember { mutableStateOf(false) }
     var selectedDialog by remember { mutableStateOf<String?>(null) }
     var appLanguage by remember { mutableStateOf("Español") }
     var appCurrency by remember { mutableStateOf("Peso Argentino") }
     var memberDesignation by remember { mutableStateOf("Alumno") }
-    var serverUrl by remember { mutableStateOf("https://script.google.com/macros/s/...") }
 
     if (showHelpScreen) {
         HelpSharedScreen(onBack = { showHelpScreen = false })
@@ -48,6 +48,11 @@ fun SettingsSharedScreen(
             onLogoChanged = onLogoChanged,
             onBack = { showSkinScreen = false }
         )
+        return
+    }
+
+    if (showNetworkScreen) {
+        NetworkConfigSharedScreen(onBack = { showNetworkScreen = false })
         return
     }
 
@@ -163,7 +168,7 @@ fun SettingsSharedScreen(
                         iconPainter = painterResource(Res.drawable.drive),
                         iconBg = Color(0xFF3D1F1A),
                         iconTint = Color(0xFFFF5722),
-                        onClick = { selectedDialog = "network" }
+                        onClick = { showNetworkScreen = true }
                     )
                 }
 
@@ -238,27 +243,6 @@ fun SettingsSharedScreen(
             confirmButton = {
                 Button(onClick = { selectedDialog = null }, colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise)) {
                     Text("CERRAR", color = Color.Black, fontWeight = FontWeight.Bold)
-                }
-            }
-        )
-        "network" -> AlertDialog(
-            onDismissRequest = { selectedDialog = null },
-            title = { Text("Configuración de Red / Servidor", color = TextWhite, fontWeight = FontWeight.Bold) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("URL del API Backend o Apps Script:", color = TextGray, fontSize = 12.sp)
-                    OutlinedTextField(
-                        value = serverUrl,
-                        onValueChange = { serverUrl = it },
-                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextWhite, unfocusedTextColor = TextWhite, focusedBorderColor = PrimaryTurquoise),
-                        shape = RoundedCornerShape(10.dp)
-                    )
-                }
-            },
-            containerColor = Color(0xFF081C24),
-            confirmButton = {
-                Button(onClick = { selectedDialog = null }, colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise)) {
-                    Text("GUARDAR", color = Color.Black, fontWeight = FontWeight.Bold)
                 }
             }
         )

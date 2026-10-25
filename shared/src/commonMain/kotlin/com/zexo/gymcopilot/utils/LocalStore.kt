@@ -10,7 +10,10 @@ data class LocalMemberData(
     val height: String = "",
     val photoUri: String? = null,
     val gymName: String = "Gym 19",
-    val gymApiUrl: String = "https://script.google.com/macros/s/AKfycbx_GymCopilot_Sync/exec"
+    val gymApiUrl: String = "https://script.google.com/macros/s/AKfycbx_GymCopilot_Sync/exec",
+    val wifiSsid: String = "",
+    val wifiSsid2: String = "",
+    val wifiSsid3: String = ""
 )
 
 expect fun saveLocalMemberProfile(data: LocalMemberData)

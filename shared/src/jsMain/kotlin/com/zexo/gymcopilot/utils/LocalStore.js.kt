@@ -14,6 +14,9 @@ actual fun saveLocalMemberProfile(data: LocalMemberData) {
         if (data.photoUri != null) localStorage.setItem("gymcopilot_member_photo", data.photoUri)
         localStorage.setItem("gymcopilot_gym_name", data.gymName)
         localStorage.setItem("gymcopilot_gym_url", data.gymApiUrl)
+        localStorage.setItem("gymcopilot_wifi_ssid", data.wifiSsid)
+        localStorage.setItem("gymcopilot_wifi_ssid2", data.wifiSsid2)
+        localStorage.setItem("gymcopilot_wifi_ssid3", data.wifiSsid3)
     } catch (e: Throwable) { }
 }
 
@@ -29,6 +32,9 @@ actual fun readLocalMemberProfile(): LocalMemberData? {
         val photo = localStorage.getItem("gymcopilot_member_photo")
         val gymName = localStorage.getItem("gymcopilot_gym_name") ?: "Gym 19"
         val gymUrl = localStorage.getItem("gymcopilot_gym_url") ?: "https://script.google.com/macros/s/AKfycbx_GymCopilot_Sync/exec"
+        val ssid = localStorage.getItem("gymcopilot_wifi_ssid") ?: ""
+        val ssid2 = localStorage.getItem("gymcopilot_wifi_ssid2") ?: ""
+        val ssid3 = localStorage.getItem("gymcopilot_wifi_ssid3") ?: ""
 
         LocalMemberData(
             firstName = firstName,
@@ -40,7 +46,10 @@ actual fun readLocalMemberProfile(): LocalMemberData? {
             height = height,
             photoUri = photo,
             gymName = gymName,
-            gymApiUrl = gymUrl
+            gymApiUrl = gymUrl,
+            wifiSsid = ssid,
+            wifiSsid2 = ssid2,
+            wifiSsid3 = ssid3
         )
     } catch (e: Throwable) {
         null

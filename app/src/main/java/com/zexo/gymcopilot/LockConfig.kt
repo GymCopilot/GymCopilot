@@ -17,5 +17,5 @@ object LockConfig {
      * 0: Desactivado (Se muestran todos los roles).
      * 1: Activado (Solo se muestra el rol seleccionado previamente).
      */
-    const val IS_ROLE_LOCK_ENABLED = 0
+    const val IS_ROLE_LOCK_ENABLED = 1
 }
