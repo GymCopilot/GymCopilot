@@ -10,6 +10,8 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
 
+expect suspend fun postAppsScriptNative(url: String, jsonBody: String): String
+
 object GymKtorApiClient {
 
     val jsonInstance = Json {
@@ -48,12 +50,7 @@ object GymKtorApiClient {
             if (!email.isNullOrBlank()) queryParams.append("memberEmail=${email.encodeURLParameter()}&email=${email.encodeURLParameter()}&")
 
             val finalUrl = queryParams.toString().removeSuffix("&").removeSuffix("?")
-
-            val response = httpClient.post(finalUrl) {
-                contentType(ContentType.Text.Plain)
-                setBody(jsonBody)
-            }
-            response.bodyAsText()
+            postAppsScriptNative(finalUrl, jsonBody)
         } catch (e: Throwable) {
             ""
         }
@@ -66,8 +63,8 @@ object GymKtorApiClient {
     ): String {
         val targetUrl = url.ifBlank { "https://script.google.com/macros/s/AKfycbx_GymCopilot_Sync/exec" }
         return try {
+            val jsonPayload = jsonInstance.encodeToString(serializer<T>(), body)
             if (targetUrl.contains("script.google.com")) {
-                val jsonPayload = jsonInstance.encodeToString(serializer<T>(), body)
                 postAppsScriptData(targetUrl, jsonPayload)
             } else {
                 val response = httpClient.post(targetUrl) {
