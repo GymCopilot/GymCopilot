@@ -54,6 +54,7 @@ object GymKtorApiClient {
             val finalUrl = queryParams.toString().removeSuffix("&").removeSuffix("?")
             postAppsScriptNative(finalUrl, jsonBody)
         } catch (e: Throwable) {
+            println("GymKtorApiClient.postAppsScriptData ERROR: $e")
             ""
         }
     }
@@ -79,6 +80,7 @@ object GymKtorApiClient {
                 response.bodyAsText()
             }
         } catch (e: Throwable) {
+            println("GymKtorApiClient.postData ERROR: $e")
             ""
         }
     }
@@ -96,6 +98,7 @@ object GymKtorApiClient {
             }
             response.bodyAsText()
         } catch (e: Throwable) {
+            println("GymKtorApiClient.getData ERROR: $e")
             ""
         }
     }

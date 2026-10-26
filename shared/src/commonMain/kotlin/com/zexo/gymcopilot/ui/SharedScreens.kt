@@ -1,6 +1,8 @@
 package com.zexo.gymcopilot.ui
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,16 +13,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.zexo.gymcopilot.model.Member
+import com.zexo.gymcopilot.model.*
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
 import kotlinx.coroutines.launch
 
 // ============================================================================
-// COMPONENTES DE TARJETAS Y VISTAS COMPARTIDAS
+// COMPONENTES REUTILIZABLES COMPARTIDOS
 // ============================================================================
 
 @Composable
@@ -33,15 +37,15 @@ fun StatCard(
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = SurfaceColor),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         modifier = modifier
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = title, fontSize = 12.sp, color = TextGray)
+            Text(text = title, fontSize = 12.sp, color = TextGray, fontWeight = FontWeight.Medium)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = value, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextWhite)
+            Text(text = value, fontSize = 28.sp, fontWeight = FontWeight.Black, color = accentColor)
             Spacer(modifier = Modifier.height(2.dp))
-            Text(text = subtitle, fontSize = 11.sp, color = accentColor)
+            Text(text = subtitle, fontSize = 11.sp, color = TextWhite.copy(alpha = 0.7f))
         }
     }
 }
@@ -70,16 +74,16 @@ fun MemberCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
-                    color = PrimaryTurquoise.copy(alpha = 0.15f),
+                    color = if (isActive) PrimaryTurquoise.copy(alpha = 0.15f) else AccentOrange.copy(alpha = 0.15f),
                     shape = CircleShape,
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier.size(42.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
                             text = name.take(1).uppercase(),
-                            color = PrimaryTurquoise,
+                            color = if (isActive) PrimaryTurquoise else AccentOrange,
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp
                         )
@@ -88,7 +92,7 @@ fun MemberCard(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(text = name, fontWeight = FontWeight.Bold, color = TextWhite, fontSize = 15.sp)
-                    Text(text = "Plan: $plan", fontSize = 12.sp, color = TextGray)
+                    Text(text = plan, fontSize = 12.sp, color = TextGray)
                 }
             }
 
@@ -439,9 +443,6 @@ fun MemberFullDashboard(
     when (currentTab) {
         0 -> MemberDashboardSharedScreen("Gym 19", "socio@gymcopilot.com", null, apiClient, currentTab, {})
         1 -> RealPublicStoreView(onTabSelected = {})
-        2 -> FullClassesScheduleSection()
-        3 -> FullRoutinesSection()
-        4 -> ChatSharedScreen(gymName = "Gym 19", userEmail = "socio@gymcopilot.com", recipientName = "Chat General", onBack = {})
         else -> MemberDashboardSharedScreen("Gym 19", "socio@gymcopilot.com", null, apiClient, currentTab, {})
     }
 }
@@ -457,13 +458,8 @@ fun FullMembersSection(membersList: List<Member>) {
         contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
     ) {
         item {
-            Text(
-                text = "Gestión de Alumnos y Socios",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextWhite,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
+            Text(text = "Clientes / Socios del Gimnasio", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextWhite)
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
         if (membersList.isNotEmpty()) {
@@ -472,7 +468,7 @@ fun FullMembersSection(membersList: List<Member>) {
                     name = member.fullName,
                     plan = member.planType,
                     status = member.membershipStatus,
-                    lastAccess = if (member.lastVisit != null) "Acceso registrado" else "Sin registros",
+                    lastAccess = if (member.lastVisit != null) "Aviso registrado" else "Sin registro",
                     isActive = member.membershipStatus.uppercase() == "ACTIVO"
                 )
             }
@@ -481,6 +477,9 @@ fun FullMembersSection(membersList: List<Member>) {
                 MemberCard("Juan Carlos Pérez", "Pase Libre Gold", "ACTIVO", "Hoy 08:30 AM", true)
                 MemberCard("María Florencia Gómez", "Musculación 3x", "ACTIVO", "Hoy 10:15 AM", true)
                 MemberCard("Carlos Alberto López", "Pase Libre", "VENCIDO", "Hace 3 días", false)
+                MemberCard("Ana Laura Torres", "Crossfit VIP", "ACTIVO", "Ayer 18:00 PM", true)
+                MemberCard("Lucas Martínez", "Pase Mensual", "ACTIVO", "Hoy 07:00 AM", true)
+                MemberCard("Sofia Benítez", "Musculación 2x", "VENCIDO", "Hace 5 días", false)
             }
         }
     }
@@ -493,19 +492,13 @@ fun FullProfessorsSection() {
         contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
     ) {
         item {
-            Text(
-                text = "Plantel de Profesores y Entrenadores",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextWhite,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
+            Text(text = "Profesores / Entrenadores", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextWhite)
+            Spacer(modifier = Modifier.height(12.dp))
         }
-
         item {
-            MemberCard("Prof. Roberto Gómez", "Head Trainer - Fuerza", "ACTIVO", "Turno Mañana", true)
-            MemberCard("Prof. Sofía Domínguez", "Crossfit & Funcional", "ACTIVO", "Turno Tarde", true)
-            MemberCard("Prof. Gabriel Fernández", "Musculación & Cardio", "ACTIVO", "Turno Noche", true)
+            MemberCard("Prof. Gabriel Fernández", "Musculación & Personalizado", "ACTIVO", "Hoy 07:00 AM", true)
+            MemberCard("Prof. Laura Benítez", "Yoga & Mobility", "ACTIVO", "Hoy 09:30 AM", true)
+            MemberCard("Prof. Roberto Carlos", "Crossfit & Funcional", "ACTIVO", "Ayer 17:00 PM", true)
         }
     }
 }
@@ -517,65 +510,157 @@ fun FullClassesScheduleSection() {
         contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
     ) {
         item {
-            Text(
-                text = "Grilla de Clases y Horarios",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextWhite,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
+            Text(text = "Horarios y Reserva de Clases", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextWhite)
+            Spacer(modifier = Modifier.height(12.dp))
         }
-
         item {
-            ClassScheduleCard("Musculación Guiada & Fuerza", "Prof. Roberto", "09:00 - 11:00 AM", "18 Cupos")
-            ClassScheduleCard("Spinning Intensivo Cardio", "Prof. Sofía", "14:00 - 15:00 PM", "12 Cupos")
-            ClassScheduleCard("Crossfit & Funcional VIP", "Prof. Gabriel", "18:00 - 19:30 PM", "5 Cupos")
-            ClassScheduleCard("Yoga & Flexibilidad", "Prof. Ana", "20:00 - 21:00 PM", "8 Cupos")
+            ClassScheduleCard("Crossfit Intensivo", "Prof. Roberto", "08:00 - 09:00 AM", "15/15 Cupos Lleno")
+            ClassScheduleCard("Yoga & Mobility", "Prof. Laura", "10:00 - 11:00 AM", "8/12 Cupos Disponibles")
+            ClassScheduleCard("Spinning Power 5G", "Prof. Marcos", "18:00 - 19:00 PM", "20/20 Cupos Lleno")
+            ClassScheduleCard("Musculación Libre", "Prof. Gabriel", "19:00 - 21:00 PM", "Cupos Libres")
         }
     }
 }
 
 @Composable
 fun FullRoutinesSection() {
-    var ex1 by remember { mutableStateOf(false) }
-    var ex2 by remember { mutableStateOf(true) }
-    var ex3 by remember { mutableStateOf(false) }
-    var ex4 by remember { mutableStateOf(false) }
+    var check1 by remember { mutableStateOf(true) }
+    var check2 by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
     ) {
         item {
-            Text(
-                text = "Plan de Rutina Diaria Asignada",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextWhite,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
+            Text(text = "Mis Rutinas y Ejercicios", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextWhite)
+            Spacer(modifier = Modifier.height(12.dp))
         }
-
         item {
-            RoutineCard("Press de Banca con Barra", "4", "10", "90 seg", ex1) { ex1 = !ex1 }
-            RoutineCard("Sentadillas Libres Profundas", "4", "12", "120 seg", ex2) { ex2 = !ex2 }
-            RoutineCard("Dominadas en Barra Fija", "3", "8", "60 seg", ex3) { ex3 = !ex3 }
-            RoutineCard("Press Militar de Hombros", "3", "10", "60 seg", ex4) { ex4 = !ex4 }
+            RoutineCard("Press Inclinado con Mancuernas", "4", "10 - 12", "90 seg", check1) { check1 = !check1 }
+            RoutineCard("Sentadilla Libre con Barra", "4", "10", "90 seg", check2) { check2 = !check2 }
+            RoutineCard("Remo con Barra T", "3", "12", "60 seg", false) {}
+            RoutineCard("Fondos en Paralelas", "4", "10", "90 seg", false) {}
         }
     }
 }
 
 @Composable
 fun FullStoreSection() {
-    RealPublicStoreView(onTabSelected = {})
-}
-
-@Composable
-fun FullSettingsSection() {
-    SettingsSharedScreen()
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
+    ) {
+        item {
+            Text(text = "Tienda & Productos del Gimnasio", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextWhite)
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+        item {
+            ProductCard("Whey Protein Isolate 1kg", "Suplementación", "$45.000")
+            ProductCard("Creatina Monohidratada 300g", "Suplementación", "$38.000")
+            ProductCard("Shaker Térmico GymCopilot", "Accesorios", "$12.500")
+            ProductCard("Remera OverSize GymCopilot", "Indumentaria", "$22.000")
+            ProductCard("Plan Pase Libre Mensual", "Membresía", "$35.000 / mes")
+            ProductCard("Plan Trimestral Promocional", "Membresía", "$90.000 total")
+        }
+    }
 }
 
 @Composable
 fun FullChatSection() {
-    ChatSharedScreen()
+    var messageText by remember { mutableStateOf("") }
+    var messages by remember {
+        mutableStateOf(
+            listOf(
+                ChatMessage("admin", "Socio", "¡Hola! Bienvenidos al chat del gimnasio GymCopilot.", 1000L, false),
+                ChatMessage("user", "Socio", "Hola, ¿a qué hora abre la sala de musculación mañana?", 1005L, true)
+            )
+        )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = 16.dp, bottom = 80.dp)
+    ) {
+        Text(text = "Chat de Soporte y Consultas", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextWhite)
+        Spacer(modifier = Modifier.height(12.dp))
+
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(messages) { msg ->
+                val isMe = msg.isMine
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = if (isMe) Alignment.CenterEnd else Alignment.CenterStart
+                ) {
+                    Surface(
+                        color = if (isMe) PrimaryTurquoise else SurfaceColor,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.widthIn(max = 280.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text(
+                                text = msg.text,
+                                color = if (isMe) Color.Black else TextWhite,
+                                fontSize = 14.sp
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Enviado",
+                                color = if (isMe) Color.Black.copy(alpha = 0.6f) else TextGray,
+                                fontSize = 10.sp,
+                                textAlign = TextAlign.End,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = messageText,
+                onValueChange = { messageText = it },
+                placeholder = { Text("Escribe un mensaje...", color = TextGray) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = TextWhite,
+                    unfocusedTextColor = TextWhite,
+                    focusedContainerColor = SurfaceColor,
+                    unfocusedContainerColor = SurfaceColor,
+                    focusedBorderColor = PrimaryTurquoise,
+                    unfocusedBorderColor = Color.Transparent
+                ),
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(
+                onClick = {
+                    if (messageText.isNotBlank()) {
+                        messages = messages + ChatMessage("user", "Socio", messageText, 2000L, true)
+                        messageText = ""
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise),
+                shape = CircleShape,
+                modifier = Modifier.size(48.dp),
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Text("➤", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+fun FullSettingsSection() {
+    SettingsSharedScreen(onBack = {})
 }

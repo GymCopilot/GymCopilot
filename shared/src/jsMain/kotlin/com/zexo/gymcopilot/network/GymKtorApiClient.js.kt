@@ -1,22 +1,20 @@
 package com.zexo.gymcopilot.shared.network
 
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
+import kotlinx.browser.window
+import kotlinx.coroutines.await
 
-actual suspend fun postAppsScriptNative(url: String, jsonBody: String): String = suspendCancellableCoroutine { continuation ->
-    try {
-        val options = js("{}")
-        options.method = "POST"
-        options.mode = "no-cors"
-        options.body = jsonBody
+actual suspend fun postAppsScriptNative(url: String, jsonBody: String): String {
+    return try {
+        val init = js("{}")
+        init.method = "POST"
+        init.headers = js("({'Content-Type': 'text/plain;charset=utf-8'})")
+        init.body = jsonBody
+        init.redirect = "follow"
 
-        val prom = kotlinx.browser.window.fetch(url, options)
-        prom.then { _ ->
-            continuation.resume("success")
-        }.catch { err ->
-            continuation.resume("error: $err")
-        }
+        val response = window.fetch(url, init).await()
+        response.text().await().toString()
     } catch (e: Throwable) {
-        continuation.resume("error: $e")
+        console.error("Error Apps Script:", e)
+        ""
     }
 }

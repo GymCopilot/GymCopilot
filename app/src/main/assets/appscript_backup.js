@@ -1,6 +1,7 @@
 /**
  * GymCopilot Backend - Gestión de Chats, Horarios, Tienda e Identidad
- * Versión v5.9.7: Planilla Maestra "GymCopilot_Master_DB" con pestaña exclusiva "GymsRegistry".
+ * Versión v5.9.8: Planilla Maestra "GymCopilot_Master_DB" con pestaña exclusiva "GymsRegistry".
+ * Cambios: fix bucle roto en fixConfigSheetStructure y detección de planilla maestra solo por ID.
  */
 
 var SS_ID_FROM_APP = '';
@@ -673,18 +674,15 @@ function executeCreateGym(data) {
   };
 }
 
+/**
+ * Detecta la planilla maestra SOLO por ID guardado en las propiedades del script.
+ * (Antes también miraba el nombre y podía confundir un gimnasio llamado "Master ..." con la maestra.)
+ */
 function isMasterSS(ss) {
   if (!ss) return false;
   try {
-    var prop = PropertiesService.getScriptProperties();
-    var masterSSId = prop.getProperty("MASTER_SS_ID");
-    if (masterSSId && ss.getId() === masterSSId) {
-      return true;
-    }
-    var name = ss.getName();
-    if (name === "GymCopilot_Master_DB" || name === "GymCopilot_BASE DE DATOS" || name.indexOf("Master") !== -1 || name.indexOf("BASE DE DATOS") !== -1 || name.indexOf("GymCopilot_Master_DB") !== -1) {
-      return true;
-    }
+    var masterSSId = PropertiesService.getScriptProperties().getProperty("MASTER_SS_ID");
+    return !!masterSSId && ss.getId() === masterSSId;
   } catch (err) {}
   return false;
 }
@@ -900,9 +898,6 @@ function fixRoutineSheetStructure(sheet) {
 
 function fixConfigSheetStructure(sheet) {
   var expectedHeaders = ["ID", "Nombre", "Logo", "Telefono", "Direccion", "Ciudad", "CP", "Pais", "Color", "BgColor", "ButtonStyle", "MostrarBordeLogo", "ClaseActiva", "Mensaje", "GimnasioAbierto", "WifiSSID1", "WifiSSID2", "WifiSSID3", "Actualizado"];
-  for (var i = 0; i < expectedHeaders.length; int++) { // wait, int is typo in user's prompt or my code? Let's check: i++
-    // i++ is correct
-  }
   for (var i = 0; i < expectedHeaders.length; i++) {
     var cell = sheet.getRange(1, i + 1);
     var headerName = cell.getValue();
