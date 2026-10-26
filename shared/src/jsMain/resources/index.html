@@ -11,6 +11,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="GymCopilot">
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <style>
         html, body {
             width: 100%;
@@ -77,17 +78,25 @@
 
                 videoContainer.appendChild(video);
 
+                var canvasElement = document.createElement('canvas');
+                var canvasContext = canvasElement.getContext('2d', { willReadFrequently: true });
+
                 var hint = document.createElement('div');
                 hint.style.cssText = 'font-size:13px;color:#aaa;margin-top:16px;text-align:center;padding:0 20px;';
-                hint.innerText = 'Apunta la cámara trasera al código QR del gimnasio';
+                hint.innerText = 'Apunta la cámara al código QR de asistencia';
+
+                var manualBtn = document.createElement('button');
+                manualBtn.style.cssText = 'margin-top:16px;background:transparent;color:#00e5ff;border:1px solid #00e5ff;padding:10px 24px;font-size:13px;font-weight:bold;border-radius:20px;cursor:pointer;';
+                manualBtn.innerText = 'INGRESAR TOKEN / EMAIL MANUAL';
 
                 var closeBtn = document.createElement('button');
-                closeBtn.style.cssText = 'margin-top:24px;background:#00e5ff;color:#000;border:none;padding:12px 32px;font-size:14px;font-weight:bold;border-radius:24px;cursor:pointer;';
-                closeBtn.innerText = 'CANCELAR CÁMARA';
+                closeBtn.style.cssText = 'margin-top:12px;background:#00e5ff;color:#000;border:none;padding:10px 28px;font-size:13px;font-weight:bold;border-radius:20px;cursor:pointer;';
+                closeBtn.innerText = 'CANCELAR';
 
                 overlay.appendChild(title);
                 overlay.appendChild(videoContainer);
                 overlay.appendChild(hint);
+                overlay.appendChild(manualBtn);
                 overlay.appendChild(closeBtn);
                 document.body.appendChild(overlay);
 
@@ -108,37 +117,58 @@
                     stopCamera();
                 };
 
+                manualBtn.onclick = function() {
+                    stopCamera();
+                    var manualCode = prompt("Ingresa el código QR, Token (MEMBERLINK|...) o Email del socio:");
+                    if (manualCode && callback) callback(manualCode);
+                };
+
                 navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } } })
                     .then(function(stream) {
                         activeStream = stream;
                         video.srcObject = stream;
                         video.play();
 
-                        if ('BarcodeDetector' in window) {
-                            var detector = new BarcodeDetector({ formats: ['qr_code'] });
-                            intervalId = setInterval(function() {
-                                detector.detect(video).then(function(barcodes) {
-                                    if (barcodes.length > 0) {
-                                        var code = barcodes[0].rawValue;
-                                        stopCamera();
-                                        if (callback) callback(code);
+                        intervalId = setInterval(function() {
+                            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                                canvasElement.width = video.videoWidth;
+                                canvasElement.height = video.videoHeight;
+                                if (canvasElement.width > 0 && canvasElement.height > 0) {
+                                    canvasContext.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+                                    var imageData = canvasContext.getImageData(0, 0, canvasElement.width, canvasElement.height);
+
+                                    // Try jsQR if loaded
+                                    if (typeof jsQR === 'function') {
+                                        var code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+                                        if (code && code.data) {
+                                            stopCamera();
+                                            if (callback) callback(code.data);
+                                            return;
+                                        }
                                     }
-                                }).catch(function() {});
-                            }, 400);
-                        } else {
-                            setTimeout(function() {
-                                stopCamera();
-                                if (callback) callback("ATTENDANCE:GymCopilot:CHECKIN_SUCCESS");
-                            }, 3500);
-                        }
+
+                                    // Fallback to BarcodeDetector if available
+                                    if ('BarcodeDetector' in window) {
+                                        var detector = new BarcodeDetector({ formats: ['qr_code'] });
+                                        detector.detect(video).then(function(barcodes) {
+                                            if (barcodes.length > 0) {
+                                                var qrText = barcodes[0].rawValue;
+                                                stopCamera();
+                                                if (callback) callback(qrText);
+                                            }
+                                        }).catch(function() {});
+                                    }
+                                }
+                            }
+                        }, 250);
                     })
                     .catch(function(err) {
                         stopCamera();
-                        var manualCode = prompt("Permiso de cámara o cámara no disponible. Ingresa el código QR o Token manualmente:");
+                        var manualCode = prompt("No se pudo acceder a la cámara. Ingresa el código QR o Email del socio:");
                         if (manualCode && callback) callback(manualCode);
                     });
             } else {
-                var manualCode = prompt("Ingresa el código QR de asistencia:");
+                var manualCode = prompt("Ingresa el código QR o Email del socio:");
                 if (manualCode && callback) callback(manualCode);
             }
         };
