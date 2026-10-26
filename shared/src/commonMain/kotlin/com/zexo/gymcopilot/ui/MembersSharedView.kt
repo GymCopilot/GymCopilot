@@ -24,7 +24,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.model.*
-import com.zexo.gymcopilot.shared.network.GymKtorApiClient
 import gymcopilot.shared.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
 
@@ -541,7 +540,7 @@ fun MemberDetailSharedScreen(
     var assignedTrainer by remember { mutableStateOf(member.assignedTrainer) }
     var notes by remember { mutableStateOf(member.notes) }
 
-    val defaultApiUrl = GymKtorApiClient.MASTER_SCRIPT_URL
+    val defaultApiUrl = "https://script.google.com/macros/s/AKfycbyrN53_uZ4ECfRyp-Qwb2sGSYjv-g7OeR5ERbAQxLdirOL7qvL6rfaxXsjJShc28P-a/exec"
     val qrToken = "MEMBERLINK|${member.firstName}|${member.lastName}|${member.email}|$defaultApiUrl|Gym 19"
 
     Box(

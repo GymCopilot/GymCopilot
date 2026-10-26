@@ -14,9 +14,6 @@ actual fun saveLocalMemberProfile(data: LocalMemberData) {
         if (data.photoUri != null) localStorage.setItem("gymcopilot_member_photo", data.photoUri)
         localStorage.setItem("gymcopilot_gym_name", data.gymName)
         localStorage.setItem("gymcopilot_gym_url", data.gymApiUrl)
-        localStorage.setItem("gymcopilot_wifi_ssid", data.wifiSsid)
-        localStorage.setItem("gymcopilot_wifi_ssid2", data.wifiSsid2)
-        localStorage.setItem("gymcopilot_wifi_ssid3", data.wifiSsid3)
     } catch (e: Throwable) { }
 }
 
@@ -31,13 +28,7 @@ actual fun readLocalMemberProfile(): LocalMemberData? {
         val height = localStorage.getItem("gymcopilot_member_height") ?: ""
         val photo = localStorage.getItem("gymcopilot_member_photo")
         val gymName = localStorage.getItem("gymcopilot_gym_name") ?: "Gym 19"
-        var gymUrl = localStorage.getItem("gymcopilot_gym_url") ?: "https://script.google.com/macros/s/AKfycby0bEX37-HRGn9M8dbO8ZBGhHY2riK_AEVhby8ESmPWwiIgNRzqv5z0I78Lvg7Dwk0p/exec"
-        if (gymUrl.contains("AKfycbx_GymCopilot_Sync")) {
-            gymUrl = "https://script.google.com/macros/s/AKfycby0bEX37-HRGn9M8dbO8ZBGhHY2riK_AEVhby8ESmPWwiIgNRzqv5z0I78Lvg7Dwk0p/exec"
-        }
-        val ssid = localStorage.getItem("gymcopilot_wifi_ssid") ?: ""
-        val ssid2 = localStorage.getItem("gymcopilot_wifi_ssid2") ?: ""
-        val ssid3 = localStorage.getItem("gymcopilot_wifi_ssid3") ?: ""
+        val gymUrl = localStorage.getItem("gymcopilot_gym_url") ?: "https://script.google.com/macros/s/AKfycbyrN53_uZ4ECfRyp-Qwb2sGSYjv-g7OeR5ERbAQxLdirOL7qvL6rfaxXsjJShc28P-a/exec"
 
         LocalMemberData(
             firstName = firstName,
@@ -49,10 +40,7 @@ actual fun readLocalMemberProfile(): LocalMemberData? {
             height = height,
             photoUri = photo,
             gymName = gymName,
-            gymApiUrl = gymUrl,
-            wifiSsid = ssid,
-            wifiSsid2 = ssid2,
-            wifiSsid3 = ssid3
+            gymApiUrl = gymUrl
         )
     } catch (e: Throwable) {
         null

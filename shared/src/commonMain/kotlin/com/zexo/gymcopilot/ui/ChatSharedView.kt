@@ -1,365 +1,232 @@
 package com.zexo.gymcopilot.ui
 
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.zexo.gymcopilot.model.ChatMessage
 import com.zexo.gymcopilot.shared.network.ChatSyncRequest
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
 import com.zexo.gymcopilot.utils.readLocalMemberProfile
 import gymcopilot.shared.generated.resources.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 
-data class SharedChatMessage(
-    val sender: String,
-    val recipient: String,
-    val text: String,
-    val timestamp: String = "11:27"
-)
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatSharedScreen(
-    gymName: String = "Gym 26",
-    userEmail: String = "socio@gymcopilot.com",
-    recipientName: String = "Gym 26",
-    onBack: () -> Unit = {}
+    onBack: () -> Unit = {},
+    apiClient: GymKtorApiClient = GymKtorApiClient
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val localData = remember { readLocalMemberProfile() }
-    val myEmail = localData?.email?.ifBlank { userEmail } ?: userEmail
-    val activeGym = localData?.gymName?.ifBlank { gymName } ?: gymName
-    val serverUrl = localData?.gymApiUrl ?: GymKtorApiClient.MASTER_SCRIPT_URL
-
-    var currentRecipient by remember { mutableStateOf(if (recipientName == "Chat General") activeGym else recipientName) }
-    var showRecipientMenu by remember { mutableStateOf(false) }
     var messageText by remember { mutableStateOf("") }
-    var showDeleteConfirm by remember { mutableStateOf(false) }
-
-    val messages = remember {
-        mutableStateListOf(
-            SharedChatMessage(sender = myEmail, recipient = currentRecipient, text = "hola", timestamp = "11:27")
+    var messages by remember {
+        mutableStateOf(
+            listOf(
+                ChatMessage("admin", "Socio", "¡Hola! Bienvenidos al chat del gimnasio GymCopilot.", 1000L, false),
+                ChatMessage("user", "Socio", "Hola, ¿a qué hora abre la sala de musculación mañana?", 1005L, true)
+            )
         )
     }
 
-    val listState = rememberLazyListState()
+    var activeGymName by remember { mutableStateOf("Gym 26") }
+    var activeGymUrl by remember { mutableStateOf("https://script.google.com/macros/s/AKfycbyrN53_uZ4ECfRyp-Qwb2sGSYjv-g7OeR5ERbAQxLdirOL7qvL6rfaxXsjJShc28P-a/exec") }
+    var userEmail by remember { mutableStateOf("socio@gymcopilot.com") }
 
-    fun sendMessage() {
-        if (messageText.isBlank()) return
-        val msgToSend = messageText
-        messageText = ""
+    LaunchedEffect(Unit) {
+        val localProfile = readLocalMemberProfile()
+        if (localProfile != null) {
+            if (localProfile.gymName.isNotBlank()) activeGymName = localProfile.gymName
+            if (localProfile.gymApiUrl.isNotBlank()) activeGymUrl = localProfile.gymApiUrl
+            if (localProfile.email.isNotBlank()) userEmail = localProfile.email
+        }
+    }
 
-        val newMsg = SharedChatMessage(
-            sender = myEmail,
-            recipient = currentRecipient,
-            text = msgToSend,
-            timestamp = "11:28"
-        )
-        messages.add(newMsg)
-
-        coroutineScope.launch {
+    LaunchedEffect(activeGymUrl) {
+        while (isActive) {
             try {
-                val req = ChatSyncRequest(
-                    action = "send_chat_message",
-                    gymId = activeGym,
-                    sender = myEmail,
-                    recipient = currentRecipient,
-                    text = msgToSend
-                )
-                val jsonPayload = GymKtorApiClient.jsonInstance.encodeToString(ChatSyncRequest.serializer(), req)
-                GymKtorApiClient.postAppsScriptData(serverUrl, jsonPayload, "send_chat_message", activeGym, myEmail)
-            } catch (t: Throwable) { }
-        }
-    }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        // FONDO DE CHAT PERSONALIZADO (fondo_chat.png)
-        Image(
-            painter = painterResource(Res.drawable.fondo_chat),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop,
-            alpha = 0.35f
-        )
-
-        Scaffold(
-            containerColor = Color.Transparent,
-            topBar = {
-                Surface(
-                    color = Color(0xFF00151C),
-                    tonalElevation = 8.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 12.dp)
-                            .statusBarsPadding(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(
-                                color = PrimaryTurquoise,
-                                shape = CircleShape,
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clickable { onBack() }
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.Black)
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.width(12.dp))
-
-                            // AVATAR CIRCULAR
-                            Surface(
-                                color = Color.White.copy(alpha = 0.08f),
-                                shape = CircleShape,
-                                modifier = Modifier.size(38.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Default.AccountBalance, contentDescription = null, tint = PrimaryTurquoise, modifier = Modifier.size(20.dp))
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.width(12.dp))
-
-                            // SELECTOR DE DESTINATARIO (TITULO Y SUBTITULO TURQUESA)
-                            Box {
-                                Column(
-                                    modifier = Modifier.clickable { showRecipientMenu = true }
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = currentRecipient,
-                                            color = TextWhite,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 18.sp
-                                        )
-                                        Spacer(Modifier.width(4.dp))
-                                        Icon(
-                                            Icons.Default.ArrowDropDown,
-                                            contentDescription = null,
-                                            tint = TextWhite,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                    Text(
-                                        text = "Administrador",
-                                        color = PrimaryTurquoise,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-
-                                DropdownMenu(
-                                    expanded = showRecipientMenu,
-                                    onDismissRequest = { showRecipientMenu = false }
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text(activeGym, color = TextWhite) },
-                                        onClick = { currentRecipient = activeGym; showRecipientMenu = false }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Chat General", color = TextWhite) },
-                                        onClick = { currentRecipient = "Chat General"; showRecipientMenu = false }
-                                    )
-                                }
-                            }
-                        }
-
-                        // BOTÓN ELIMINAR / VACIAR
-                        IconButton(onClick = { showDeleteConfirm = true }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Vaciar", tint = PrimaryTurquoise)
-                        }
-                    }
-                }
-            },
-            bottomBar = {
-                // BARRA DE ENVÍO INFERIOR
-                Surface(
-                    color = Color(0xFF00151C),
-                    tonalElevation = 8.dp,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        OutlinedTextField(
-                            value = messageText,
-                            onValueChange = { messageText = it },
-                            placeholder = { Text("Escribe aquí...", color = TextGray, fontSize = 14.sp) },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(24.dp),
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                focusedBorderColor = Color.Transparent,
-                                unfocusedBorderColor = Color.Transparent,
-                                focusedTextColor = TextWhite,
-                                unfocusedTextColor = TextWhite
-                            )
-                        )
-
-                        IconButton(
-                            onClick = { sendMessage() },
-                            enabled = messageText.isNotBlank()
-                        ) {
-                            Icon(
-                                Icons.Default.Send,
-                                contentDescription = "Enviar",
-                                tint = if (messageText.isNotBlank()) PrimaryTurquoise else TextGray,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    }
-                }
-            }
-        ) { padding ->
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 12.dp)
-            ) {
-                items(messages) { msg ->
-                    val isMine = msg.sender == myEmail
-                    SharedMessageBubble(msg, isMine)
-                }
-            }
-        }
-    }
-
-    if (showDeleteConfirm) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Vaciar Chat", color = TextWhite, fontWeight = FontWeight.Bold) },
-            text = { Text("¿Deseas vaciar el historial de conversación?", color = TextGray) },
-            containerColor = Color(0xFF081C24),
-            confirmButton = {
-                Button(
-                    onClick = {
-                        messages.clear()
-                        showDeleteConfirm = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
-                ) {
-                    Text("VACIAR", color = Color.White, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text("CANCELAR", color = TextWhite)
-                }
-            }
-        )
-    }
-}
-
-@Composable
-fun SharedMessageBubble(message: SharedChatMessage, isMine: Boolean) {
-    val density = LocalDensity.current
-
-    val bubbleShape = remember(isMine, density) {
-        GenericShape { size, _ ->
-            val r = with(density) { 16.dp.toPx() }
-            val tailW = with(density) { 8.dp.toPx() }
-            val tailH = with(density) { 12.dp.toPx() }
-
-            if (isMine) {
-                addRoundRect(
-                    RoundRect(
-                        rect = Rect(0f, 0f, size.width - tailW, size.height),
-                        topLeft = CornerRadius(r),
-                        topRight = CornerRadius(r),
-                        bottomLeft = CornerRadius(r),
-                        bottomRight = CornerRadius(0f)
-                    )
-                )
-                moveTo(size.width - tailW, size.height - tailH)
-                lineTo(size.width, size.height)
-                lineTo(size.width - tailW, size.height)
-                close()
-            } else {
-                addRoundRect(
-                    RoundRect(
-                        rect = Rect(tailW, 0f, size.width, size.height),
-                        topLeft = CornerRadius(r),
-                        topRight = CornerRadius(r),
-                        bottomLeft = CornerRadius(0f),
-                        bottomRight = CornerRadius(r)
-                    )
-                )
-                moveTo(tailW, size.height - tailH)
-                lineTo(0f, size.height)
-                lineTo(tailW, size.height)
-                close()
-            }
+                val paramChar = if (activeGymUrl.contains("?")) "&" else "?"
+                val url = "$activeGymUrl${paramChar}type=chats"
+                apiClient.getData(url)
+            } catch (_: Throwable) { }
+            delay(10000L)
         }
     }
 
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        contentAlignment = if (isMine) Alignment.CenterEnd else Alignment.CenterStart
+            .fillMaxSize()
+            .background(Color(0xFF00151C))
     ) {
-        Surface(
-            color = if (isMine) PrimaryTurquoise else Color(0xFF081C24),
-            shape = bubbleShape,
-            modifier = Modifier.widthIn(max = 260.dp)
-        ) {
-            Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
-                Text(
-                    text = message.text,
-                    color = if (isMine) Color.Black else TextWhite,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium
+        Image(
+            painter = painterResource(Res.drawable.fondo_chat),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(0.35f)
+        )
+
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(PrimaryTurquoise.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Person, contentDescription = null, tint = PrimaryTurquoise, modifier = Modifier.size(20.dp))
+                            }
+                            Spacer(Modifier.width(10.dp))
+                            Column {
+                                Text(text = "$activeGymName ▼", color = TextWhite, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                Text(text = "Administrador", color = PrimaryTurquoise, fontSize = 11.sp)
+                            }
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = PrimaryTurquoise)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF00151C))
                 )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = message.timestamp,
-                    color = if (isMine) Color.Black.copy(alpha = 0.6f) else TextGray,
-                    fontSize = 10.sp,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.fillMaxWidth()
-                )
+            }
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = 16.dp)
+                ) {
+                    items(messages) { msg ->
+                        val isMine = msg.isMine
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = if (isMine) Alignment.CenterEnd else Alignment.CenterStart
+                        ) {
+                            Surface(
+                                color = if (isMine) PrimaryTurquoise else Color(0xFF081C24),
+                                shape = RoundedCornerShape(16.dp),
+                                modifier = Modifier.widthIn(max = 280.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(
+                                        text = msg.text,
+                                        color = if (isMine) Color.Black else TextWhite,
+                                        fontSize = 14.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = if (msg.isPending) "Enviando..." else "Enviado",
+                                        color = if (isMine) Color.Black.copy(alpha = 0.6f) else TextGray,
+                                        fontSize = 10.sp,
+                                        textAlign = TextAlign.End,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Surface(
+                    color = Color(0xFF00151C),
+                    tonalElevation = 8.dp
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .padding(12.dp)
+                            .fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = messageText,
+                            onValueChange = { messageText = it },
+                            placeholder = { Text("Escribe aquí...", color = TextGray) },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = TextWhite,
+                                unfocusedTextColor = TextWhite,
+                                focusedContainerColor = Color(0xFF081C24),
+                                unfocusedContainerColor = Color(0xFF081C24),
+                                focusedBorderColor = PrimaryTurquoise,
+                                unfocusedBorderColor = Color.Transparent
+                            ),
+                            shape = RoundedCornerShape(24.dp),
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                if (messageText.isNotBlank()) {
+                                    val txt = messageText
+                                    val ts = 0L
+                                    messageText = ""
+                                    val newMsg = ChatMessage(userEmail, "Admin", txt, ts, true, isPending = true)
+                                    messages = messages + newMsg
+
+                                    coroutineScope.launch {
+                                        try {
+                                            val gymIdVal = activeGymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+                                            val chatReq = ChatSyncRequest(
+                                                action = "send_chat_message",
+                                                gymId = gymIdVal,
+                                                sender = userEmail,
+                                                recipient = "Admin",
+                                                text = txt,
+                                                timestamp = ts,
+                                                senderRole = "socio"
+                                            )
+                                            apiClient.postData(activeGymUrl, chatReq)
+                                            messages = messages.map { if (it.timestamp == ts) it.copy(isPending = false) else it }
+                                        } catch (e: Throwable) {
+                                            println("Error sending chat message: ${e.message}")
+                                        }
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise),
+                            shape = CircleShape,
+                            modifier = Modifier.size(48.dp),
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Icon(Icons.Default.Send, contentDescription = "Enviar", tint = Color.Black, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                }
             }
         }
     }

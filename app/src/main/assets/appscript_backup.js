@@ -1,7 +1,6 @@
 /**
  * GymCopilot Backend - Gestión de Chats, Horarios, Tienda e Identidad
- * Versión v5.9.8: Planilla Maestra "GymCopilot_Master_DB" con pestaña exclusiva "GymsRegistry".
- * Cambios: fix bucle roto en fixConfigSheetStructure y detección de planilla maestra solo por ID.
+ * Versión v5.9.7: Planilla Maestra "GymCopilot_Master_DB" con pestaña exclusiva "GymsRegistry".
  */
 
 var SS_ID_FROM_APP = '';
@@ -674,15 +673,18 @@ function executeCreateGym(data) {
   };
 }
 
-/**
- * Detecta la planilla maestra SOLO por ID guardado en las propiedades del script.
- * (Antes también miraba el nombre y podía confundir un gimnasio llamado "Master ..." con la maestra.)
- */
 function isMasterSS(ss) {
   if (!ss) return false;
   try {
-    var masterSSId = PropertiesService.getScriptProperties().getProperty("MASTER_SS_ID");
-    return !!masterSSId && ss.getId() === masterSSId;
+    var prop = PropertiesService.getScriptProperties();
+    var masterSSId = prop.getProperty("MASTER_SS_ID");
+    if (masterSSId && ss.getId() === masterSSId) {
+      return true;
+    }
+    var name = ss.getName();
+    if (name === "GymCopilot_Master_DB" || name === "GymCopilot_BASE DE DATOS") {
+      return true;
+    }
   } catch (err) {}
   return false;
 }
@@ -938,7 +940,7 @@ function fixMemberSheetStructure(sheet) {
     var headerName = cell.getValue();
     if (String(headerName).toLowerCase().trim() !== expectedHeaders[i].toLowerCase().trim()) {
       sheet.insertColumnBefore(i + 1);
-      sheet.getRange(1, i + 1).setValue(headerName);
+      sheet.getRange(1, i + 1).setValue(expectedHeaders[i]);
     }
   }
 }

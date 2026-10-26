@@ -443,6 +443,7 @@ fun MemberFullDashboard(
     when (currentTab) {
         0 -> MemberDashboardSharedScreen("Gym 19", "socio@gymcopilot.com", null, apiClient, currentTab, {})
         1 -> RealPublicStoreView(onTabSelected = {})
+        4 -> ChatSharedScreen(apiClient = apiClient)
         else -> MemberDashboardSharedScreen("Gym 19", "socio@gymcopilot.com", null, apiClient, currentTab, {})
     }
 }
@@ -567,97 +568,7 @@ fun FullStoreSection() {
 
 @Composable
 fun FullChatSection() {
-    var messageText by remember { mutableStateOf("") }
-    var messages by remember {
-        mutableStateOf(
-            listOf(
-                ChatMessage("admin", "Socio", "¡Hola! Bienvenidos al chat del gimnasio GymCopilot.", 1000L, false),
-                ChatMessage("user", "Socio", "Hola, ¿a qué hora abre la sala de musculación mañana?", 1005L, true)
-            )
-        )
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = 16.dp, bottom = 80.dp)
-    ) {
-        Text(text = "Chat de Soporte y Consultas", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextWhite)
-        Spacer(modifier = Modifier.height(12.dp))
-
-        LazyColumn(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(messages) { msg ->
-                val isMe = msg.isMine
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = if (isMe) Alignment.CenterEnd else Alignment.CenterStart
-                ) {
-                    Surface(
-                        color = if (isMe) PrimaryTurquoise else SurfaceColor,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.widthIn(max = 280.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(10.dp)) {
-                            Text(
-                                text = msg.text,
-                                color = if (isMe) Color.Black else TextWhite,
-                                fontSize = 14.sp
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Enviado",
-                                color = if (isMe) Color.Black.copy(alpha = 0.6f) else TextGray,
-                                fontSize = 10.sp,
-                                textAlign = TextAlign.End,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedTextField(
-                value = messageText,
-                onValueChange = { messageText = it },
-                placeholder = { Text("Escribe un mensaje...", color = TextGray) },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = TextWhite,
-                    unfocusedTextColor = TextWhite,
-                    focusedContainerColor = SurfaceColor,
-                    unfocusedContainerColor = SurfaceColor,
-                    focusedBorderColor = PrimaryTurquoise,
-                    unfocusedBorderColor = Color.Transparent
-                ),
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Button(
-                onClick = {
-                    if (messageText.isNotBlank()) {
-                        messages = messages + ChatMessage("user", "Socio", messageText, 2000L, true)
-                        messageText = ""
-                    }
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise),
-                shape = CircleShape,
-                modifier = Modifier.size(48.dp),
-                contentPadding = PaddingValues(0.dp)
-            ) {
-                Text("➤", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            }
-        }
-    }
+    ChatSharedScreen()
 }
 
 @Composable

@@ -52,7 +52,7 @@ fun MemberDashboardSharedScreen(
     var showHelpScreen by remember { mutableStateOf(false) }
     var showMemberProfileScreen by remember { mutableStateOf(false) }
 
-    // DATOS DINÁMICOS DEL PERFIL DEL SOCIO
+    // DATOS DINÁMICOS DEL PERFIL DEL SOCIO Y GIMNASIO
     var activeFirstName by remember { mutableStateOf("pe") }
     var activeLastName by remember { mutableStateOf("lado") }
     var activeEmail by remember { mutableStateOf(userEmail) }
@@ -62,7 +62,7 @@ fun MemberDashboardSharedScreen(
     var activeHeight by remember { mutableStateOf("") }
     var activePhotoUri by remember { mutableStateOf<String?>(null) }
     var activeGymName by remember { mutableStateOf(gymName) }
-    var activeGymUrl by remember { mutableStateOf("https://script.google.com/macros/s/AKfycbx_GymCopilot_Sync/exec") }
+    var activeGymUrl by remember { mutableStateOf("https://script.google.com/macros/s/AKfycbyrN53_uZ4ECfRyp-Qwb2sGSYjv-g7OeR5ERbAQxLdirOL7qvL6rfaxXsjJShc28P-a/exec") }
 
     // CARGA PERSISTENTE DESDE LOCALSTORAGE EN WEB / DISPOSITIVO
     LaunchedEffect(Unit) {
@@ -145,8 +145,7 @@ fun MemberDashboardSharedScreen(
                             photoUri = photo,
                             membershipStatus = "ACTIVO"
                         )
-                        val jsonPayload = GymKtorApiClient.jsonInstance.encodeToString(MemberSyncRequest.serializer(), syncReq)
-                        GymKtorApiClient.postAppsScriptData(activeGymUrl, jsonPayload, "update_member", activeGymName, em)
+                        GymKtorApiClient.postData(activeGymUrl, syncReq)
                     } catch (t: Throwable) { }
                 }
             }
@@ -445,9 +444,7 @@ fun MemberDashboardSharedScreen(
     }
 
     if (showCheckInDialog) {
-        var isCheckingIn by remember { mutableStateOf(false) }
         var checkInSuccess by remember { mutableStateOf(false) }
-        var checkInError by remember { mutableStateOf<String?>(null) }
 
         AlertDialog(
             onDismissRequest = { showCheckInDialog = false },
@@ -457,11 +454,7 @@ fun MemberDashboardSharedScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
                 ) {
-                    if (isCheckingIn) {
-                        CircularProgressIndicator(color = PrimaryTurquoise, modifier = Modifier.size(48.dp))
-                        Spacer(Modifier.height(12.dp))
-                        Text("Enviando asistencia a Google Sheets...", color = TextWhite, fontSize = 14.sp)
-                    } else if (checkInSuccess) {
+                    if (checkInSuccess) {
                         Surface(
                             color = Color(0xFF00C853).copy(alpha = 0.2f),
                             shape = RoundedCornerShape(16.dp),
@@ -478,10 +471,6 @@ fun MemberDashboardSharedScreen(
                             }
                         }
                     } else {
-                        if (checkInError != null) {
-                            Text(text = checkInError!!, color = Color.Red, fontSize = 13.sp, textAlign = TextAlign.Center)
-                            Spacer(Modifier.height(8.dp))
-                        }
                         Box(
                             modifier = Modifier
                                 .size(200.dp)
@@ -489,8 +478,6 @@ fun MemberDashboardSharedScreen(
                                 .background(Color(0xFF00151C))
                                 .border(BorderStroke(2.dp, PrimaryTurquoise), RoundedCornerShape(20.dp))
                                 .clickable {
-                                    isCheckingIn = true
-                                    checkInError = null
                                     launchQrScanner { scannedCode ->
                                         val cleanCode = scannedCode.trim()
                                         if (cleanCode.startsWith("MEMBERLINK|")) {
@@ -529,6 +516,8 @@ fun MemberDashboardSharedScreen(
                                             )
                                         )
 
+                                        checkInSuccess = true
+
                                         // Registrar asistencia y actualizar miembro HTTP POST en Google Sheets DB
                                         coroutineScope.launch {
                                             try {
@@ -544,8 +533,7 @@ fun MemberDashboardSharedScreen(
                                                     photoUri = activePhotoUri,
                                                     membershipStatus = "ACTIVO"
                                                 )
-                                                val jsonSync = GymKtorApiClient.jsonInstance.encodeToString(MemberSyncRequest.serializer(), syncReq)
-                                                GymKtorApiClient.postAppsScriptData(activeGymUrl, jsonSync, "update_member", activeGymName, activeEmail)
+                                                GymKtorApiClient.postData(activeGymUrl, syncReq)
 
                                                 val checkInReq = CheckInRequest(
                                                     action = "check_in",
@@ -553,15 +541,8 @@ fun MemberDashboardSharedScreen(
                                                     memberEmail = activeEmail,
                                                     timestamp = 0L
                                                 )
-                                                val jsonCheckIn = GymKtorApiClient.jsonInstance.encodeToString(CheckInRequest.serializer(), checkInReq)
-                                                GymKtorApiClient.postAppsScriptData(activeGymUrl, jsonCheckIn, "check_in", activeGymName, activeEmail)
-
-                                                checkInSuccess = true
-                                            } catch (t: Throwable) {
-                                                checkInError = t.message ?: "Error de red"
-                                            } finally {
-                                                isCheckingIn = false
-                                            }
+                                                GymKtorApiClient.postData(activeGymUrl, checkInReq)
+                                            } catch (t: Throwable) { }
                                         }
                                     }
                                 },
@@ -579,11 +560,9 @@ fun MemberDashboardSharedScreen(
             containerColor = Color(0xFF081C24),
             confirmButton = {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (!checkInSuccess && !isCheckingIn) {
+                    if (!checkInSuccess) {
                         Button(
                             onClick = {
-                                isCheckingIn = true
-                                checkInError = null
                                 launchQrScanner { scannedCode ->
                                     val cleanCode = scannedCode.trim()
                                     if (cleanCode.startsWith("MEMBERLINK|")) {
@@ -621,6 +600,8 @@ fun MemberDashboardSharedScreen(
                                         )
                                     )
 
+                                    checkInSuccess = true
+
                                     coroutineScope.launch {
                                         try {
                                             val syncReq = MemberSyncRequest(
@@ -635,8 +616,7 @@ fun MemberDashboardSharedScreen(
                                                 photoUri = activePhotoUri,
                                                 membershipStatus = "ACTIVO"
                                             )
-                                            val jsonSync = GymKtorApiClient.jsonInstance.encodeToString(MemberSyncRequest.serializer(), syncReq)
-                                            GymKtorApiClient.postAppsScriptData(activeGymUrl, jsonSync, "update_member", activeGymName, activeEmail)
+                                            GymKtorApiClient.postData(activeGymUrl, syncReq)
 
                                             val checkInReq = CheckInRequest(
                                                 action = "check_in",
@@ -644,15 +624,8 @@ fun MemberDashboardSharedScreen(
                                                 memberEmail = activeEmail,
                                                 timestamp = 0L
                                             )
-                                            val jsonCheckIn = GymKtorApiClient.jsonInstance.encodeToString(CheckInRequest.serializer(), checkInReq)
-                                            GymKtorApiClient.postAppsScriptData(activeGymUrl, jsonCheckIn, "check_in", activeGymName, activeEmail)
-
-                                            checkInSuccess = true
-                                        } catch (t: Throwable) {
-                                            checkInError = t.message ?: "Error de red"
-                                        } finally {
-                                            isCheckingIn = false
-                                        }
+                                            GymKtorApiClient.postData(activeGymUrl, checkInReq)
+                                        } catch (t: Throwable) { }
                                     }
                                 }
                             },
