@@ -16,3 +16,6 @@ data class LocalMemberData(
 expect fun saveLocalMemberProfile(data: LocalMemberData)
 
 expect fun readLocalMemberProfile(): LocalMemberData?
+
+expect fun saveLocalStorageFlag(key: String, value: String)
+expect fun readLocalStorageFlag(key: String): String?

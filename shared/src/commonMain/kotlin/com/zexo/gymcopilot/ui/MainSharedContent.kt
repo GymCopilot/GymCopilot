@@ -29,6 +29,8 @@ import com.zexo.gymcopilot.utils.decodeBase64ToBitmap
 import com.zexo.gymcopilot.utils.isIOSDevice
 import com.zexo.gymcopilot.utils.isStandaloneMode
 import com.zexo.gymcopilot.utils.readLocalMemberProfile
+import com.zexo.gymcopilot.utils.readLocalStorageFlag
+import com.zexo.gymcopilot.utils.saveLocalStorageFlag
 import com.zexo.gymcopilot.utils.triggerPwaInstall
 import gymcopilot.shared.generated.resources.*
 import kotlinx.coroutines.delay
@@ -110,7 +112,8 @@ fun SharedGymCopilotApp(
     val isIOS = remember { isIOSDevice() }
 
     LaunchedEffect(Unit) {
-        if (!isStandaloneMode()) {
+        val isInstalledFlag = readLocalStorageFlag("gymcopilot_pwa_installed") == "true"
+        if (!isStandaloneMode() && !isInstalledFlag) {
             showInstallBanner = true
         }
         val localData = readLocalMemberProfile()
@@ -201,6 +204,8 @@ fun SharedGymCopilotApp(
                             Spacer(Modifier.height(24.dp))
                             Button(
                                 onClick = {
+                                    saveLocalStorageFlag("gymcopilot_pwa_installed", "true")
+                                    showInstallBanner = false
                                     val triggered = triggerPwaInstall()
                                     if (!triggered || isIOS) {
                                         showInstructionsDialog = true

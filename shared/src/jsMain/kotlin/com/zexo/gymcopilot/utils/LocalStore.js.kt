@@ -46,3 +46,17 @@ actual fun readLocalMemberProfile(): LocalMemberData? {
         null
     }
 }
+
+actual fun saveLocalStorageFlag(key: String, value: String) {
+    try {
+        localStorage.setItem(key, value)
+    } catch (e: Throwable) {}
+}
+
+actual fun readLocalStorageFlag(key: String): String? {
+    return try {
+        localStorage.getItem(key)
+    } catch (e: Throwable) {
+        null
+    }
+}
