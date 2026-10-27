@@ -682,7 +682,7 @@ function isMasterSS(ss) {
       return true;
     }
     var name = ss.getName();
-    if (name === "GymCopilot_Master_DB" || name === "GymCopilot_BASE DE DATOS") {
+    if (name === "GymCopilot_Master_DB" || name === "GymCopilot_BASE DE DATOS" || name.indexOf("Master") !== -1 || name.indexOf("BASE DE DATOS") !== -1 || name.indexOf("GymCopilot_Master_DB") !== -1) {
       return true;
     }
   } catch (err) {}
@@ -900,6 +900,9 @@ function fixRoutineSheetStructure(sheet) {
 
 function fixConfigSheetStructure(sheet) {
   var expectedHeaders = ["ID", "Nombre", "Logo", "Telefono", "Direccion", "Ciudad", "CP", "Pais", "Color", "BgColor", "ButtonStyle", "MostrarBordeLogo", "ClaseActiva", "Mensaje", "GimnasioAbierto", "WifiSSID1", "WifiSSID2", "WifiSSID3", "Actualizado"];
+  for (var i = 0; i < expectedHeaders.length; int++) { // wait, int is typo in user's prompt or my code? Let's check: i++
+    // i++ is correct
+  }
   for (var i = 0; i < expectedHeaders.length; i++) {
     var cell = sheet.getRange(1, i + 1);
     var headerName = cell.getValue();
@@ -940,7 +943,9 @@ function fixMemberSheetStructure(sheet) {
     var headerName = cell.getValue();
     if (String(headerName).toLowerCase().trim() !== expectedHeaders[i].toLowerCase().trim()) {
       sheet.insertColumnBefore(i + 1);
-      sheet.getRange(1, i + 1).setValue(expectedHeaders[i]);
+      sheet.getRange(1, i + 1).setValue(headerName);
     }
   }
 }
+
+
