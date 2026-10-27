@@ -31,6 +31,9 @@ import gymcopilot.shared.generated.resources.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.compose.resources.painterResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,14 +44,7 @@ fun ChatSharedScreen(
 ) {
     val coroutineScope = rememberCoroutineScope()
     var messageText by remember { mutableStateOf("") }
-    var messages by remember {
-        mutableStateOf(
-            listOf(
-                ChatMessage("admin", "Socio", "¡Hola! Bienvenidos al chat del gimnasio GymCopilot.", 1000L, false),
-                ChatMessage("user", "Socio", "Hola, ¿a qué hora abre la sala de musculación mañana?", 1005L, true)
-            )
-        )
-    }
+    var messages by remember { mutableStateOf(listOf<ChatMessage>()) }
 
     var activeGymName by remember { mutableStateOf("Gym 26") }
     var activeGymUrl by remember { mutableStateOf("https://script.google.com/macros/s/AKfycbyrN53_uZ4ECfRyp-Qwb2sGSYjv-g7OeR5ERbAQxLdirOL7qvL6rfaxXsjJShc28P-a/exec") }
@@ -63,14 +59,40 @@ fun ChatSharedScreen(
         }
     }
 
-    LaunchedEffect(activeGymUrl) {
+    // Polling & Fetching Chat Messages from Google Sheets Database (`type=chats`)
+    LaunchedEffect(activeGymUrl, userEmail, activeGymName) {
+        val gymIdVal = activeGymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
         while (isActive) {
             try {
                 val paramChar = if (activeGymUrl.contains("?")) "&" else "?"
-                val url = "$activeGymUrl${paramChar}type=chats"
-                apiClient.getData(url)
-            } catch (_: Throwable) { }
-            delay(10000L)
+                val url = "$activeGymUrl${paramChar}type=chats&gymId=$gymIdVal&email=${userEmail}"
+                val responseText = apiClient.getData(url)
+                if (responseText.isNotBlank() && responseText.contains("success")) {
+                    val jsonElement = apiClient.jsonInstance.parseToJsonElement(responseText)
+                    val jsonObject = jsonElement as? JsonObject
+                    val dataArray = jsonObject?.get("data") as? JsonArray
+                    if (dataArray != null && dataArray.size > 1) {
+                        val fetchedMsgs = mutableListOf<ChatMessage>()
+                        val myIdTrim = userEmail.lowercase().trim()
+                        for (i in 1 until dataArray.size) {
+                            val row = dataArray[i] as? JsonArray
+                            if (row != null && row.size >= 4) {
+                                val sender = row[1].jsonPrimitive.content
+                                val recipient = row[2].jsonPrimitive.content
+                                val text = row[3].jsonPrimitive.content
+                                val tsStr = if (row.size > 4) row[4].jsonPrimitive.content else "0"
+                                val ts = tsStr.toLongOrNull() ?: 0L
+                                val isMine = sender.lowercase().trim() == myIdTrim || sender.lowercase().contains("socio")
+                                fetchedMsgs.add(ChatMessage(sender, recipient, text, ts, isMine))
+                            }
+                        }
+                        messages = fetchedMsgs.sortedBy { it.timestamp }
+                    }
+                }
+            } catch (e: Throwable) {
+                println("Error fetching chats: ${e.message}")
+            }
+            delay(5000L)
         }
     }
 
@@ -106,7 +128,7 @@ fun ChatSharedScreen(
                             Spacer(Modifier.width(10.dp))
                             Column {
                                 Text(text = "$activeGymName ▼", color = TextWhite, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                                Text(text = "Administrador", color = PrimaryTurquoise, fontSize = 11.sp)
+                                Text(text = "Administrador (Base de Datos)", color = PrimaryTurquoise, fontSize = 11.sp)
                             }
                         }
                     },
@@ -151,7 +173,7 @@ fun ChatSharedScreen(
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = if (msg.isPending) "Enviando..." else "Enviado",
+                                        text = if (msg.isPending) "Enviando..." else "Sincronizado",
                                         color = if (isMine) Color.Black.copy(alpha = 0.6f) else TextGray,
                                         fontSize = 10.sp,
                                         textAlign = TextAlign.End,
@@ -211,7 +233,6 @@ fun ChatSharedScreen(
                                                 senderRole = "socio"
                                             )
                                             apiClient.postData(activeGymUrl, chatReq)
-                                            messages = messages.map { if (it.timestamp == ts) it.copy(isPending = false) else it }
                                         } catch (e: Throwable) {
                                             println("Error sending chat message: ${e.message}")
                                         }
