@@ -17,11 +17,18 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
+import com.zexo.gymcopilot.utils.decodeBase64ToBitmap
+import com.zexo.gymcopilot.utils.isStandaloneMode
 import com.zexo.gymcopilot.utils.readLocalMemberProfile
+import com.zexo.gymcopilot.utils.triggerPwaInstall
 import gymcopilot.shared.generated.resources.*
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.painterResource
@@ -96,11 +103,21 @@ fun SharedGymCopilotApp(
     var screenState by remember { mutableStateOf(AppScreenState.SPLASH) }
     var currentRole by remember { mutableStateOf(initialRole.lowercase()) }
     var activeGymName by remember { mutableStateOf(gymName) }
+    var showInstallBanner by remember { mutableStateOf(false) }
+    var gymLogoUri by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
+        if (!isStandaloneMode()) {
+            showInstallBanner = true
+        }
         val localData = readLocalMemberProfile()
-        if (localData != null && localData.gymName.isNotBlank() && localData.gymName != "Tu Gimnasio") {
-            activeGymName = localData.gymName
+        if (localData != null) {
+            if (localData.gymName.isNotBlank() && localData.gymName != "Tu Gimnasio") {
+                activeGymName = localData.gymName
+            }
+            if (localData.photoUri != null) {
+                gymLogoUri = localData.photoUri
+            }
         }
     }
 
@@ -133,6 +150,79 @@ fun SharedGymCopilotApp(
                         apiClient = GymKtorApiClient,
                         onChangeRole = { screenState = AppScreenState.LOGIN }
                     )
+                }
+            }
+
+            if (showInstallBanner) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.94f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
+                        shape = RoundedCornerShape(24.dp),
+                        border = BorderStroke(2.dp, PrimaryTurquoise),
+                        modifier = Modifier
+                            .fillMaxWidth(0.9f)
+                            .padding(20.dp)
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(24.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF00151C))
+                                    .border(BorderStroke(2.dp, PrimaryTurquoise), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                val logoBm = remember(gymLogoUri) { if (gymLogoUri != null) decodeBase64ToBitmap(gymLogoUri!!) else null }
+                                if (logoBm != null) {
+                                    Image(bitmap = logoBm, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                } else {
+                                    Icon(Icons.Default.PhoneAndroid, contentDescription = null, tint = PrimaryTurquoise, modifier = Modifier.size(40.dp))
+                                }
+                            }
+                            Spacer(Modifier.height(16.dp))
+                            Text(
+                                text = "Instalar $activeGymName",
+                                color = TextWhite,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Black,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = "Para utilizar GymCopilot sin marcos y como aplicación nativa en tu dispositivo, es necesario instalar la aplicación.",
+                                color = TextGray,
+                                fontSize = 13.sp,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(Modifier.height(24.dp))
+                            Button(
+                                onClick = {
+                                    triggerPwaInstall()
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise),
+                                shape = RoundedCornerShape(24.dp),
+                                modifier = Modifier.fillMaxWidth().height(48.dp)
+                            ) {
+                                Text("📲 INSTALAR AHORA", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            TextButton(onClick = {
+                                if (isStandaloneMode()) {
+                                    showInstallBanner = false
+                                }
+                            }) {
+                                Text("Ya instalada / Continuar en navegador", color = TextGray, fontSize = 11.sp)
+                            }
+                        }
+                    }
                 }
             }
         }

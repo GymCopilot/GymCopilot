@@ -183,6 +183,30 @@
                 if (manualCode && callback) callback(manualCode);
             }
         };
+
+        let deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+        });
+
+        window.isGymCopilotStandalone = function() {
+            return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        };
+
+        window.triggerGymCopilotInstall = function() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                    }
+                    deferredPrompt = null;
+                });
+            } else {
+                alert('Para instalar la app, usa el menú de tu navegador (tres puntos en Chrome o Compartir en Safari) y selecciona "Agregar a la pantalla principal" o "Instalar aplicación".');
+            }
+        };
     </script>
 
     <script src="skiko.js"></script>
