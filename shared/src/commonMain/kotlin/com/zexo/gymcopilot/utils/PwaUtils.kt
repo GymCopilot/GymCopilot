@@ -1,4 +1,5 @@
 package com.zexo.gymcopilot.utils
 
 expect fun isStandaloneMode(): Boolean
-expect fun triggerPwaInstall()
+expect fun triggerPwaInstall(): Boolean
+expect fun isIOSDevice(): Boolean

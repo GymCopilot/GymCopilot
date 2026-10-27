@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
 import com.zexo.gymcopilot.utils.decodeBase64ToBitmap
+import com.zexo.gymcopilot.utils.isIOSDevice
 import com.zexo.gymcopilot.utils.isStandaloneMode
 import com.zexo.gymcopilot.utils.readLocalMemberProfile
 import com.zexo.gymcopilot.utils.triggerPwaInstall
@@ -104,7 +105,9 @@ fun SharedGymCopilotApp(
     var currentRole by remember { mutableStateOf(initialRole.lowercase()) }
     var activeGymName by remember { mutableStateOf(gymName) }
     var showInstallBanner by remember { mutableStateOf(false) }
+    var showInstructionsDialog by remember { mutableStateOf(false) }
     var gymLogoUri by remember { mutableStateOf<String?>(null) }
+    val isIOS = remember { isIOSDevice() }
 
     LaunchedEffect(Unit) {
         if (!isStandaloneMode()) {
@@ -198,7 +201,10 @@ fun SharedGymCopilotApp(
                             Spacer(Modifier.height(24.dp))
                             Button(
                                 onClick = {
-                                    triggerPwaInstall()
+                                    val triggered = triggerPwaInstall()
+                                    if (!triggered || isIOS) {
+                                        showInstructionsDialog = true
+                                    }
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise),
                                 shape = RoundedCornerShape(24.dp),
@@ -209,6 +215,33 @@ fun SharedGymCopilotApp(
                         }
                     }
                 }
+            }
+
+            if (showInstructionsDialog) {
+                AlertDialog(
+                    onDismissRequest = { showInstructionsDialog = false },
+                    title = { Text("Cómo instalar la app", color = TextWhite, fontWeight = FontWeight.Bold) },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (isIOS) {
+                                Text("1. Toca el botón **Compartir** 📤 en la barra inferior de Safari.", color = TextWhite, fontSize = 14.sp)
+                                Text("2. Desplázate hacia abajo y selecciona **'Añadir a la pantalla de inicio'** ➕.", color = TextWhite, fontSize = 14.sp)
+                            } else {
+                                Text("1. Toca el menú de los 3 puntos (⋮) en la esquina superior derecha de tu navegador.", color = TextWhite, fontSize = 14.sp)
+                                Text("2. Selecciona **'Instalar aplicación'** o **'Agregar a la pantalla principal'**.", color = TextWhite, fontSize = 14.sp)
+                            }
+                        }
+                    },
+                    containerColor = Color(0xFF001F29),
+                    confirmButton = {
+                        Button(
+                            onClick = { showInstructionsDialog = false },
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise)
+                        ) {
+                            Text("ENTENDIDO", color = Color.Black, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                )
             }
         }
     }
