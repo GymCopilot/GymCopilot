@@ -55,6 +55,14 @@
             }
         };
 
+        window.launchGymCopilotScannerKotlin = function(kotlinCallback) {
+            window.openGymCopilotQrScanner(function(code) {
+                if (kotlinCallback) {
+                    kotlinCallback(code);
+                }
+            });
+        };
+
         window.openGymCopilotQrScanner = function(callback) {
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                 var oldOverlay = document.getElementById('qr_camera_overlay');

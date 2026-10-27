@@ -1,12 +1,24 @@
 package com.zexo.gymcopilot.utils
 
+import kotlinx.browser.window
+
 actual fun launchQrScanner(onQrScanned: (String) -> Unit) {
     try {
-        val scannerFunc = js("window.openGymCopilotQrScanner")
-        if (scannerFunc != null) {
-            scannerFunc(onQrScanned)
+        val launcher = js("window.launchGymCopilotScannerKotlin")
+        if (launcher != null) {
+            launcher(onQrScanned)
+        } else {
+            val code = window.prompt("Ingresa el código QR o Email del socio para asistencia:")
+            if (!code.isNullOrBlank()) {
+                onQrScanned(code)
+            }
         }
     } catch (e: Throwable) {
-        // Fallback
+        try {
+            val code = window.prompt("Ingresa el código QR o Email del socio para asistencia:")
+            if (!code.isNullOrBlank()) {
+                onQrScanned(code)
+            }
+        } catch (_: Throwable) {}
     }
 }
