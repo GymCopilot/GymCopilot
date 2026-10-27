@@ -166,7 +166,7 @@ function processAction(action, data, e) {
     var newStyle = (data.buttonStyle !== undefined && data.buttonStyle !== null && data.buttonStyle !== "") ? data.buttonStyle : (existingRow[10] !== undefined ? existingRow[10] : "");
     var newBorder = (data.showLogoBorder !== undefined && data.showLogoBorder !== null && data.showLogoBorder !== "") ? (data.showLogoBorder === true || data.showLogoBorder === "true") : (existingRow[11] !== undefined ? existingRow[11] : true);
     var newClass = (data.classInSession !== undefined && data.classInSession !== null && data.classInSession !== "") ? (data.classInSession === true || data.classInSession === "true") : (existingRow[12] !== undefined ? existingRow[12] : false);
-    var newMsg = (data.broadcastMessage !== undefined && data.broadcastMessage !== null && data.broadcastMessage !== "") ? data.broadcastMessage : (existingRow[13] || "");
+    var newMsg = (data.broadcastMessage !== undefined && data.broadcastMessage !== null) ? data.broadcastMessage : (existingRow[13] !== undefined ? existingRow[13] : "");
     var newGymOpen = (data.gymIsOpen !== undefined && data.gymIsOpen !== null && data.gymIsOpen !== "") ? (data.gymIsOpen === true || data.gymIsOpen === "true") : (existingRow[14] !== undefined ? existingRow[14] : true);
     var newSsid1 = (data.wifiSsid !== undefined && data.wifiSsid !== null) ? data.wifiSsid : (existingRow[15] || "");
     var newSsid2 = (data.wifiSsid2 !== undefined && data.wifiSsid2 !== null) ? data.wifiSsid2 : (existingRow[16] || "");
@@ -361,7 +361,8 @@ function processAction(action, data, e) {
   if (action === "update_member") {
     var sheet = getOrCreateSheet(ss, "Alumnos");
     fixMemberSheetStructure(sheet);
-    var searchEmail = data.targetEmail || data.originalEmail || data.email;
+    var searchEmail = String(data.targetEmail || data.originalEmail || data.email || "").trim().toLowerCase();
+    if (!searchEmail) searchEmail = "___invalid_email___";
     updateRow(sheet, searchEmail, 2, [
       data.firstName !== undefined ? data.firstName : "",
       data.lastName !== undefined ? data.lastName : "",
