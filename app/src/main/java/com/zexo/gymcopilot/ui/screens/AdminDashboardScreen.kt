@@ -2139,14 +2139,8 @@ fun GymBroadcastEditor(
     coroutineScope: kotlinx.coroutines.CoroutineScope
 ) {
     val currentMessage by dataStoreManager.getBroadcastMessage().collectAsState(initial = "")
-    var messageText by remember { mutableStateOf(currentMessage) }
+    var messageText by remember(currentMessage) { mutableStateOf(currentMessage) }
     var isSaving by remember { mutableStateOf(false) }
-
-    LaunchedEffect(currentMessage) {
-        if (messageText.isBlank() && currentMessage.isNotBlank()) {
-            messageText = currentMessage
-        }
-    }
 
     Card(
         modifier = Modifier.fillMaxWidth().border(1.5.dp, accentColor, containerShape),

@@ -676,7 +676,7 @@ class AttendanceRepository(
             dataStoreManager.setClassInSessionManual(classInSessionStr.lowercase() == "true")
             dataStoreManager.setGymIsOpen(gymIsOpenStr.lowercase() != "false")
             dataStoreManager.setShowLogoBorder(showBorderStr.lowercase() != "false")
-            if (message.isNotBlank() && message != "null") dataStoreManager.setBroadcastMessage(message)
+            if (message != "null") dataStoreManager.setBroadcastMessage(message)
             
             if (remoteSsid1.isNotBlank() && remoteSsid1 != "null") dataStoreManager.setGymWifiSsid(remoteSsid1)
             if (remoteSsid2.isNotBlank() && remoteSsid2 != "null") dataStoreManager.setGymWifiSsid2(remoteSsid2)
