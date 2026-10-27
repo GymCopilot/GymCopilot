@@ -563,6 +563,43 @@ fun MemberDashboardSharedScreen(
                     if (!checkInSuccess) {
                         Button(
                             onClick = {
+                                checkInSuccess = true
+                                coroutineScope.launch {
+                                    try {
+                                        val gymIdVal = activeGymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+                                        val syncReq = MemberSyncRequest(
+                                            action = "update_member",
+                                            firstName = activeFirstName,
+                                            lastName = activeLastName,
+                                            email = activeEmail,
+                                            phone = activePhone,
+                                            address = activeAddress,
+                                            weight = activeWeight,
+                                            height = activeHeight,
+                                            photoUri = activePhotoUri,
+                                            membershipStatus = "ACTIVO"
+                                        )
+                                        GymKtorApiClient.postData(activeGymUrl, syncReq)
+
+                                        val checkInReq = CheckInRequest(
+                                            action = "check_in",
+                                            gymId = gymIdVal,
+                                            memberEmail = activeEmail,
+                                            timestamp = 0L
+                                        )
+                                        GymKtorApiClient.postData(activeGymUrl, checkInReq)
+                                    } catch (t: Throwable) {
+                                        println("Error check-in: ${t.message}")
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise)
+                        ) {
+                            Text("MARCAR PRESENTE", color = Color.Black, fontWeight = FontWeight.Bold)
+                        }
+
+                        Button(
+                            onClick = {
                                 launchQrScanner { scannedCode ->
                                     val cleanCode = scannedCode.trim()
                                     if (cleanCode.startsWith("MEMBERLINK|")) {
@@ -604,6 +641,7 @@ fun MemberDashboardSharedScreen(
 
                                     coroutineScope.launch {
                                         try {
+                                            val gymIdVal = activeGymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
                                             val syncReq = MemberSyncRequest(
                                                 action = "update_member",
                                                 firstName = activeFirstName,
@@ -620,7 +658,7 @@ fun MemberDashboardSharedScreen(
 
                                             val checkInReq = CheckInRequest(
                                                 action = "check_in",
-                                                gymId = activeGymName,
+                                                gymId = gymIdVal,
                                                 memberEmail = activeEmail,
                                                 timestamp = 0L
                                             )
@@ -629,9 +667,9 @@ fun MemberDashboardSharedScreen(
                                     }
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise)
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853))
                         ) {
-                            Text("ABRIR CÁMARA", color = Color.Black, fontWeight = FontWeight.Bold)
+                            Text("ESCANEAR QR", color = Color.Black, fontWeight = FontWeight.Bold)
                         }
                     }
                     TextButton(onClick = { showCheckInDialog = false }) {
