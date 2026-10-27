@@ -3,6 +3,7 @@
   "short_name": "GymCopilot",
   "start_url": "./",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#00151C",
   "theme_color": "#00151C",
   "description": "Sistema de Gestión de Gimnasios y Asistencia"
