@@ -199,6 +199,10 @@
             return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
         };
 
+        window.isIOSDevice = function() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        };
+
         window.triggerGymCopilotInstall = function() {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
@@ -208,8 +212,9 @@
                     }
                     deferredPrompt = null;
                 });
+                return true;
             } else {
-                alert('Para instalar la app, usa el menú de tu navegador (tres puntos en Chrome o Compartir en Safari) y selecciona "Agregar a la pantalla principal" o "Instalar aplicación".');
+                return false;
             }
         };
     </script>
