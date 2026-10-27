@@ -195,13 +195,6 @@ fun SharedGymCopilotApp(
                                 fontWeight = FontWeight.Black,
                                 textAlign = TextAlign.Center
                             )
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                text = "Para utilizar GymCopilot sin marcos y como aplicación nativa en tu dispositivo, es necesario instalar la aplicación.",
-                                color = TextGray,
-                                fontSize = 13.sp,
-                                textAlign = TextAlign.Center
-                            )
                             Spacer(Modifier.height(24.dp))
                             Button(
                                 onClick = {
@@ -212,14 +205,6 @@ fun SharedGymCopilotApp(
                                 modifier = Modifier.fillMaxWidth().height(48.dp)
                             ) {
                                 Text("📲 INSTALAR AHORA", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 15.sp)
-                            }
-                            Spacer(Modifier.height(12.dp))
-                            TextButton(onClick = {
-                                if (isStandaloneMode()) {
-                                    showInstallBanner = false
-                                }
-                            }) {
-                                Text("Ya instalada / Continuar en navegador", color = TextGray, fontSize = 11.sp)
                             }
                         }
                     }

@@ -190,6 +190,11 @@
             deferredPrompt = e;
         });
 
+        window.addEventListener('appinstalled', (evt) => {
+            deferredPrompt = null;
+            window.location.reload();
+        });
+
         window.isGymCopilotStandalone = function() {
             return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
         };
