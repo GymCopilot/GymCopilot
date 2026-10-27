@@ -17,6 +17,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -79,6 +83,29 @@ fun MemberDashboardSharedScreen(
             if (localData.gymName.isNotBlank()) activeGymName = localData.gymName
             if (localData.gymApiUrl.isNotBlank()) activeGymUrl = localData.gymApiUrl
         }
+    }
+
+    var broadcastMessage by remember { mutableStateOf("hola") }
+
+    LaunchedEffect(activeGymUrl) {
+        try {
+            val paramChar = if (activeGymUrl.contains("?")) "&" else "?"
+            val responseText = apiClient.getData("$activeGymUrl${paramChar}type=config")
+            if (responseText.isNotBlank() && responseText.contains("success")) {
+                val jsonElement = apiClient.jsonInstance.parseToJsonElement(responseText)
+                val jsonObject = jsonElement as? JsonObject
+                val dataArray = jsonObject?.get("data") as? JsonArray
+                if (dataArray != null && dataArray.size > 1) {
+                    val row = dataArray[1] as? JsonArray
+                    if (row != null && row.size > 13) {
+                        val msg = row[13].jsonPrimitive.content
+                        if (msg.isNotBlank() && msg != "null") {
+                            broadcastMessage = msg
+                        }
+                    }
+                }
+            }
+        } catch (e: Throwable) {}
     }
 
     val gymIsOpen = true
@@ -321,6 +348,11 @@ fun MemberDashboardSharedScreen(
                         }
                     }
                 }
+            }
+
+            // 3.5 BANNER DE COMUNICADOS / MENSAJE GENERAL (BROADCAST)
+            item {
+                BroadcastMessageSharedDisplay(broadcastMessage)
             }
 
             // 4. GRILLA DE ACCIONES RÁPIDAS (2X2)
@@ -783,5 +815,33 @@ fun MemberActionSquareCard(
                 textAlign = TextAlign.Center
             )
         }
+    }
+}
+
+@Composable
+fun BroadcastMessageSharedDisplay(broadcastMessage: String) {
+    val message = broadcastMessage.ifBlank { "hola" }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White.copy(alpha = 0.05f))
+            .background(
+                brush = Brush.horizontalGradient(
+                    0.0f to Color(0xFF8A2BE2).copy(alpha = 0.5f),
+                    0.5f to Color(0xFF00151C).copy(alpha = 0.9f),
+                    1.0f to Color.Red.copy(alpha = 0.5f)
+                )
+            )
+            .padding(vertical = 12.dp, horizontal = 16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = message,
+            color = TextWhite,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
     }
 }
