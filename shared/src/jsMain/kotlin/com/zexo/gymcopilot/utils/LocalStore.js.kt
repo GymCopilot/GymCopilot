@@ -15,6 +15,9 @@ actual fun saveLocalMemberProfile(data: LocalMemberData) {
         localStorage.setItem("gymcopilot_gym_name", data.gymName)
         localStorage.setItem("gymcopilot_gym_url", data.gymApiUrl)
         localStorage.setItem("gymcopilot_gym_ssid", data.spreadsheetId)
+        localStorage.setItem("gymcopilot_member_status", data.membershipStatus)
+        localStorage.setItem("gymcopilot_member_renewal", data.nextRenewalDate.toString())
+        localStorage.setItem("gymcopilot_member_plan", data.planName)
     } catch (e: Throwable) { }
 }
 
@@ -31,6 +34,9 @@ actual fun readLocalMemberProfile(): LocalMemberData? {
         val gymName = localStorage.getItem("gymcopilot_gym_name") ?: "Gym 19"
         val gymUrl = localStorage.getItem("gymcopilot_gym_url") ?: "https://script.google.com/macros/s/AKfycbyrN53_uZ4ECfRyp-Qwb2sGSYjv-g7OeR5ERbAQxLdirOL7qvL6rfaxXsjJShc28P-a/exec"
         val spreadsheetId = localStorage.getItem("gymcopilot_gym_ssid") ?: ""
+        val membershipStatus = localStorage.getItem("gymcopilot_member_status") ?: "ACTIVO"
+        val nextRenewalDate = localStorage.getItem("gymcopilot_member_renewal")?.toLongOrNull() ?: 0L
+        val planName = localStorage.getItem("gymcopilot_member_plan") ?: "Plan Mensual"
 
         LocalMemberData(
             firstName = firstName,
@@ -43,7 +49,10 @@ actual fun readLocalMemberProfile(): LocalMemberData? {
             photoUri = photo,
             gymName = gymName,
             gymApiUrl = gymUrl,
-            spreadsheetId = spreadsheetId
+            spreadsheetId = spreadsheetId,
+            membershipStatus = membershipStatus,
+            nextRenewalDate = nextRenewalDate,
+            planName = planName
         )
     } catch (e: Throwable) {
         null

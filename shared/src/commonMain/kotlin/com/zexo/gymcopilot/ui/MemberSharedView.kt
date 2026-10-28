@@ -17,6 +17,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.animation.core.*
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import kotlinx.serialization.json.JsonArray
@@ -68,6 +70,9 @@ fun MemberDashboardSharedScreen(
     var activePhotoUri by remember { mutableStateOf<String?>(null) }
     var activeGymName by remember { mutableStateOf(gymName) }
     var activeGymUrl by remember { mutableStateOf("https://script.google.com/macros/s/AKfycbyrN53_uZ4ECfRyp-Qwb2sGSYjv-g7OeR5ERbAQxLdirOL7qvL6rfaxXsjJShc28P-a/exec") }
+    var activeMembershipStatus by remember { mutableStateOf("ACTIVO") }
+    var activeNextRenewalDate by remember { mutableLongStateOf(0L) }
+    var activePlanName by remember { mutableStateOf("Plan Mensual") }
 
     // CARGA PERSISTENTE DESDE LOCALSTORAGE EN WEB / DISPOSITIVO
     LaunchedEffect(Unit) {
@@ -83,6 +88,54 @@ fun MemberDashboardSharedScreen(
             if (localData.photoUri != null) activePhotoUri = localData.photoUri
             if (localData.gymName.isNotBlank()) activeGymName = localData.gymName
             if (localData.gymApiUrl.isNotBlank()) activeGymUrl = localData.gymApiUrl
+            activeMembershipStatus = localData.membershipStatus
+            activeNextRenewalDate = localData.nextRenewalDate
+            if (localData.planName.isNotBlank()) activePlanName = localData.planName
+        }
+    }
+
+    LaunchedEffect(activeGymUrl, activeEmail) {
+        if (activeGymUrl.isNotBlank() && activeEmail.isNotBlank()) {
+            while (true) {
+                try {
+                    val gymIdVal = activeGymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+                    val localProfile = readLocalMemberProfile()
+                    val ssId = localProfile?.spreadsheetId.orEmpty()
+                    val paramChar = if (activeGymUrl.contains("?")) "&" else "?"
+                    val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+                    val url = "$activeGymUrl${paramChar}type=members&gymId=$gymIdVal$ssParam"
+                    val responseText = apiClient.getData(url)
+                    if (responseText.isNotBlank() && responseText.contains("success")) {
+                        val jsonElement = apiClient.jsonInstance.parseToJsonElement(responseText)
+                        val jsonObject = jsonElement as? JsonObject
+                        val dataArray = jsonObject?.get("data") as? JsonArray
+                        if (dataArray != null) {
+                            val myEmailTrim = activeEmail.lowercase().trim()
+                            for (i in 1 until dataArray.size) {
+                                val row = dataArray[i] as? JsonArray
+                                if (row != null && row.size > 3) {
+                                    val emailInRow = row[2].jsonPrimitive.content.lowercase().trim()
+                                    if (emailInRow == myEmailTrim) {
+                                        val status = row[3].jsonPrimitive.content
+                                        if (status.isNotBlank()) activeMembershipStatus = status
+                                        if (row.size > 10) {
+                                            val renewalStr = row[10].jsonPrimitive.content
+                                            val renewalTs = renewalStr.toLongOrNull() ?: 0L
+                                            if (renewalTs > 0L) activeNextRenewalDate = renewalTs
+                                        }
+                                        if (row.size > 12) {
+                                            val plan = row[12].jsonPrimitive.content
+                                            if (plan.isNotBlank()) activePlanName = plan
+                                        }
+                                        break
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Throwable) {}
+                kotlinx.coroutines.delay(10000)
+            }
         }
     }
 
@@ -311,63 +364,11 @@ fun MemberDashboardSharedScreen(
             // 3. TARJETA "ESTADO DE MEMBRESÍA"
             item {
                 Box(modifier = Modifier.padding(horizontal = 20.dp)) {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
-                        shape = RoundedCornerShape(16.dp),
-                        border = BorderStroke(1.5.dp, PrimaryTurquoise),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(20.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "ESTADO DE MEMBRESÍA",
-                                    color = TextGray,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.sp
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Vigente",
-                                    color = Color(0xFF00C853),
-                                    fontSize = 26.sp,
-                                    fontWeight = FontWeight.Black
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = "Plan: Plan Mensual",
-                                    color = TextWhite,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "Vence: N/A",
-                                    color = TextGray,
-                                    fontSize = 12.sp
-                                )
-                            }
-
-                            // ESCUDO DE VERIFICACIÓN
-                            Surface(
-                                color = Color(0xFF00C853).copy(alpha = 0.15f),
-                                shape = CircleShape,
-                                modifier = Modifier.size(54.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        Icons.Default.CheckCircle,
-                                        contentDescription = "Vigente",
-                                        tint = Color(0xFF00C853),
-                                        modifier = Modifier.size(32.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    SharedMembershipStatusCard(
+                        membershipStatus = activeMembershipStatus,
+                        nextRenewalDate = activeNextRenewalDate,
+                        planName = activePlanName
+                    )
                 }
             }
 
@@ -877,5 +878,125 @@ fun BroadcastMessageSharedDisplay(broadcastMessage: String) {
                 repeatDelayMillis = 1000
             )
         )
+    }
+}
+
+@Composable
+fun SharedMembershipStatusCard(
+    membershipStatus: String,
+    nextRenewalDate: Long,
+    planName: String,
+    currentTime: Long = 0L,
+    accentColor: Color = PrimaryTurquoise
+) {
+    val isDeudor = membershipStatus.equals("DEUDOR", ignoreCase = true) || membershipStatus.equals("PENDIENTE", ignoreCase = true)
+    val isExpired = nextRenewalDate > 0L && currentTime > 0L && nextRenewalDate < currentTime
+    val isVigente = !isDeudor && !isExpired && (membershipStatus.equals("ACTIVO", ignoreCase = true) || membershipStatus.equals("ACTIVE", ignoreCase = true) || membershipStatus.equals("Vigente", ignoreCase = true))
+
+    val statusText = when {
+        isDeudor -> "Pendiente de pago"
+        isExpired -> "Vencida"
+        isVigente -> "Vigente"
+        else -> membershipStatus.ifBlank { "Vigente" }
+    }
+
+    val statusColor = if (isVigente) Color(0xFF00C853) else Color(0xFFF44336)
+
+    val daysRemaining: Long? = if (nextRenewalDate > 0L && currentTime > 0L) {
+        (nextRenewalDate - currentTime) / (1000L * 60 * 60 * 24)
+    } else null
+
+    val countdownColor = when {
+        !isVigente -> Color(0xFFF44336)
+        daysRemaining == null -> TextGray
+        daysRemaining in 1L..3L -> Color(0xFFFFEB3B)
+        daysRemaining <= 0L -> Color(0xFFF44336)
+        else -> Color(0xFF00C853)
+    }
+
+    val isWarning = !isVigente || (daysRemaining != null && daysRemaining <= 3L)
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val pulseAlpha by if (isWarning) {
+        infiniteTransition.animateFloat(
+            initialValue = 1f,
+            targetValue = 0.3f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(800, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "alpha"
+        )
+    } else {
+        remember { mutableFloatStateOf(1f) }
+    }
+
+    val dateStr = if (nextRenewalDate > 0L) {
+        val days = daysRemaining ?: 0L
+        val daysTxt = when {
+            days < 0L -> " (Vencido)"
+            days == 0L -> " (Vence hoy!)"
+            days == 1L -> " (Falta 1 día)"
+            else -> " (Quedan $days días)"
+        }
+        "Vence: $daysTxt"
+    } else "Vence: N/A"
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.5.dp, if (isVigente) accentColor else Color(0xFFF44336)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "ESTADO DE MEMBRESÍA",
+                    color = TextGray,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = statusText,
+                    color = statusColor,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Black
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Plan: ${planName.ifBlank { "Plan Mensual" }}",
+                    color = TextWhite,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = dateStr,
+                    color = countdownColor,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.graphicsLayer { alpha = pulseAlpha }
+                )
+            }
+
+            Surface(
+                color = statusColor.copy(alpha = 0.15f),
+                shape = CircleShape,
+                modifier = Modifier.size(56.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = if (isVigente) Icons.Default.VerifiedUser else Icons.Default.GppBad,
+                        contentDescription = statusText,
+                        tint = statusColor,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+            }
+        }
     }
 }
