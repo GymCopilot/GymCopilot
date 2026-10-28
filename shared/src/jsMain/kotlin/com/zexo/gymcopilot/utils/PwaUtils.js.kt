@@ -26,3 +26,5 @@ actual fun isIOSDevice(): Boolean {
         false
     }
 }
+
+actual fun isWebTarget(): Boolean = true

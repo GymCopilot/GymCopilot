@@ -889,15 +889,17 @@ fun SharedMembershipStatusCard(
     currentTime: Long = 0L,
     accentColor: Color = PrimaryTurquoise
 ) {
-    val isDeudor = membershipStatus.equals("DEUDOR", ignoreCase = true) || membershipStatus.equals("PENDIENTE", ignoreCase = true)
-    val isExpired = nextRenewalDate > 0L && currentTime > 0L && nextRenewalDate < currentTime
-    val isVigente = !isDeudor && !isExpired && (membershipStatus.equals("ACTIVO", ignoreCase = true) || membershipStatus.equals("ACTIVE", ignoreCase = true) || membershipStatus.equals("Vigente", ignoreCase = true))
+    val isSinMembresia = planName.isBlank() || planName.equals("Sin Plan", ignoreCase = true) || membershipStatus.equals("SIN_MEMBRESIA", ignoreCase = true)
+    val isDeudor = !isSinMembresia && (membershipStatus.equals("DEUDOR", ignoreCase = true) || membershipStatus.equals("PENDIENTE", ignoreCase = true))
+    val isExpired = !isSinMembresia && nextRenewalDate > 0L && currentTime > 0L && nextRenewalDate < currentTime
+    val isVigente = !isSinMembresia && !isDeudor && !isExpired && (membershipStatus.equals("ACTIVO", ignoreCase = true) || membershipStatus.equals("ACTIVE", ignoreCase = true) || membershipStatus.equals("Vigente", ignoreCase = true))
 
     val statusText = when {
+        isSinMembresia -> "Sin Membresía"
         isDeudor -> "Pendiente de pago"
         isExpired -> "Vencida"
         isVigente -> "Vigente"
-        else -> membershipStatus.ifBlank { "Vigente" }
+        else -> membershipStatus.ifBlank { "Sin Membresía" }
     }
 
     val statusColor = if (isVigente) Color(0xFF00C853) else Color(0xFFF44336)

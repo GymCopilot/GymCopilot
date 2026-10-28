@@ -28,6 +28,7 @@ import com.zexo.gymcopilot.shared.network.GymKtorApiClient
 import com.zexo.gymcopilot.utils.decodeBase64ToBitmap
 import com.zexo.gymcopilot.utils.isIOSDevice
 import com.zexo.gymcopilot.utils.isStandaloneMode
+import com.zexo.gymcopilot.utils.isWebTarget
 import com.zexo.gymcopilot.utils.readLocalMemberProfile
 import com.zexo.gymcopilot.utils.readLocalStorageFlag
 import com.zexo.gymcopilot.utils.saveLocalStorageFlag
@@ -434,15 +435,18 @@ fun MainAppView(
     onChangeRole: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
+    val isWeb = remember { isWebTarget() }
 
     Scaffold(
         topBar = {
-            Column {
-                HeaderBar(
-                    gymName = gymName,
-                    userRole = userRole,
-                    onRoleClick = onChangeRole
-                )
+            if (!isWeb) {
+                Column {
+                    HeaderBar(
+                        gymName = gymName,
+                        userRole = userRole,
+                        onRoleClick = onChangeRole
+                    )
+                }
             }
         },
         bottomBar = {
@@ -458,7 +462,6 @@ fun MainAppView(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp)
         ) {
             when (userRole) {
                 "admin" -> RealAdminDashboardView(gymName = gymName, apiClient = apiClient, currentTab = selectedTab, onTabSelected = { selectedTab = it })
