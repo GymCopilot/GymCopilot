@@ -102,12 +102,33 @@ class AttendanceRepository(
                 timestamp = System.currentTimeMillis(),
                 spreadsheetId = ssId
             )
+            val encFirstName = java.net.URLEncoder.encode(firstName, "UTF-8")
+            val encLastName = java.net.URLEncoder.encode(lastName, "UTF-8")
+            val encEmail = java.net.URLEncoder.encode(email, "UTF-8")
+            val encPhone = java.net.URLEncoder.encode(phone, "UTF-8")
+            val encAddress = java.net.URLEncoder.encode(address, "UTF-8")
+            val encWeight = java.net.URLEncoder.encode(weight, "UTF-8")
+            val encHeight = java.net.URLEncoder.encode(height, "UTF-8")
+            val encStatus = java.net.URLEncoder.encode(membershipStatus ?: "DEUDOR", "UTF-8")
+            val encPlanId = java.net.URLEncoder.encode(planId ?: "", "UTF-8")
+            val encPlanType = java.net.URLEncoder.encode(planType ?: "", "UTF-8")
+            val encTrainer = java.net.URLEncoder.encode(assignedTrainer ?: "", "UTF-8")
+            val renewalVal = nextRenewalDate ?: 0L
+
             val paramChar = if (gymUrl.contains("?")) "&" else "?"
             val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
-            val requestUrl = "$gymUrl${paramChar}action=update_member&gymId=$gymId&email=${java.net.URLEncoder.encode(email, "UTF-8")}&firstName=${java.net.URLEncoder.encode(firstName, "UTF-8")}&lastName=${java.net.URLEncoder.encode(lastName, "UTF-8")}&membershipStatus=${java.net.URLEncoder.encode(membershipStatus ?: "DEUDOR", "UTF-8")}$ssParam"
+            val requestUrl = "$gymUrl${paramChar}action=update_member&gymId=$gymId&email=$encEmail&firstName=$encFirstName&lastName=$encLastName&membershipStatus=$encStatus&phone=$encPhone&address=$encAddress&weight=$encWeight&height=$encHeight&nextRenewalDate=$renewalVal&planId=$encPlanId&planType=$encPlanType&assignedTrainer=$encTrainer$ssParam"
+            
             try {
-                GymKtorApiClient.postData(requestUrl, request)
-                Result.success(Unit)
+                val responseText = GymKtorApiClient.postData(requestUrl, request)
+                if (responseText.isNotBlank()) {
+                    Result.success(Unit)
+                } else {
+                    val dynamicService = NetworkModule.getApiService(gymUrl)
+                    val response = dynamicService.postMemberSync(requestUrl, null, request)
+                    if (response.isSuccessful || response.code() == 302) Result.success(Unit)
+                    else Result.failure(Exception("Error syncing member: ${response.code()}"))
+                }
             } catch (e: Exception) {
                 val dynamicService = NetworkModule.getApiService(gymUrl)
                 val response = dynamicService.postMemberSync(requestUrl, null, request)

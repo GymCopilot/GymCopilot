@@ -85,7 +85,7 @@ fun MemberDashboardSharedScreen(
         }
     }
 
-    var broadcastMessage by remember { mutableStateOf("hola") }
+    var broadcastMessage by remember { mutableStateOf("") }
 
     LaunchedEffect(activeGymUrl) {
         if (activeGymUrl.isNotBlank()) {
@@ -371,8 +371,10 @@ fun MemberDashboardSharedScreen(
             }
 
             // 3.5 BANNER DE COMUNICADOS / MENSAJE GENERAL (BROADCAST)
-            item {
-                BroadcastMessageSharedDisplay(broadcastMessage)
+            if (broadcastMessage.isNotBlank() && broadcastMessage != "null") {
+                item {
+                    BroadcastMessageSharedDisplay(broadcastMessage)
+                }
             }
 
             // 4. GRILLA DE ACCIONES RÁPIDAS (2X2)
@@ -840,11 +842,12 @@ fun MemberActionSquareCard(
 
 @Composable
 fun BroadcastMessageSharedDisplay(broadcastMessage: String) {
-    val message = broadcastMessage.ifBlank { "hola" }
+    if (broadcastMessage.isBlank() || broadcastMessage == "null") return
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(16.dp))
             .background(Color.White.copy(alpha = 0.05f))
             .background(
                 brush = Brush.horizontalGradient(
@@ -857,7 +860,7 @@ fun BroadcastMessageSharedDisplay(broadcastMessage: String) {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = message,
+            text = broadcastMessage,
             color = TextWhite,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
