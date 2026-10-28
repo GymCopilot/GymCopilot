@@ -35,6 +35,12 @@
     <canvas id="ComposeTarget"></canvas>
 
     <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('./sw.js').catch(function() {});
+            });
+        }
+
         window.gymCopilotImageCallback = null;
         document.getElementById('gym_copilot_image_input').addEventListener('change', function(e) {
             var file = e.target.files[0];
