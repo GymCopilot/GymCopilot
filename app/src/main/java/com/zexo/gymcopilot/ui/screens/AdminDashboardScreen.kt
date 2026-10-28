@@ -2143,7 +2143,7 @@ fun GymBroadcastEditor(
     var isSaving by remember { mutableStateOf(false) }
 
     LaunchedEffect(currentMessage) {
-        if (messageText.isBlank() && currentMessage.isNotBlank()) {
+        if (!isSaving) {
             messageText = currentMessage
         }
     }
@@ -2166,10 +2166,11 @@ fun GymBroadcastEditor(
                 } else {
                     IconButton(
                         onClick = {
+                            val textToSend = messageText
                             coroutineScope.launch {
                                 isSaving = true
-                                dataStoreManager.setBroadcastMessage(messageText)
-                                repository?.syncGymInfo(broadcastMessage = messageText)
+                                dataStoreManager.setBroadcastMessage(textToSend)
+                                repository?.syncGymInfo(broadcastMessage = textToSend)
                                 isSaving = false
                             }
                         },
