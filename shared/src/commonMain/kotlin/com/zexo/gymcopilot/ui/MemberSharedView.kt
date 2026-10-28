@@ -3,6 +3,7 @@ package com.zexo.gymcopilot.ui
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -206,16 +207,14 @@ fun MemberDashboardSharedScreen(
             .background(GymBackgroundGradient)
     ) {
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 20.dp),
+            modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp)
         ) {
             // 1. HEADER CON RECUADRO DE LOGO 1:1 Y BOTONES DE ACCIÓN
             item {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.Top
                 ) {
@@ -293,7 +292,7 @@ fun MemberDashboardSharedScreen(
             // 2. BADGES DE ESTADÍSTICAS E INDICADORES
             item {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     StatusChip(
@@ -311,59 +310,61 @@ fun MemberDashboardSharedScreen(
 
             // 3. TARJETA "ESTADO DE MEMBRESÍA"
             item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.5.dp, PrimaryTurquoise),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(20.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                Box(modifier = Modifier.padding(horizontal = 20.dp)) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.5.dp, PrimaryTurquoise),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "ESTADO DE MEMBRESÍA",
-                                color = TextGray,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Vigente",
-                                color = Color(0xFF00C853),
-                                fontSize = 26.sp,
-                                fontWeight = FontWeight.Black
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Plan: Plan Mensual",
-                                color = TextWhite,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Vence: N/A",
-                                color = TextGray,
-                                fontSize = 12.sp
-                            )
-                        }
-
-                        // ESCUDO DE VERIFICACIÓN
-                        Surface(
-                            color = Color(0xFF00C853).copy(alpha = 0.15f),
-                            shape = CircleShape,
-                            modifier = Modifier.size(54.dp)
+                        Row(
+                            modifier = Modifier.padding(20.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Default.CheckCircle,
-                                    contentDescription = "Vigente",
-                                    tint = Color(0xFF00C853),
-                                    modifier = Modifier.size(32.dp)
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "ESTADO DE MEMBRESÍA",
+                                    color = TextGray,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.sp
                                 )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Vigente",
+                                    color = Color(0xFF00C853),
+                                    fontSize = 26.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "Plan: Plan Mensual",
+                                    color = TextWhite,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Vence: N/A",
+                                    color = TextGray,
+                                    fontSize = 12.sp
+                                )
+                            }
+
+                            // ESCUDO DE VERIFICACIÓN
+                            Surface(
+                                color = Color(0xFF00C853).copy(alpha = 0.15f),
+                                shape = CircleShape,
+                                modifier = Modifier.size(54.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        Icons.Default.CheckCircle,
+                                        contentDescription = "Vigente",
+                                        tint = Color(0xFF00C853),
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -379,7 +380,10 @@ fun MemberDashboardSharedScreen(
 
             // 4. GRILLA DE ACCIONES RÁPIDAS (2X2)
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -434,30 +438,32 @@ fun MemberDashboardSharedScreen(
 
             // 5. TARJETA "RUTINA DE HOY"
             item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, PrimaryTurquoise.copy(alpha = 0.3f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        Text(
-                            text = "RUTINA DE HOY",
-                            color = TextGray,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(text = "🏆", fontSize = 28.sp)
-                            Spacer(modifier = Modifier.width(12.dp))
+                Box(modifier = Modifier.padding(horizontal = 20.dp)) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, PrimaryTurquoise.copy(alpha = 0.3f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(20.dp)) {
                             Text(
-                                text = "¡Día de Descanso!",
-                                color = TextWhite,
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Black
+                                text = "RUTINA DE HOY",
+                                color = TextGray,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
                             )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(text = "🏆", fontSize = 28.sp)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "¡Día de Descanso!",
+                                    color = TextWhite,
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                            }
                         }
                     }
                 }
@@ -847,16 +853,16 @@ fun BroadcastMessageSharedDisplay(broadcastMessage: String) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
             .background(Color.White.copy(alpha = 0.05f))
             .background(
                 brush = Brush.horizontalGradient(
-                    0.0f to Color(0xFF8A2BE2).copy(alpha = 0.5f),
-                    0.5f to Color(0xFF00151C).copy(alpha = 0.9f),
-                    1.0f to Color.Red.copy(alpha = 0.5f)
+                    0.0f to Color(0xFF8A2BE2).copy(alpha = 0.3f),
+                    0.3f to Color.Transparent,
+                    0.7f to Color.Transparent,
+                    1.0f to Color.Red.copy(alpha = 0.3f)
                 )
             )
-            .padding(vertical = 12.dp, horizontal = 16.dp),
+            .padding(vertical = 12.dp, horizontal = 24.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -864,7 +870,12 @@ fun BroadcastMessageSharedDisplay(broadcastMessage: String) {
             color = TextWhite,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            modifier = Modifier.basicMarquee(
+                iterations = Int.MAX_VALUE,
+                repeatDelayMillis = 1000
+            )
         )
     }
 }
