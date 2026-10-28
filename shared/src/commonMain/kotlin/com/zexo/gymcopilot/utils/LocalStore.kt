@@ -10,7 +10,8 @@ data class LocalMemberData(
     val height: String = "",
     val photoUri: String? = null,
     val gymName: String = "Gym 19",
-    val gymApiUrl: String = "https://script.google.com/macros/s/AKfycbyrN53_uZ4ECfRyp-Qwb2sGSYjv-g7OeR5ERbAQxLdirOL7qvL6rfaxXsjJShc28P-a/exec"
+    val gymApiUrl: String = "https://script.google.com/macros/s/AKfycbyrN53_uZ4ECfRyp-Qwb2sGSYjv-g7OeR5ERbAQxLdirOL7qvL6rfaxXsjJShc28P-a/exec",
+    val spreadsheetId: String = ""
 )
 
 expect fun saveLocalMemberProfile(data: LocalMemberData)

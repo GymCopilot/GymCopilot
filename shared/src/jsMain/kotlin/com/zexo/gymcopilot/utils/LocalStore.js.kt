@@ -14,6 +14,7 @@ actual fun saveLocalMemberProfile(data: LocalMemberData) {
         if (data.photoUri != null) localStorage.setItem("gymcopilot_member_photo", data.photoUri)
         localStorage.setItem("gymcopilot_gym_name", data.gymName)
         localStorage.setItem("gymcopilot_gym_url", data.gymApiUrl)
+        localStorage.setItem("gymcopilot_gym_ssid", data.spreadsheetId)
     } catch (e: Throwable) { }
 }
 
@@ -29,6 +30,7 @@ actual fun readLocalMemberProfile(): LocalMemberData? {
         val photo = localStorage.getItem("gymcopilot_member_photo")
         val gymName = localStorage.getItem("gymcopilot_gym_name") ?: "Gym 19"
         val gymUrl = localStorage.getItem("gymcopilot_gym_url") ?: "https://script.google.com/macros/s/AKfycbyrN53_uZ4ECfRyp-Qwb2sGSYjv-g7OeR5ERbAQxLdirOL7qvL6rfaxXsjJShc28P-a/exec"
+        val spreadsheetId = localStorage.getItem("gymcopilot_gym_ssid") ?: ""
 
         LocalMemberData(
             firstName = firstName,
@@ -40,7 +42,8 @@ actual fun readLocalMemberProfile(): LocalMemberData? {
             height = height,
             photoUri = photo,
             gymName = gymName,
-            gymApiUrl = gymUrl
+            gymApiUrl = gymUrl,
+            spreadsheetId = spreadsheetId
         )
     } catch (e: Throwable) {
         null

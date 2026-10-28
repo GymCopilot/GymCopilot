@@ -2138,6 +2138,7 @@ fun GymBroadcastEditor(
     repository: AttendanceRepository?,
     coroutineScope: kotlinx.coroutines.CoroutineScope
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val currentMessage by dataStoreManager.getBroadcastMessage().collectAsState(initial = "")
     var messageText by remember { mutableStateOf(currentMessage) }
     var isSaving by remember { mutableStateOf(false) }
@@ -2170,8 +2171,13 @@ fun GymBroadcastEditor(
                             coroutineScope.launch {
                                 isSaving = true
                                 dataStoreManager.setBroadcastMessage(textToSend)
-                                repository?.syncGymInfo(broadcastMessage = textToSend)
+                                val result = repository?.syncGymInfo(broadcastMessage = textToSend)
                                 isSaving = false
+                                if (result?.isSuccess == true) {
+                                    Toast.makeText(context, "Mensaje guardado correctamente", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "Error al guardar el mensaje", Toast.LENGTH_SHORT).show()
+                                }
                             }
                         },
                         enabled = messageText != currentMessage,

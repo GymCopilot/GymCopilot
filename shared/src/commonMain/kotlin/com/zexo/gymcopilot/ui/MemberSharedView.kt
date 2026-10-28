@@ -88,24 +88,44 @@ fun MemberDashboardSharedScreen(
     var broadcastMessage by remember { mutableStateOf("hola") }
 
     LaunchedEffect(activeGymUrl) {
-        try {
-            val paramChar = if (activeGymUrl.contains("?")) "&" else "?"
-            val responseText = apiClient.getData("$activeGymUrl${paramChar}type=config")
-            if (responseText.isNotBlank() && responseText.contains("success")) {
-                val jsonElement = apiClient.jsonInstance.parseToJsonElement(responseText)
-                val jsonObject = jsonElement as? JsonObject
-                val dataArray = jsonObject?.get("data") as? JsonArray
-                if (dataArray != null && dataArray.size > 1) {
-                    val row = dataArray[1] as? JsonArray
-                    if (row != null && row.size > 13) {
-                        val msg = row[13].jsonPrimitive.content
-                        if (msg.isNotBlank() && msg != "null") {
-                            broadcastMessage = msg
+        if (activeGymUrl.isNotBlank()) {
+            while (true) {
+                try {
+                    val gymIdVal = activeGymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+                    val localProfile = readLocalMemberProfile()
+                    val ssId = localProfile?.spreadsheetId.orEmpty()
+                    val paramChar = if (activeGymUrl.contains("?")) "&" else "?"
+                    val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+                    val url = "$activeGymUrl${paramChar}type=config&gymId=$gymIdVal$ssParam"
+                    val responseText = apiClient.getData(url)
+                    if (responseText.isNotBlank() && responseText.contains("success")) {
+                        val jsonElement = apiClient.jsonInstance.parseToJsonElement(responseText)
+                        val jsonObject = jsonElement as? JsonObject
+                        val dataArray = jsonObject?.get("data") as? JsonArray
+                        if (dataArray != null) {
+                            var msgFound: String? = null
+                            for (i in 0 until dataArray.size) {
+                                val row = dataArray[i] as? JsonArray
+                                if (row != null && row.size > 0 && row[0].jsonPrimitive.content == "GYM_CONFIG") {
+                                    if (row.size > 13) {
+                                        val rawMsg = row[13].jsonPrimitive.content
+                                        val isIsoDate = rawMsg.matches(Regex("""\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.*"""))
+                                        if (!isIsoDate && rawMsg != "null") {
+                                            msgFound = rawMsg
+                                        }
+                                    }
+                                    break
+                                }
+                            }
+                            if (msgFound != null) {
+                                broadcastMessage = msgFound
+                            }
                         }
                     }
-                }
+                } catch (e: Throwable) {}
+                kotlinx.coroutines.delay(5000)
             }
-        } catch (e: Throwable) {}
+        }
     }
 
     val gymIsOpen = true

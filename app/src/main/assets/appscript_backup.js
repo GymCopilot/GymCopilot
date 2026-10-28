@@ -166,7 +166,7 @@ function processAction(action, data, e) {
     var newStyle = (data.buttonStyle !== undefined && data.buttonStyle !== null && data.buttonStyle !== "") ? data.buttonStyle : (existingRow[10] !== undefined ? existingRow[10] : "");
     var newBorder = (data.showLogoBorder !== undefined && data.showLogoBorder !== null && data.showLogoBorder !== "") ? (data.showLogoBorder === true || data.showLogoBorder === "true") : (existingRow[11] !== undefined ? existingRow[11] : true);
     var newClass = (data.classInSession !== undefined && data.classInSession !== null && data.classInSession !== "") ? (data.classInSession === true || data.classInSession === "true") : (existingRow[12] !== undefined ? existingRow[12] : false);
-    var newMsg = (data.broadcastMessage !== undefined && data.broadcastMessage !== null && data.broadcastMessage !== "") ? data.broadcastMessage : (existingRow[13] || "");
+    var newMsg = (data.broadcastMessage !== undefined && data.broadcastMessage !== null) ? data.broadcastMessage : (existingRow[13] !== undefined ? existingRow[13] : "");
     var newGymOpen = (data.gymIsOpen !== undefined && data.gymIsOpen !== null && data.gymIsOpen !== "") ? (data.gymIsOpen === true || data.gymIsOpen === "true") : (existingRow[14] !== undefined ? existingRow[14] : true);
     var newSsid1 = (data.wifiSsid !== undefined && data.wifiSsid !== null) ? data.wifiSsid : (existingRow[15] || "");
     var newSsid2 = (data.wifiSsid2 !== undefined && data.wifiSsid2 !== null) ? data.wifiSsid2 : (existingRow[16] || "");
@@ -900,9 +900,6 @@ function fixRoutineSheetStructure(sheet) {
 
 function fixConfigSheetStructure(sheet) {
   var expectedHeaders = ["ID", "Nombre", "Logo", "Telefono", "Direccion", "Ciudad", "CP", "Pais", "Color", "BgColor", "ButtonStyle", "MostrarBordeLogo", "ClaseActiva", "Mensaje", "GimnasioAbierto", "WifiSSID1", "WifiSSID2", "WifiSSID3", "Actualizado"];
-  for (var i = 0; i < expectedHeaders.length; int++) { // wait, int is typo in user's prompt or my code? Let's check: i++
-    // i++ is correct
-  }
   for (var i = 0; i < expectedHeaders.length; i++) {
     var cell = sheet.getRange(1, i + 1);
     var headerName = cell.getValue();
@@ -943,7 +940,8 @@ function fixMemberSheetStructure(sheet) {
     var headerName = cell.getValue();
     if (String(headerName).toLowerCase().trim() !== expectedHeaders[i].toLowerCase().trim()) {
       sheet.insertColumnBefore(i + 1);
-      sheet.getRange(1, i + 1).setValue(headerName);
+      sheet.getRange(1, i + 1).setValue(expectedHeaders[i]);
+      SpreadsheetApp.flush();
     }
   }
 }

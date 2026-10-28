@@ -558,8 +558,15 @@ class AttendanceRepository(
         val requestUrl = "$gymUrl${paramChar}action=update_gym_info&gymId=$gymId&email=$encEmail&name=$encName&phone=$encPhone&address=$encAddress&city=$encCity&zip=$encZip&country=$encCountry&accentColor=$finalColor&backgroundColor=$finalBgColor&buttonStyle=$finalStyle&showLogoBorder=$finalShowBorder&classInSession=$finalClass&broadcastMessage=$encMsg&gymIsOpen=$finalGymOpen$ssParam"
 
         try {
-            GymKtorApiClient.postData(requestUrl, request)
-            Result.success(Unit)
+            val responseText = GymKtorApiClient.postData(requestUrl, request)
+            if (responseText.isNotBlank()) {
+                Result.success(Unit)
+            } else {
+                val dynamicService = NetworkModule.getApiService(gymUrl)
+                val response = dynamicService.postGymSync(requestUrl, null, request)
+                if (response.isSuccessful || response.code() == 302) Result.success(Unit)
+                else Result.failure(Exception("Error syncing gym info: ${response.code()}"))
+            }
         } catch (eKtor: Exception) {
             val dynamicService = NetworkModule.getApiService(gymUrl)
             val response = dynamicService.postGymSync(requestUrl, null, request)
@@ -676,7 +683,7 @@ class AttendanceRepository(
             dataStoreManager.setClassInSessionManual(classInSessionStr.lowercase() == "true")
             dataStoreManager.setGymIsOpen(gymIsOpenStr.lowercase() != "false")
             dataStoreManager.setShowLogoBorder(showBorderStr.lowercase() != "false")
-            if (message.isNotBlank() && message != "null") dataStoreManager.setBroadcastMessage(message)
+            if (message != "null") dataStoreManager.setBroadcastMessage(message)
             
             if (remoteSsid1.isNotBlank() && remoteSsid1 != "null") dataStoreManager.setGymWifiSsid(remoteSsid1)
             if (remoteSsid2.isNotBlank() && remoteSsid2 != "null") dataStoreManager.setGymWifiSsid2(remoteSsid2)
