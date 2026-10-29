@@ -182,15 +182,81 @@ fun MemberDashboardSharedScreen(
         }
     }
 
+    LaunchedEffect(activeGymUrl) {
+        if (activeGymUrl.isNotBlank()) {
+            while (true) {
+                try {
+                    val gymIdVal = activeGymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+                    val localProfile = readLocalMemberProfile()
+                    val ssId = localProfile?.spreadsheetId.orEmpty()
+                    val paramChar = if (activeGymUrl.contains("?")) "&" else "?"
+                    val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+                    val url = "$activeGymUrl${paramChar}type=config&gymId=$gymIdVal$ssParam"
+                    val responseText = apiClient.getData(url)
+                    if (responseText.isNotBlank() && responseText.contains("success")) {
+                        val jsonElement = apiClient.jsonInstance.parseToJsonElement(responseText)
+                        val jsonObject = jsonElement as? JsonObject
+                        val dataArray = jsonObject?.get("data") as? JsonArray
+                        if (dataArray != null) {
+                            for (i in 0 until dataArray.size) {
+                                val row = dataArray[i] as? JsonArray
+                                if (row != null && row.size > 0 && row[0].jsonPrimitive.content == "GYM_CONFIG") {
+                                    if (row.size > 1 && row[1].jsonPrimitive.content.isNotBlank()) {
+                                        val gName = row[1].jsonPrimitive.content
+                                        if (gName != "null") activeGymName = gName
+                                    }
+                                    if (row.size > 2) {
+                                        val logoUriVal = row[2].jsonPrimitive.content
+                                        if (logoUriVal.isNotBlank() && logoUriVal != "null") {
+                                            activePhotoUri = logoUriVal
+                                        }
+                                    }
+                                    if (row.size > 13) {
+                                        val rawMsg = row[13].jsonPrimitive.content
+                                        val isIsoDate = rawMsg.matches(Regex("""\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.*"""))
+                                        if (!isIsoDate && rawMsg != "null") {
+                                            broadcastMessage = rawMsg
+                                        }
+                                    }
+                                    saveLocalMemberProfile(
+                                        LocalMemberData(
+                                            firstName = activeFirstName,
+                                            lastName = activeLastName,
+                                            email = activeEmail,
+                                            phone = activePhone,
+                                            address = activeAddress,
+                                            weight = activeWeight,
+                                            height = activeHeight,
+                                            photoUri = activePhotoUri,
+                                            gymName = activeGymName,
+                                            gymApiUrl = activeGymUrl,
+                                            spreadsheetId = ssId,
+                                            membershipStatus = activeMembershipStatus,
+                                            nextRenewalDate = activeNextRenewalDate,
+                                            planName = activePlanName
+                                        )
+                                    )
+                                    break
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Throwable) {}
+                kotlinx.coroutines.delay(10000)
+            }
+        }
+    }
+
     val gymIsOpen = true
     val classInSession = false
 
-    val logoBitmap = remember(customLogoUri) {
-        if (customLogoUri != null) decodeBase64ToBitmap(customLogoUri) else null
+    val logoBitmap = remember(activePhotoUri, customLogoUri) {
+        val uri = activePhotoUri ?: customLogoUri
+        if (uri != null) decodeBase64ToBitmap(uri) else null
     }
 
     if (showHelpScreen) {
-        HelpSharedScreen(userRole = "member", onBack = { showHelpScreen = false })
+        HelpSharedScreen(onBack = { showHelpScreen = false })
         return
     }
 

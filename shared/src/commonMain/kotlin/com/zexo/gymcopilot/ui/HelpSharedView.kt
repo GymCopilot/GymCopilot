@@ -35,10 +35,8 @@ data class HelpItemData(
 
 @Composable
 fun HelpSharedScreen(
-    userRole: String = "admin",
     onBack: () -> Unit
 ) {
-    val isAdmin = userRole.lowercase() == "admin"
     var selectedTab by remember { mutableStateOf(0) } // 0: Home, 1: Store, 2: Members, 3: Professors, 4: Config
     var assistantEnabled by remember { mutableStateOf(false) }
 
@@ -113,7 +111,7 @@ fun HelpSharedScreen(
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
-                        text = if (isAdmin) "Guía del Administrador" else "Guía del Alumno",
+                        text = "Guía del Administrador",
                         color = TextWhite,
                         fontWeight = FontWeight.Black,
                         fontSize = 22.sp
@@ -129,62 +127,60 @@ fun HelpSharedScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp)
             ) {
-                // 1. TARJETA SUPERIOR "Ayudante COPI" (SOLO PARA ADMIN)
-                if (isAdmin) {
-                    item {
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
-                            shape = RoundedCornerShape(16.dp),
-                            border = BorderStroke(1.dp, PrimaryTurquoise.copy(alpha = 0.5f)),
-                            modifier = Modifier.fillMaxWidth()
+                // 1. TARJETA SUPERIOR "Ayudante COPI"
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, PrimaryTurquoise.copy(alpha = 0.5f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Column(
-                                modifier = Modifier.padding(20.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
+                                Surface(
+                                    color = Color(0xFF1D2636),
+                                    shape = CircleShape,
+                                    modifier = Modifier.size(54.dp)
                                 ) {
-                                    Surface(
-                                        color = Color(0xFF1D2636),
-                                        shape = CircleShape,
-                                        modifier = Modifier.size(54.dp)
-                                    ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                Icons.Default.Info,
-                                                contentDescription = null,
-                                                tint = Color(0xFF7986CB),
-                                                modifier = Modifier.size(32.dp)
-                                            )
-                                        }
-                                    }
-                                    Spacer(modifier = Modifier.width(16.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(text = "Ayudante COPI", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(text = "Un personaje te guiará por las funciones clave de la app.", color = TextGray, fontSize = 12.sp)
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Default.Info,
+                                            contentDescription = null,
+                                            tint = Color(0xFF7986CB),
+                                            modifier = Modifier.size(32.dp)
+                                        )
                                     }
                                 }
-
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                Button(
-                                    onClick = { assistantEnabled = !assistantEnabled },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (assistantEnabled) Color(0xFF00C853) else PrimaryTurquoise
-                                    ),
-                                    shape = RoundedCornerShape(24.dp),
-                                    modifier = Modifier.fillMaxWidth().height(44.dp)
-                                ) {
-                                    Text(
-                                        text = if (assistantEnabled) "Ayudante Activado" else "Ayudante Desactivado",
-                                        color = Color.Black,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp
-                                    )
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(text = "Ayudante COPI", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(text = "Un personaje te guiará por las funciones clave de la app.", color = TextGray, fontSize = 12.sp)
                                 }
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Button(
+                                onClick = { assistantEnabled = !assistantEnabled },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (assistantEnabled) Color(0xFF00C853) else PrimaryTurquoise
+                                ),
+                                shape = RoundedCornerShape(24.dp),
+                                modifier = Modifier.fillMaxWidth().height(44.dp)
+                            ) {
+                                Text(
+                                    text = if (assistantEnabled) "Ayudante Activado" else "Ayudante Desactivado",
+                                    color = Color.Black,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
                             }
                         }
                     }

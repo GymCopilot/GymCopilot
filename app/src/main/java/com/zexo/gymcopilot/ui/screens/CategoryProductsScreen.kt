@@ -223,7 +223,9 @@ fun CategoryProductsScreen(
         allProducts.filter { it.categoryId == categoryId && it.name.contains(searchQuery, ignoreCase = true) }
     }
 
-    val attendanceRepository = remember { com.zexo.gymcopilot.repository.AttendanceRepository(NetworkModule.getApiService(""), dataStoreManager) }
+    val attendanceRepository = remember(gymApiUrl) {
+        com.zexo.gymcopilot.repository.AttendanceRepository(NetworkModule.getApiService(gymApiUrl), dataStoreManager)
+    }
 
     if (productToDelete != null) {
         AlertDialog(

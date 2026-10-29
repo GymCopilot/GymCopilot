@@ -489,8 +489,15 @@ class AttendanceRepository(
             val requestUrl = "$gymUrl${paramChar}action=$actionStr&gymId=$gymId&email=${java.net.URLEncoder.encode(userEmail, "UTF-8")}&id=${product.id}&name=${java.net.URLEncoder.encode(product.name ?: "", "UTF-8")}&price=${product.price}$ssParam"
             
             try {
-                GymKtorApiClient.postData(requestUrl, request)
-                Result.success(Unit)
+                val responseText = GymKtorApiClient.postData(requestUrl, request)
+                if (responseText.isNotBlank() && !responseText.contains("error", ignoreCase = true)) {
+                    Result.success(Unit)
+                } else {
+                    val dynamicService = NetworkModule.getApiService(gymUrl)
+                    val response = dynamicService.postProductSync(requestUrl, null, request)
+                    if (response.isSuccessful || response.code() == 302) Result.success(Unit)
+                    else Result.failure(Exception("Error syncing product: ${response.code()}"))
+                }
             } catch (eKtor: Exception) {
                 val dynamicService = NetworkModule.getApiService(gymUrl)
                 val response = dynamicService.postProductSync(requestUrl, null, request)
@@ -520,7 +527,13 @@ class AttendanceRepository(
             if (gymUrl.isBlank()) return Result.failure(Exception("URL no configurada"))
             
             val finalName = name ?: dataStoreManager.getGymName().first()
-            val finalLogo = logoUri ?: dataStoreManager.getGymLogoUri().first()
+            val storedLogo = dataStoreManager.getGymLogoUri().first()
+            val effectiveLogo = logoUri ?: storedLogo
+            val finalLogo = if (effectiveLogo != null && (effectiveLogo.startsWith("file://") || effectiveLogo.startsWith("content://"))) {
+                null
+            } else {
+                effectiveLogo
+            }
             val finalPhone = phone ?: dataStoreManager.getGymPhone().first()
             val finalAddress = address ?: dataStoreManager.getGymAddress().first()
             val finalCity = city ?: dataStoreManager.getGymCity().first()
@@ -540,6 +553,7 @@ class AttendanceRepository(
 
         val gymId = finalName.lowercase().replace(Regex("[^a-z0-9]"), "_")
         val userEmail = dataStoreManager.getUserEmail().first()
+        val ssId = dataStoreManager.getGymSpreadsheetId().first()
 
         val request = GymSyncRequest(
             action = "update_gym_info",
@@ -561,7 +575,8 @@ class AttendanceRepository(
             wifiSsid2 = ssid2,
             wifiSsid3 = ssid3,
             gymId = gymId,
-            email = userEmail
+            email = userEmail,
+            spreadsheetId = ssId
         )
 
         val encName = java.net.URLEncoder.encode(finalName, "UTF-8")
@@ -573,7 +588,6 @@ class AttendanceRepository(
         val encMsg = java.net.URLEncoder.encode(finalMessage, "UTF-8")
         val encEmail = java.net.URLEncoder.encode(userEmail, "UTF-8")
 
-        val ssId = dataStoreManager.getGymSpreadsheetId().first()
         val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
         val paramChar = if (gymUrl.contains("?")) "&" else "?"
         val requestUrl = "$gymUrl${paramChar}action=update_gym_info&gymId=$gymId&email=$encEmail&name=$encName&phone=$encPhone&address=$encAddress&city=$encCity&zip=$encZip&country=$encCountry&accentColor=$finalColor&backgroundColor=$finalBgColor&buttonStyle=$finalStyle&showLogoBorder=$finalShowBorder&classInSession=$finalClass&broadcastMessage=$encMsg&gymIsOpen=$finalGymOpen$ssParam"
@@ -673,7 +687,7 @@ class AttendanceRepository(
             }
 
             val currentLocalLogo = dataStoreManager.getGymLogoUri().first()
-            if (currentLocalLogo.isNullOrBlank() && !logo.isNullOrBlank() && logo != "null") {
+            if (!logo.isNullOrBlank() && logo != "null" && logo != currentLocalLogo && logo.startsWith("data:image")) {
                 dataStoreManager.setGymLogoUri(logo)
             }
 
@@ -1224,6 +1238,8 @@ class AttendanceRepository(
                 data.routines?.let { processRoutineRows(it) }
                 // 6. Horarios
                 data.schedules?.let { processScheduleRows(it) }
+                // 7. Tienda
+                data.store?.let { processStoreRows(it) }
                 
                 Log.d("MegaSync", "Sincronización total completada con éxito")
                 Result.success(Unit)
@@ -1272,6 +1288,43 @@ class AttendanceRepository(
             if (result.isNotEmpty()) dataStoreManager.saveAllSchedules(result)
         } catch (e: Exception) {
             Log.e("MegaSync", "Error horarios: ${e.message}")
+        }
+    }
+
+    private suspend fun processStoreRows(rows: JsonArray) {
+        val remoteProducts = mutableListOf<Product>()
+        val startIdx = if (rows.size() > 0 && rows[0].isJsonArray && rows[0].asJsonArray[0].asString == "ID") 1 else 0
+        for (i in startIdx until rows.size()) {
+            val row = rows[i].asJsonArray
+            if (row.size() >= 3) {
+                val id = row[0].asString.trim()
+                if (id.isBlank() || id.equals("ID", ignoreCase = true)) continue
+                val name = row[1].asString
+                val price = if (row.size() > 2) row[2].asString.toDoubleOrNull() ?: 0.0 else 0.0
+                val categoryId = if (row.size() > 3) row[3].asString else ""
+                val imageUri = if (row.size() > 4) row[4].asString.takeIf { it.isNotBlank() && it != "null" } else null
+                val description = if (row.size() > 5) row[5].asString else ""
+                val contactMethod = if (row.size() > 6) row[6].asString else "whatsapp"
+                val contactPhone = if (row.size() > 7) row[7].asString else ""
+                val bannerType = if (row.size() > 8) row[8].asString else null
+                val bannerText = if (row.size() > 9) row[9].asString else null
+
+                remoteProducts.add(Product(
+                    id = id,
+                    name = name,
+                    price = price,
+                    categoryId = categoryId,
+                    imageUri = imageUri,
+                    description = description,
+                    contactMethod = contactMethod,
+                    contactPhone = contactPhone,
+                    bannerType = bannerType,
+                    bannerText = bannerText
+                ))
+            }
+        }
+        if (remoteProducts.isNotEmpty()) {
+            dataStoreManager.saveAllProducts(remoteProducts)
         }
     }
 

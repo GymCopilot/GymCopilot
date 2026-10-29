@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.zexo.gymcopilot.DataStoreManager
 import com.zexo.gymcopilot.R
+import com.zexo.gymcopilot.network.NetworkModule
 import com.zexo.gymcopilot.repository.AttendanceRepository
 import com.zexo.gymcopilot.ui.theme.PrimaryTurquoise
 import com.zexo.gymcopilot.ui.theme.TextWhite
@@ -73,6 +74,10 @@ fun AddProductScreen(
     val customCategoryIds by dataStoreManager.getCustomCategoryIds().collectAsState(initial = emptySet())
     val appCurrencySelection by dataStoreManager.getAppCurrency().collectAsState(initial = "Peso Argentino")
     val currencySymbol = remember(appCurrencySelection) { CurrencyData.getSymbol(appCurrencySelection) }
+    val gymApiUrl by dataStoreManager.getGymApiUrl().collectAsState(initial = "")
+    val repo = remember(gymApiUrl, attendanceRepository) {
+        attendanceRepository ?: AttendanceRepository(NetworkModule.getApiService(gymApiUrl), dataStoreManager)
+    }
 
     val savedBtnColor by dataStoreManager.getButtonColor().collectAsState(initial = null)
     val appAccentColor = if (savedBtnColor != null) Color(savedBtnColor!!) else PrimaryTurquoise
@@ -620,9 +625,9 @@ fun AddProductScreen(
                                 
                                 // Sincronización Remota (Base64 ultra-ligero)
                                 val productForSync = product.copy(imageUri = imageToSync)
-                                val result = attendanceRepository?.syncProduct(productForSync)
+                                val result = repo.syncProduct(productForSync)
                                 
-                                if (result?.isSuccess == true) {
+                                if (result.isSuccess) {
                                     Toast.makeText(context, t["success"], Toast.LENGTH_SHORT).show()
                                     onBack()
                                 } else {
