@@ -190,7 +190,7 @@ fun MemberDashboardSharedScreen(
     }
 
     if (showHelpScreen) {
-        HelpSharedScreen(onBack = { showHelpScreen = false })
+        HelpSharedScreen(userRole = "member", onBack = { showHelpScreen = false })
         return
     }
 
