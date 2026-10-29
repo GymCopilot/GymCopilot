@@ -293,16 +293,34 @@ fun AppearanceScreen(
                 }
                 item {
                     ExpandableAppearanceSection(title = t["colors"] ?: "Colors", icon = Icons.Default.Palette, isExpanded = expandedSection == "colors", onToggle = { expandedSection = if (expandedSection == "colors") null else "colors" }, accentColor = accentColor, shape = containerShape) {
-                        ColorSelectorGrid(t, mainColors, grayScale, rainbowColors, accentColor = accentColor, onReset = {
-                            scope.launch {
-                                val defaultColor = PrimaryTurquoise.toArgb()
-                                dataStoreManager.setButtonColor(defaultColor)
-                                attendanceRepository?.syncGymInfo(accentColor = defaultColor)
+                        Column(modifier = Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Text("Color de Fondo de Botones", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            ColorSelectorGrid(t, mainColors, grayScale, rainbowColors, accentColor = accentColor, onReset = {
+                                scope.launch {
+                                    val defaultBg = Color(0xFF00222E).toArgb()
+                                    dataStoreManager.setBackgroundColor(defaultBg)
+                                    attendanceRepository?.syncGymInfo(backgroundColor = defaultBg)
+                                }
+                            }) { color ->
+                                scope.launch {
+                                    dataStoreManager.setBackgroundColor(color.toArgb())
+                                    attendanceRepository?.syncGymInfo(backgroundColor = color.toArgb())
+                                }
                             }
-                        }) { color ->
-                            scope.launch {
-                                dataStoreManager.setButtonColor(color.toArgb())
-                                attendanceRepository?.syncGymInfo(accentColor = color.toArgb())
+
+                            Spacer(Modifier.height(8.dp))
+                            Text("Color de Bordes de Botones", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            ColorSelectorGrid(t, mainColors, grayScale, rainbowColors, accentColor = accentColor, onReset = {
+                                scope.launch {
+                                    val defaultColor = PrimaryTurquoise.toArgb()
+                                    dataStoreManager.setButtonColor(defaultColor)
+                                    attendanceRepository?.syncGymInfo(accentColor = defaultColor)
+                                }
+                            }) { color ->
+                                scope.launch {
+                                    dataStoreManager.setButtonColor(color.toArgb())
+                                    attendanceRepository?.syncGymInfo(accentColor = color.toArgb())
+                                }
                             }
                         }
                     }
