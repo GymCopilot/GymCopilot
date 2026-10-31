@@ -19,3 +19,21 @@ actual fun decodeBase64ToBitmap(base64Str: String): ImageBitmap? {
         null
     }
 }
+
+actual fun generateQrBitmap(content: String, size: Int): ImageBitmap? {
+    return try {
+        val writer = com.google.zxing.qrcode.QRCodeWriter()
+        val bitMatrix = writer.encode(content, com.google.zxing.BarcodeFormat.QR_CODE, size, size)
+        val width = bitMatrix.width
+        val height = bitMatrix.height
+        val bitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.RGB_565)
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                bitmap.setPixel(x, y, if (bitMatrix.get(x, y)) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+            }
+        }
+        bitmap.asImageBitmap()
+    } catch (e: Throwable) {
+        null
+    }
+}

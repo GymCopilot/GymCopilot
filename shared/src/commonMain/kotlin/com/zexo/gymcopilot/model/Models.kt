@@ -12,7 +12,7 @@ data class Member(
     val weight: String = "",
     val height: String = "",
     val registrationDate: Long = 0L,
-    val membershipStatus: String = "ACTIVO",
+    val membershipStatus: String = "DEUDOR",
     val planId: String? = null,
     val planType: String = "Mensual",
     val nextRenewalDate: Long = 0L,

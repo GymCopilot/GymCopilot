@@ -9,3 +9,5 @@ actual fun launchImagePicker(onImagePicked: (String) -> Unit) {
 actual fun decodeBase64ToBitmap(base64Str: String): ImageBitmap? {
     return null
 }
+
+actual fun generateQrBitmap(content: String, size: Int): ImageBitmap? = null

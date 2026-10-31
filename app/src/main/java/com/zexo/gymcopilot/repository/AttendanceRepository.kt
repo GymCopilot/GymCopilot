@@ -933,6 +933,10 @@ class AttendanceRepository(
                 if (idx != -1) {
                     val existing = currentLocal[idx]
                     currentLocal[idx] = remote.copy(
+                        membershipStatus = remote.membershipStatus,
+                        nextRenewalDate = remote.nextRenewalDate,
+                        planId = remote.planId,
+                        planType = remote.planType,
                         attendanceCount = maxOf(existing.attendanceCount, remote.attendanceCount),
                         currentAttendanceCount = maxOf(existing.currentAttendanceCount, remote.currentAttendanceCount),
                         monthAttendanceCount = maxOf(existing.monthAttendanceCount, remote.monthAttendanceCount),

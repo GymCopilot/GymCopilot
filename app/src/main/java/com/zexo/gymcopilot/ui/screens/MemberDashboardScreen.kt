@@ -34,7 +34,6 @@ import coil.compose.AsyncImage
 import com.google.gson.JsonArray
 import com.zexo.gymcopilot.R
 import com.zexo.gymcopilot.DataStoreManager
-import com.zexo.gymcopilot.LockConfig
 import com.zexo.gymcopilot.network.NetworkModule
 import com.zexo.gymcopilot.repository.AttendanceRepository
 import com.zexo.gymcopilot.ui.theme.PrimaryTurquoise
@@ -197,19 +196,13 @@ fun MemberDashboardScreen(
     var showTimerDialog by remember { mutableStateOf(false) }
 
     val membershipStatus = remember(currentMember) {
-        if (LockConfig.IS_ROLE_LOCK_ENABLED == 0) "Vigente"
-        else if (currentMember == null) "N/A"
-        else if (currentMember.membershipStatus == "DEUDOR" || currentMember.membershipStatus == "DEBTOR") "Deudor"
-        else if (currentMember.membershipStatus == "ACTIVO" || currentMember.membershipStatus == "ACTIVE") {
-            val isExpired = currentMember.nextRenewalDate < System.currentTimeMillis()
-            if (isExpired) "Vencida" else "Vigente"
-        }
-        else if (currentMember.membershipStatus == "VENCIDO" || currentMember.membershipStatus == "EXPIRED") "Vencida"
-        else currentMember.membershipStatus
+        if (currentMember == null) "Pendiente de pago"
+        else if (currentMember.membershipStatus.equals("ACTIVO", ignoreCase = true) && currentMember.nextRenewalDate > System.currentTimeMillis()) "Vigente"
+        else "Pendiente de pago"
     }
     
     val nextRenewal = remember(currentMember) {
-        if (currentMember == null) "N/A"
+        if (currentMember == null || currentMember.nextRenewalDate <= 0L) "N/A"
         else {
             val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
             sdf.format(Date(currentMember.nextRenewalDate))
@@ -217,7 +210,7 @@ fun MemberDashboardScreen(
     }
 
     val daysRemaining = remember(currentMember) {
-        if (currentMember == null) null
+        if (currentMember == null || currentMember.nextRenewalDate <= 0L) null
         else {
             val now = Calendar.getInstance().apply { 
                 set(Calendar.HOUR_OF_DAY, 0)
@@ -240,8 +233,11 @@ fun MemberDashboardScreen(
     }
 
     val activePlanName = remember(currentMember, plans) {
-        val plan = plans.find { it.id == currentMember?.planId } ?: plans.find { it.name == currentMember?.planType }
-        plan?.name ?: "Plan Mensual"
+        if (currentMember == null) "Plan Mensual"
+        else {
+            val matchingPlan = plans.find { it.id == currentMember.planId } ?: plans.find { it.name.equals(currentMember.planType, ignoreCase = true) }
+            matchingPlan?.name ?: currentMember.planType.takeIf { it.isNotBlank() && it != "null" } ?: "Plan Mensual"
+        }
     }
 
     val savedRoutines by dataStoreManager.getRoutines().collectAsState(initial = emptyList())
@@ -579,23 +575,30 @@ fun MembershipStatusCard(
     accentColor: Color,
     shape: androidx.compose.ui.graphics.Shape
 ) {
-    val statusColor = if (status == "Vigente") Color(0xFF4CAF50) else Color(0xFFF44336)
+    val isVigente = status == "Vigente"
+    val statusColor = if (isVigente) Color(0xFF4CAF50) else Color(0xFFF44336)
     
     val countdownColor = when {
+        !isVigente -> Color(0xFFF44336)
         daysRemaining == null -> TextGray
-        daysRemaining >= 3L -> Color(0xFF4CAF50) // Verde
-        daysRemaining == 2L -> Color(0xFFFFEB3B) // Amarillo
-        else -> Color(0xFFF44336) // Rojo (1 día o menos)
+        daysRemaining <= 3L -> Color(0xFFF44336) // Rojo (3 días o menos / Vence hoy)
+        daysRemaining <= 7L -> Color(0xFFFFEB3B) // Amarillo (4 a 7 días / 1 semana)
+        else -> Color(0xFF4CAF50) // Verde activo (> 7 días)
     }
 
-    val isWarning = daysRemaining != null && daysRemaining <= 2L
+    val pulseDuration = when {
+        !isVigente || (daysRemaining != null && daysRemaining <= 3L) -> 800
+        daysRemaining != null && daysRemaining in 4L..7L -> 1400
+        else -> 0
+    }
+
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val pulseAlpha by if (isWarning) {
+    val pulseAlpha by if (pulseDuration > 0) {
         infiniteTransition.animateFloat(
             initialValue = 1f,
             targetValue = 0.3f,
             animationSpec = infiniteRepeatable(
-                animation = tween(800, easing = LinearEasing),
+                animation = tween(pulseDuration, easing = LinearEasing),
                 repeatMode = RepeatMode.Reverse
             ),
             label = "alpha"
@@ -604,8 +607,12 @@ fun MembershipStatusCard(
         remember { mutableFloatStateOf(1f) }
     }
 
+    val cardBorderColor = if (isVigente) accentColor else Color(0xFFF44336)
+    val iconBgColor = if (isVigente) Color(0xFF0A2F35) else Color(0xFF350A0A)
+    val iconVector = if (isVigente) Icons.Default.VerifiedUser else Icons.Default.GppBad
+
     Card(
-        modifier = Modifier.fillMaxWidth().border(1.5.dp, accentColor, shape),
+        modifier = Modifier.fillMaxWidth().border(1.5.dp, cardBorderColor, shape),
         shape = shape,
         colors = CardDefaults.cardColors(containerColor = LocalButtonBackgroundColor.current)
     ) {
@@ -640,8 +647,8 @@ fun MembershipStatusCard(
                     }
                 }
             }
-            Box(modifier = Modifier.size(60.dp).background(Color(0xFF0A2F35), CircleShape), contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.VerifiedUser, null, tint = statusColor, modifier = Modifier.size(36.dp))
+            Box(modifier = Modifier.size(60.dp).background(iconBgColor, CircleShape), contentAlignment = Alignment.Center) {
+                Icon(iconVector, null, tint = statusColor, modifier = Modifier.size(36.dp))
             }
         }
     }

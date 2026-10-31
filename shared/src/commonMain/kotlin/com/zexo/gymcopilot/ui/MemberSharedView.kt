@@ -36,9 +36,11 @@ import com.zexo.gymcopilot.shared.network.GymKtorApiClient
 import com.zexo.gymcopilot.shared.network.MemberSyncRequest
 import com.zexo.gymcopilot.utils.LocalMemberData
 import com.zexo.gymcopilot.utils.decodeBase64ToBitmap
+import com.zexo.gymcopilot.utils.generateQrBitmap
 import com.zexo.gymcopilot.utils.launchQrScanner
 import com.zexo.gymcopilot.utils.readLocalMemberProfile
 import com.zexo.gymcopilot.utils.saveLocalMemberProfile
+import androidx.compose.ui.graphics.ImageBitmap
 import gymcopilot.shared.generated.resources.*
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
@@ -540,6 +542,8 @@ fun MemberDashboardSharedScreen(
 
     // DIÁLOGOS MODALES INTERACTIVOS
     if (showQrDialog) {
+        val qrContent = "ATTENDANCE:$activeEmail"
+        val qrBitmap: ImageBitmap? = remember(qrContent) { generateQrBitmap(qrContent, 512) }
         AlertDialog(
             onDismissRequest = { showQrDialog = false },
             title = { Text("Mi Código QR", color = TextWhite, fontWeight = FontWeight.Bold) },
@@ -554,7 +558,16 @@ fun MemberDashboardSharedScreen(
                         modifier = Modifier.size(180.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.QrCode2, contentDescription = "QR Login", tint = Color.Black, modifier = Modifier.size(140.dp))
+                            if (qrBitmap != null) {
+                                Image(
+                                    bitmap = qrBitmap,
+                                    contentDescription = "QR Login",
+                                    modifier = Modifier.fillMaxSize().padding(8.dp),
+                                    contentScale = ContentScale.Fit
+                                )
+                            } else {
+                                Icon(Icons.Default.QrCode2, contentDescription = "QR Login", tint = Color.Black, modifier = Modifier.size(140.dp))
+                            }
                         }
                     }
                     Spacer(Modifier.height(12.dp))
@@ -955,41 +968,40 @@ fun SharedMembershipStatusCard(
     currentTime: Long = 0L,
     accentColor: Color = PrimaryTurquoise
 ) {
-    val isSinMembresia = planName.isBlank() || planName.equals("Sin Plan", ignoreCase = true) || membershipStatus.equals("SIN_MEMBRESIA", ignoreCase = true)
-    val isDeudor = !isSinMembresia && (membershipStatus.equals("DEUDOR", ignoreCase = true) || membershipStatus.equals("PENDIENTE", ignoreCase = true))
-    val isExpired = !isSinMembresia && nextRenewalDate > 0L && currentTime > 0L && nextRenewalDate < currentTime
-    val isVigente = !isSinMembresia && !isDeudor && !isExpired && (membershipStatus.equals("ACTIVO", ignoreCase = true) || membershipStatus.equals("ACTIVE", ignoreCase = true) || membershipStatus.equals("Vigente", ignoreCase = true))
+    val stat = membershipStatus.uppercase().trim()
+    val isActivo = stat == "ACTIVO" || stat == "ACTIVE" || stat == "VIGENTE"
+    val hasPlan = planName.isNotBlank() && !planName.equals("Sin Plan", ignoreCase = true)
+    val isVigente = isActivo && hasPlan && nextRenewalDate > 0L
 
-    val statusText = when {
-        isSinMembresia -> "Sin Membresía"
-        isDeudor -> "Pendiente de pago"
-        isExpired -> "Vencida"
-        isVigente -> "Vigente"
-        else -> membershipStatus.ifBlank { "Sin Membresía" }
-    }
-
+    val statusText = if (isVigente) "Vigente" else "Pendiente de pago"
     val statusColor = if (isVigente) Color(0xFF00C853) else Color(0xFFF44336)
 
-    val daysRemaining: Long? = if (nextRenewalDate > 0L && currentTime > 0L) {
-        (nextRenewalDate - currentTime) / (1000L * 60 * 60 * 24)
+    val now = if (currentTime > 0L) currentTime else com.zexo.gymcopilot.utils.getCurrentTimeMillis()
+    val daysRemaining: Long? = if (nextRenewalDate > 0L) {
+        (nextRenewalDate - now) / (1000L * 60 * 60 * 24)
     } else null
 
     val countdownColor = when {
         !isVigente -> Color(0xFFF44336)
         daysRemaining == null -> TextGray
-        daysRemaining in 1L..3L -> Color(0xFFFFEB3B)
-        daysRemaining <= 0L -> Color(0xFFF44336)
+        daysRemaining <= 3L -> Color(0xFFF44336)
+        daysRemaining <= 7L -> Color(0xFFFFEB3B)
         else -> Color(0xFF00C853)
     }
 
-    val isWarning = !isVigente || (daysRemaining != null && daysRemaining <= 3L)
+    val pulseDuration = when {
+        !isVigente || (daysRemaining != null && daysRemaining <= 3L) -> 800
+        daysRemaining != null && daysRemaining in 4L..7L -> 1400
+        else -> 0
+    }
+
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val pulseAlpha by if (isWarning) {
+    val pulseAlpha by if (pulseDuration > 0) {
         infiniteTransition.animateFloat(
             initialValue = 1f,
             targetValue = 0.3f,
             animationSpec = infiniteRepeatable(
-                animation = tween(800, easing = LinearEasing),
+                animation = tween(pulseDuration, easing = LinearEasing),
                 repeatMode = RepeatMode.Reverse
             ),
             label = "alpha"
@@ -999,6 +1011,7 @@ fun SharedMembershipStatusCard(
     }
 
     val dateStr = if (nextRenewalDate > 0L) {
+        val formattedDate = com.zexo.gymcopilot.utils.formatEpochDate(nextRenewalDate)
         val days = daysRemaining ?: 0L
         val daysTxt = when {
             days < 0L -> " (Vencido)"
@@ -1006,7 +1019,7 @@ fun SharedMembershipStatusCard(
             days == 1L -> " (Falta 1 día)"
             else -> " (Quedan $days días)"
         }
-        "Vence: $daysTxt"
+        "Vence: $formattedDate$daysTxt"
     } else "Vence: N/A"
 
     Card(

@@ -72,3 +72,15 @@ actual fun readLocalStorageFlag(key: String): String? {
         null
     }
 }
+
+actual fun getCurrentTimeMillis(): Long = kotlin.js.Date.now().toLong()
+
+actual fun formatEpochDate(timestamp: Long): String {
+    if (timestamp <= 0L) return "N/A"
+    val date = kotlin.js.Date(timestamp)
+    val months = arrayOf("ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic")
+    val day = date.getDate().toString().padStart(2, '0')
+    val monthStr = months[date.getMonth()]
+    val year = date.getFullYear()
+    return "$day $monthStr $year"
+}

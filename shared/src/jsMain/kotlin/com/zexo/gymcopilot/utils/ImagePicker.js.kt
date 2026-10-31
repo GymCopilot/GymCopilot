@@ -85,3 +85,19 @@ private fun decodeBase64StringToByteArray(base64Str: String): ByteArray? {
         null
     }
 }
+
+actual fun generateQrBitmap(content: String, size: Int): ImageBitmap? {
+    return try {
+        val qrFn = js("QRCode")
+        if (qrFn != null) {
+            val canvas = document.createElement("canvas") as org.w3c.dom.HTMLCanvasElement
+            canvas.width = size
+            canvas.height = size
+            qrFn.toCanvas(canvas, content, js("({ width: size, margin: 2 })"))
+            val dataUrl = canvas.toDataURL("image/png")
+            decodeBase64ToBitmap(dataUrl)
+        } else null
+    } catch (e: Throwable) {
+        null
+    }
+}

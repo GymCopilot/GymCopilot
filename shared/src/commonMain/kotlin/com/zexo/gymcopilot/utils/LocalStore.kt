@@ -12,7 +12,7 @@ data class LocalMemberData(
     val gymName: String = "Gym 19",
     val gymApiUrl: String = "https://script.google.com/macros/s/AKfycbzXYYMu43-ATeyxQmwdF3CuRYXi7KbpChyTQEBFIsWh7SCHv2XugxsWen61oBeDdzw/exec",
     val spreadsheetId: String = "",
-    val membershipStatus: String = "ACTIVO",
+    val membershipStatus: String = "DEUDOR",
     val nextRenewalDate: Long = 0L,
     val planName: String = "Plan Mensual"
 )
@@ -23,3 +23,5 @@ expect fun readLocalMemberProfile(): LocalMemberData?
 
 expect fun saveLocalStorageFlag(key: String, value: String)
 expect fun readLocalStorageFlag(key: String): String?
+expect fun getCurrentTimeMillis(): Long
+expect fun formatEpochDate(timestamp: Long): String

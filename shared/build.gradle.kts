@@ -57,6 +57,7 @@ kotlin {
 
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.zxing.core)
         }
 
         iosMain.dependencies {
