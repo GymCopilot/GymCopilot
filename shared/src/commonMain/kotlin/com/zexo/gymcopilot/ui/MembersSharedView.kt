@@ -540,7 +540,7 @@ fun MemberDetailSharedScreen(
     var assignedTrainer by remember { mutableStateOf(member.assignedTrainer) }
     var notes by remember { mutableStateOf(member.notes) }
 
-    val defaultApiUrl = "https://script.google.com/macros/s/AKfycbyrN53_uZ4ECfRyp-Qwb2sGSYjv-g7OeR5ERbAQxLdirOL7qvL6rfaxXsjJShc28P-a/exec"
+    val defaultApiUrl = "https://script.google.com/macros/s/AKfycbzXYYMu43-ATeyxQmwdF3CuRYXi7KbpChyTQEBFIsWh7SCHv2XugxsWen61oBeDdzw/exec"
     val qrToken = "MEMBERLINK|${member.firstName}|${member.lastName}|${member.email}|$defaultApiUrl|Gym 19"
 
     Box(

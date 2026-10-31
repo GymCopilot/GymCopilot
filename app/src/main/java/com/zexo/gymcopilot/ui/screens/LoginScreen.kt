@@ -25,6 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.luminance
+import com.zexo.gymcopilot.ui.theme.LocalButtonBackgroundColor
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.painter.Painter
@@ -189,8 +191,12 @@ fun LoginScreen(onRoleSelected: (String) -> Unit, onSettingsClick: () -> Unit) {
 
 @Composable
 fun RoleCard(title: String, description: String, icon: Painter, photoUri: String? = null, accentColor: Color, shape: Shape, onClick: () -> Unit) {
+    val buttonBgColor = LocalButtonBackgroundColor.current
+    val contentColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
+    val descColor = if (buttonBgColor.luminance() > 0.5f) Color.DarkGray else TextGray
+
     Box(
-        modifier = Modifier.fillMaxWidth().clip(shape).background(Color(0xFF081C24)).border(1.5.dp, accentColor, shape).clickable { onClick() }.padding(20.dp)
+        modifier = Modifier.fillMaxWidth().clip(shape).background(buttonBgColor).border(1.5.dp, accentColor, shape).clickable { onClick() }.padding(20.dp)
     ) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(56.dp).clip(shape).background(accentColor.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
@@ -202,8 +208,8 @@ fun RoleCard(title: String, description: String, icon: Painter, photoUri: String
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = title, color = TextWhite, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Text(text = description, color = TextGray, fontSize = 14.sp)
+                Text(text = title, color = contentColor, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(text = description, color = descColor, fontSize = 14.sp)
             }
             Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = accentColor, modifier = Modifier.size(24.dp))
         }

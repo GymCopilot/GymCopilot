@@ -25,8 +25,10 @@ typealias SubscriptionPlan = com.zexo.gymcopilot.model.SubscriptionPlan
 
 
 
-class DataStoreManager(context: Context) {
+class DataStoreManager(private val context: Context) {
     private val dataStore = context.dataStore
+
+    fun getContext(): Context = context
 
     companion object {
         val APP_LANGUAGE = stringPreferencesKey("APP_LANGUAGE")
@@ -45,8 +47,10 @@ class DataStoreManager(context: Context) {
         val GYM_COUNTRY = stringPreferencesKey("GYM_COUNTRY")
         val SHOW_LOGO_BORDER = booleanPreferencesKey("SHOW_LOGO_BORDER")
         val BUTTON_COLOR = intPreferencesKey("BUTTON_COLOR")
+        val BUTTON_BACKGROUND_COLOR = intPreferencesKey("BUTTON_BACKGROUND_COLOR")
         val BUTTON_STYLE = intPreferencesKey("BUTTON_STYLE") 
         val BACKGROUND_COLOR = intPreferencesKey("BACKGROUND_COLOR")
+        val BOTTOM_NAV_BACKGROUND_COLOR = intPreferencesKey("BOTTOM_NAV_BACKGROUND_COLOR")
         val STORE_CATEGORIES = stringSetPreferencesKey("STORE_CATEGORIES")
         val CUSTOM_CATEGORY_IDS = stringSetPreferencesKey("CUSTOM_CATEGORY_IDS")
         
@@ -187,6 +191,14 @@ class DataStoreManager(context: Context) {
     suspend fun setButtonColor(color: Int) { dataStore.edit { it[BUTTON_COLOR] = color } }
     suspend fun resetButtonColor() { dataStore.edit { it.remove(BUTTON_COLOR) } }
     fun getButtonColor(): Flow<Int?> = dataStore.data.map { it[BUTTON_COLOR] }
+
+    suspend fun setButtonBackgroundColor(color: Int) { dataStore.edit { it[BUTTON_BACKGROUND_COLOR] = color } }
+    suspend fun resetButtonBackgroundColor() { dataStore.edit { it.remove(BUTTON_BACKGROUND_COLOR) } }
+    fun getButtonBackgroundColor(): Flow<Int?> = dataStore.data.map { it[BUTTON_BACKGROUND_COLOR] }
+
+    suspend fun setBottomNavBackgroundColor(color: Int) { dataStore.edit { it[BOTTOM_NAV_BACKGROUND_COLOR] = color } }
+    suspend fun resetBottomNavBackgroundColor() { dataStore.edit { it.remove(BOTTOM_NAV_BACKGROUND_COLOR) } }
+    fun getBottomNavBackgroundColor(): Flow<Int?> = dataStore.data.map { it[BOTTOM_NAV_BACKGROUND_COLOR] }
 
     suspend fun setButtonStyle(style: Int) { dataStore.edit { it[BUTTON_STYLE] = style } }
     fun getButtonStyle(): Flow<Int> = dataStore.data.map { it[BUTTON_STYLE] ?: 1 }
@@ -379,15 +391,17 @@ class DataStoreManager(context: Context) {
     suspend fun addProfessor(professor: Professor) {
         dataStore.edit { preferences ->
             val current = try { Json.decodeFromString<MutableList<Professor>>(preferences[GYM_PROFESSORS] ?: "[]") } catch (e: Exception) { mutableListOf() }
-            current.add(professor)
-            preferences[GYM_PROFESSORS] = Json.encodeToString(current)
+            if (current.none { it.id == professor.id || (professor.email.isNotBlank() && it.email.trim().equals(professor.email.trim(), ignoreCase = true)) }) {
+                current.add(professor)
+                preferences[GYM_PROFESSORS] = Json.encodeToString(current)
+            }
         }
     }
 
     suspend fun updateProfessor(updatedProfessor: Professor) {
         dataStore.edit { preferences ->
             val current = try { Json.decodeFromString<MutableList<Professor>>(preferences[GYM_PROFESSORS] ?: "[]") } catch (e: Exception) { mutableListOf() }
-            val index = current.indexOfFirst { it.id == updatedProfessor.id }
+            val index = current.indexOfFirst { it.id == updatedProfessor.id || (updatedProfessor.email.isNotBlank() && it.email.trim().equals(updatedProfessor.email.trim(), ignoreCase = true)) }
             if (index != -1) {
                 current[index] = updatedProfessor
                 preferences[GYM_PROFESSORS] = Json.encodeToString(current)
@@ -398,10 +412,14 @@ class DataStoreManager(context: Context) {
         }
     }
 
-    suspend fun removeProfessor(id: String) {
+    suspend fun removeProfessor(id: String = "", email: String = "", fullName: String = "") {
         dataStore.edit { preferences ->
             val current = try { Json.decodeFromString<MutableList<Professor>>(preferences[GYM_PROFESSORS] ?: "[]") } catch (e: Exception) { mutableListOf() }
-            current.removeAll { it.id == id }
+            current.removeAll { 
+                (id.isNotBlank() && it.id == id) ||
+                (email.isNotBlank() && it.email.trim().equals(email.trim(), ignoreCase = true)) ||
+                (email.isBlank() && fullName.isNotBlank() && it.fullName.trim().equals(fullName.trim(), ignoreCase = true))
+            }
             preferences[GYM_PROFESSORS] = Json.encodeToString(current)
         }
     }

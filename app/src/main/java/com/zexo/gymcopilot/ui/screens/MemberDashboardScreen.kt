@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -39,6 +40,7 @@ import com.zexo.gymcopilot.repository.AttendanceRepository
 import com.zexo.gymcopilot.ui.theme.PrimaryTurquoise
 import com.zexo.gymcopilot.ui.theme.TextGray
 import com.zexo.gymcopilot.ui.theme.TextWhite
+import com.zexo.gymcopilot.ui.theme.LocalButtonBackgroundColor
 import com.zexo.gymcopilot.ui.theme.getButtonStyleShape
 import com.zexo.gymcopilot.ui.theme.getGymFontFamily
 import com.zexo.gymcopilot.utils.ShortcutUtils
@@ -605,7 +607,7 @@ fun MembershipStatusCard(
     Card(
         modifier = Modifier.fillMaxWidth().border(1.5.dp, accentColor, shape),
         shape = shape,
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF00222E))
+        colors = CardDefaults.cardColors(containerColor = LocalButtonBackgroundColor.current)
     ) {
         Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
@@ -656,13 +658,16 @@ fun ActionCard(
     iconColor: Color? = null
 ) {
     val finalIconColor = iconColor ?: accentColor
+    val buttonBgColor = LocalButtonBackgroundColor.current
+    val titleColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
+
     Surface(
         modifier = modifier
             .height(120.dp)
             .clip(shape)
             .clickable { onClick() }
             .border(1.5.dp, accentColor, shape),
-        color = Color(0xFF081C24)
+        color = buttonBgColor
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -683,7 +688,7 @@ fun ActionCard(
             Spacer(Modifier.height(12.dp))
             Text(
                 text = title,
-                color = TextWhite,
+                color = titleColor,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -693,12 +698,15 @@ fun ActionCard(
 
 @Composable
 fun BigActionCard(title: String, icon: ImageVector, accentColor: Color, onClick: () -> Unit, shape: androidx.compose.ui.graphics.Shape) {
+    val buttonBgColor = LocalButtonBackgroundColor.current
+    val titleColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else accentColor
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .height(100.dp)
             .clickable { onClick() },
-        color = Color(0xFF00222E),
+        color = buttonBgColor,
         shape = shape,
         border = androidx.compose.foundation.BorderStroke(1.dp, accentColor.copy(alpha = 0.5f))
     ) {
@@ -709,7 +717,7 @@ fun BigActionCard(title: String, icon: ImageVector, accentColor: Color, onClick:
         ) {
             Icon(icon, null, tint = accentColor, modifier = Modifier.size(32.dp))
             Spacer(Modifier.height(8.dp))
-            Text(title, color = accentColor, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text(title, color = titleColor, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -722,46 +730,48 @@ fun TodayRoutineCard(
     onViewDetailClick: (String) -> Unit,
     shape: androidx.compose.ui.graphics.Shape
 ) {
+    val buttonBgColor = LocalButtonBackgroundColor.current
+    val titleColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = shape,
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF00222E)),
+        colors = CardDefaults.cardColors(containerColor = buttonBgColor),
         border = androidx.compose.foundation.BorderStroke(1.dp, accentColor.copy(alpha = 0.3f))
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            Text("RUTINA DE HOY", color = TextGray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text("RUTINA DE HOY", color = if (buttonBgColor.luminance() > 0.5f) Color.DarkGray else TextGray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(16.dp))
             
             if (routine != null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.FitnessCenter, null, tint = accentColor, modifier = Modifier.size(24.dp))
                     Spacer(Modifier.width(12.dp))
-                    Text(routine.name, color = TextWhite, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                    Text(routine.name, color = titleColor, fontSize = 24.sp, fontWeight = FontWeight.Black)
                 }
                 Spacer(Modifier.height(20.dp))
                 Button(
                     onClick = { onViewDetailClick(routine.id) },
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise),
+                    modifier = Modifier.fillMaxWidth().height(48.dp).border(1.dp, accentColor, shape),
+                    colors = ButtonDefaults.buttonColors(containerColor = buttonBgColor),
                     shape = shape
                 ) {
-                    Text("VER DETALLE DE RUTINA", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("VER DETALLE DE RUTINA", color = titleColor, fontWeight = FontWeight.Bold)
                 }
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.EmojiEvents, null, tint = Color(0xFFFFD700), modifier = Modifier.size(24.dp))
                     Spacer(Modifier.width(12.dp))
-                    Text("¡Día de Descanso!", color = TextWhite, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                    Text("¡Día de Descanso!", color = titleColor, fontSize = 24.sp, fontWeight = FontWeight.Black)
                 }
                 Spacer(Modifier.height(20.dp))
                 Button(
                     onClick = onRoutinesClick,
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.05f)),
-                    shape = shape,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, accentColor.copy(alpha = 0.3f))
+                    modifier = Modifier.fillMaxWidth().height(48.dp).border(1.dp, accentColor, shape),
+                    colors = ButtonDefaults.buttonColors(containerColor = buttonBgColor),
+                    shape = shape
                 ) {
-                    Text("VER TODAS MIS RUTINAS", color = TextWhite, fontWeight = FontWeight.Bold)
+                    Text("VER TODAS MIS RUTINAS", color = titleColor, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -818,10 +828,12 @@ fun LoginQRCodeDialog(content: String, accentColor: Color, onDismiss: () -> Unit
                 Spacer(modifier = Modifier.height(24.dp))
                 Button(
                     onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = accentColor)
+                    modifier = Modifier.fillMaxWidth().border(1.dp, accentColor, RoundedCornerShape(14.dp)),
+                    colors = ButtonDefaults.buttonColors(containerColor = LocalButtonBackgroundColor.current),
+                    shape = RoundedCornerShape(14.dp)
                 ) {
-                    Text("CERRAR", color = Color.White, fontWeight = FontWeight.Bold)
+                    val contentColor = if (LocalButtonBackgroundColor.current.luminance() > 0.5f) Color.Black else Color.White
+                    Text("CERRAR", color = contentColor, fontWeight = FontWeight.Bold)
                 }
             }
         }

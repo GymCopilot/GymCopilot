@@ -41,7 +41,7 @@ fun PaywallScreen(
     val buttonStyle by dataStoreManager.getButtonStyle().collectAsState(initial = 1)
     val shape = getButtonStyleShape(buttonStyle)
 
-    Box(modifier = Modifier.fillMaxSize().background(GymBackgroundGradient)) {
+    Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,

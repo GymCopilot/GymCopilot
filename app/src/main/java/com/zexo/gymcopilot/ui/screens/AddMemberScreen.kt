@@ -36,6 +36,7 @@ import com.zexo.gymcopilot.Member
 import com.zexo.gymcopilot.Professor
 import com.zexo.gymcopilot.R
 import com.zexo.gymcopilot.repository.AttendanceRepository
+import com.zexo.gymcopilot.ui.theme.LocalButtonBackgroundColor
 import com.zexo.gymcopilot.ui.theme.PrimaryTurquoise
 import com.zexo.gymcopilot.ui.theme.TextGray
 import com.zexo.gymcopilot.ui.theme.TextWhite
@@ -560,11 +561,11 @@ fun AddMemberScreen(
                     
                     Button(
                         onClick = { showQrDialog = false },
-                        colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                        colors = ButtonDefaults.buttonColors(containerColor = LocalButtonBackgroundColor.current),
                         shape = containerShape,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().border(1.dp, accentColor, containerShape)
                     ) {
-                        val contentColor = if (accentColor.luminance() > 0.5f) Color.Black else Color.White
+                        val contentColor = if (LocalButtonBackgroundColor.current.luminance() > 0.5f) Color.Black else Color.White
                         Text(t["close"] ?: "", color = contentColor, fontWeight = FontWeight.Bold)
                     }
                 }

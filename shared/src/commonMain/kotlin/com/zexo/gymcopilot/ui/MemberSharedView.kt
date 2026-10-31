@@ -69,7 +69,7 @@ fun MemberDashboardSharedScreen(
     var activeHeight by remember { mutableStateOf("") }
     var activePhotoUri by remember { mutableStateOf<String?>(null) }
     var activeGymName by remember { mutableStateOf(gymName) }
-    var activeGymUrl by remember { mutableStateOf("https://script.google.com/macros/s/AKfycbyrN53_uZ4ECfRyp-Qwb2sGSYjv-g7OeR5ERbAQxLdirOL7qvL6rfaxXsjJShc28P-a/exec") }
+    var activeGymUrl by remember { mutableStateOf("https://script.google.com/macros/s/AKfycbzXYYMu43-ATeyxQmwdF3CuRYXi7KbpChyTQEBFIsWh7SCHv2XugxsWen61oBeDdzw/exec") }
     var activeMembershipStatus by remember { mutableStateOf("ACTIVO") }
     var activeNextRenewalDate by remember { mutableLongStateOf(0L) }
     var activePlanName by remember { mutableStateOf("Plan Mensual") }

@@ -18,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.luminance
+import com.zexo.gymcopilot.ui.theme.LocalButtonBackgroundColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -200,13 +202,17 @@ fun ContactCard(
     val finalIconColor = iconColor ?: accentColor
     val backgroundCircleColor = if (finalIconColor == Color.Unspecified) Color.White.copy(alpha = 0.1f) else finalIconColor.copy(alpha = 0.1f)
 
+    val buttonBgColor = LocalButtonBackgroundColor.current
+    val titleColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
+    val descColor = if (buttonBgColor.luminance() > 0.5f) Color.DarkGray else TextGray
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .border(1.dp, accentColor.copy(alpha = 0.3f), shape)
             .clickable { onClick() },
         shape = shape,
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF081C24).copy(alpha = 0.6f))
+        colors = CardDefaults.cardColors(containerColor = buttonBgColor)
     ) {
         Row(
             modifier = Modifier.padding(20.dp),
@@ -225,8 +231,8 @@ fun ContactCard(
             }
             Spacer(Modifier.width(16.dp))
             Column {
-                Text(title, color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text(description, color = TextGray, fontSize = 12.sp)
+                Text(title, color = titleColor, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(description, color = descColor, fontSize = 12.sp)
             }
         }
     }

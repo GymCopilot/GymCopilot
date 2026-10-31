@@ -34,6 +34,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -47,6 +48,7 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import com.zexo.gymcopilot.DataStoreManager
 import com.zexo.gymcopilot.R
+import com.zexo.gymcopilot.ui.theme.LocalButtonBackgroundColor
 import com.zexo.gymcopilot.ui.theme.PrimaryTurquoise
 import com.zexo.gymcopilot.ui.viewmodels.AttendanceViewModel
 import com.zexo.gymcopilot.ui.viewmodels.CheckInState
@@ -169,8 +171,13 @@ fun AttendanceScannerScreen(
                     title = { Text("¡Éxito!") },
                     text = { Text(state.message) },
                     confirmButton = {
-                        Button(onClick = { viewModel.resetState(); onClose() }, colors = ButtonDefaults.buttonColors(containerColor = accentColor)) {
-                            Text("Aceptar")
+                        Button(
+                            onClick = { viewModel.resetState(); onClose() },
+                            colors = ButtonDefaults.buttonColors(containerColor = LocalButtonBackgroundColor.current),
+                            modifier = Modifier.border(1.dp, accentColor, RoundedCornerShape(20.dp))
+                        ) {
+                            val contentColor = if (LocalButtonBackgroundColor.current.luminance() > 0.5f) Color.Black else Color.White
+                            Text("Aceptar", color = contentColor)
                         }
                     }
                 )
@@ -181,8 +188,13 @@ fun AttendanceScannerScreen(
                     title = { Text("Error") },
                     text = { Text(state.error) },
                     confirmButton = {
-                        Button(onClick = { viewModel.resetState() }, colors = ButtonDefaults.buttonColors(containerColor = accentColor)) {
-                            Text("Reintentar")
+                        Button(
+                            onClick = { viewModel.resetState() },
+                            colors = ButtonDefaults.buttonColors(containerColor = LocalButtonBackgroundColor.current),
+                            modifier = Modifier.border(1.dp, accentColor, RoundedCornerShape(20.dp))
+                        ) {
+                            val contentColor = if (LocalButtonBackgroundColor.current.luminance() > 0.5f) Color.Black else Color.White
+                            Text("Reintentar", color = contentColor)
                         }
                     },
                     dismissButton = {

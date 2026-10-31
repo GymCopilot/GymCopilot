@@ -59,6 +59,14 @@ object ShortcutUtils {
                 val base64String = source.substringAfter("base64,")
                 val imageBytes = Base64.decode(base64String, Base64.DEFAULT)
                 BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+            } else if (source.startsWith("file://")) {
+                val path = Uri.parse(source).path ?: source.removePrefix("file://")
+                val file = java.io.File(path)
+                if (file.exists()) {
+                    BitmapFactory.decodeFile(file.absolutePath)
+                } else {
+                    null
+                }
             } else {
                 val inputStream = context.contentResolver.openInputStream(Uri.parse(source))
                 val bmp = BitmapFactory.decodeStream(inputStream)
@@ -95,5 +103,30 @@ object ShortcutUtils {
         val left = (width - newSize) / 2
         val top = (height - newSize) / 2
         return Bitmap.createBitmap(bitmap, left, top, newSize, newSize)
+    }
+
+    fun getBase64FromSource(context: Context, source: String?): String? {
+        if (source.isNullOrBlank()) return null
+        if (source.startsWith("data:image")) return source
+        return try {
+            val bitmap = decodeLogo(context, source) ?: return null
+            val maxDim = 200
+            val scaledBitmap = if (bitmap.width > maxDim || bitmap.height > maxDim) {
+                val aspectRatio = bitmap.width.toFloat() / bitmap.height.toFloat()
+                val width = if (aspectRatio > 1) maxDim else (maxDim * aspectRatio).toInt()
+                val height = if (aspectRatio > 1) (maxDim / aspectRatio).toInt() else maxDim
+                Bitmap.createScaledBitmap(bitmap, width, height, true)
+            } else {
+                bitmap
+            }
+
+            val outputStream = java.io.ByteArrayOutputStream()
+            scaledBitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+            val byteArray = outputStream.toByteArray()
+            val base64 = Base64.encodeToString(byteArray, Base64.NO_WRAP)
+            "data:image/png;base64,$base64"
+        } catch (e: Exception) {
+            null
+        }
     }
 }

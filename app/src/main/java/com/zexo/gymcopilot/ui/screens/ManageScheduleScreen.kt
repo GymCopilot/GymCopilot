@@ -25,6 +25,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +36,7 @@ import com.zexo.gymcopilot.DataStoreManager
 import com.zexo.gymcopilot.Professor
 import com.zexo.gymcopilot.R
 import com.zexo.gymcopilot.ScheduleEntry
+import com.zexo.gymcopilot.ui.theme.LocalButtonBackgroundColor
 import com.zexo.gymcopilot.ui.theme.PrimaryTurquoise
 import com.zexo.gymcopilot.ui.theme.TextGray
 import com.zexo.gymcopilot.ui.theme.TextWhite
@@ -192,21 +194,25 @@ fun ManageScheduleScreen(
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = Color(0xFF081C24)
+        containerColor = Color.Transparent
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
             if (isAdmin) {
-                Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(12.dp)).padding(4.dp)) {
+                val buttonBgColor = LocalButtonBackgroundColor.current
+                Row(modifier = Modifier.fillMaxWidth().background(buttonBgColor, RoundedCornerShape(12.dp)).border(1.dp, accentColor, RoundedCornerShape(12.dp)).padding(4.dp)) {
                     listOf(t["gym"], t["profs"]).forEachIndexed { index, title ->
                         val isSelected = selectedTab == index
+                        val tabBg = if (isSelected) accentColor else Color.Transparent
+                        val tabText = if (isSelected) (if (accentColor.luminance() > 0.5f) Color.Black else Color.White)
+                                      else (if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite)
                         Box(
                             modifier = Modifier.weight(1f).clip(RoundedCornerShape(8.dp))
-                                .background(if (isSelected) accentColor else Color.Transparent)
+                                .background(tabBg)
                                 .clickable { selectedTab = index; if (index == 0) selectedProfessor = null }
                                 .padding(vertical = 10.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(title ?: "", color = if (isSelected) Color.Black else TextWhite, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text(title ?: "", color = tabText, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
                 }
@@ -306,20 +312,26 @@ fun ScheduleHeader(calendar: Calendar, viewMode: ScheduleViewMode, t: Map<String
     val monthName = SimpleDateFormat("MMMM 'de' yyyy", locale).format(calendar.time)
         .replaceFirstChar { if (it.isLowerCase()) it.titlecase(locale) else it.toString() }
 
+    val buttonBgColor = LocalButtonBackgroundColor.current
+    val navTextColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
+
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(8.dp))) {
-                IconButton(onClick = onPrev) { Icon(Icons.Default.ChevronLeft, null, tint = TextWhite) }
-                Text(t["hoy"] ?: "HOY", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.clickable { onToday() }.padding(horizontal = 8.dp))
-                IconButton(onClick = onNext) { Icon(Icons.Default.ChevronRight, null, tint = TextWhite) }
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.background(buttonBgColor, RoundedCornerShape(8.dp)).border(1.dp, accentColor.copy(alpha = 0.4f), RoundedCornerShape(8.dp))) {
+                IconButton(onClick = onPrev) { Icon(Icons.Default.ChevronLeft, null, tint = navTextColor) }
+                Text(t["hoy"] ?: "HOY", color = navTextColor, fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.clickable { onToday() }.padding(horizontal = 8.dp))
+                IconButton(onClick = onNext) { Icon(Icons.Default.ChevronRight, null, tint = navTextColor) }
             }
             Text(monthName, color = TextWhite, fontSize = 18.sp, fontWeight = FontWeight.Black)
         }
-        Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(12.dp)).padding(4.dp)) {
+        val buttonBgColor = LocalButtonBackgroundColor.current
+        Row(modifier = Modifier.fillMaxWidth().background(buttonBgColor, RoundedCornerShape(12.dp)).border(1.dp, accentColor.copy(alpha = 0.4f), RoundedCornerShape(12.dp)).padding(4.dp)) {
             ScheduleViewMode.entries.forEach { mode ->
                 val label = when(mode) { ScheduleViewMode.DAY -> t["day"]; ScheduleViewMode.WEEK -> t["week"]; ScheduleViewMode.MONTH -> t["month"] }
-                Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).background(if (viewMode == mode) accentColor.copy(alpha = 0.2f) else Color.Transparent).border(if (viewMode == mode) 1.dp else 0.dp, if (viewMode == mode) accentColor else Color.Transparent, RoundedCornerShape(8.dp)).clickable { onViewModeChange(mode) }.padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
-                    Text(label ?: "", color = if (viewMode == mode) accentColor else TextGray, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                val isSelected = viewMode == mode
+                val modeTextColor = if (isSelected) accentColor else (if (buttonBgColor.luminance() > 0.5f) Color.DarkGray else TextGray)
+                Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).background(if (isSelected) accentColor.copy(alpha = 0.25f) else Color.Transparent).border(if (isSelected) 1.dp else 0.dp, if (isSelected) accentColor else Color.Transparent, RoundedCornerShape(8.dp)).clickable { onViewModeChange(mode) }.padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+                    Text(label ?: "", color = modeTextColor, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
         }
@@ -374,13 +386,16 @@ fun DayView(
         LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             items(editingEntries) { coloredEntry ->
                 val entry = coloredEntry.entry
+                val buttonBgColor = LocalButtonBackgroundColor.current
+                val entryTextColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
+
                 Card(
-                    modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.08f), shape),
+                    modifier = Modifier.fillMaxWidth().border(1.dp, accentColor.copy(alpha = 0.4f), shape),
                     shape = shape,
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0C1D26))
+                    colors = CardDefaults.cardColors(containerColor = buttonBgColor)
                 ) {
                     Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("${entry.startTime} - ${entry.endTime}", color = TextWhite, fontSize = 15.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(1.2f))
+                        Text("${entry.startTime} - ${entry.endTime}", color = entryTextColor, fontSize = 15.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(1.2f))
                         Text(entry.eventName, color = coloredEntry.color, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(2f))
                         IconButton(
                             onClick = {
@@ -395,14 +410,16 @@ fun DayView(
                 }
             }
             item {
+                val buttonBgColor = LocalButtonBackgroundColor.current
+                val contentColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else accentColor
+
                 Button(
                     onClick = { showAddDialog = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = accentColor.copy(alpha = 0.1f)),
-                    shape = shape,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, accentColor.copy(alpha = 0.3f))
+                    modifier = Modifier.fillMaxWidth().border(1.5.dp, accentColor, shape),
+                    colors = ButtonDefaults.buttonColors(containerColor = buttonBgColor),
+                    shape = shape
                 ) {
-                    Icon(Icons.Default.Add, null, tint = accentColor); Spacer(Modifier.width(8.dp)); Text(t["add_event"] ?: "Nuevo Evento", color = accentColor)
+                    Icon(Icons.Default.Add, null, tint = contentColor); Spacer(Modifier.width(8.dp)); Text(t["add_event"] ?: "Nuevo Evento", color = contentColor, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -531,10 +548,14 @@ fun AddScheduleEventDialog(
                     }
                     onConfirm(result)
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                colors = ButtonDefaults.buttonColors(containerColor = LocalButtonBackgroundColor.current),
                 shape = shape,
-                enabled = name.isNotBlank()
-            ) { Text("Agregar", color = Color.Black, fontWeight = FontWeight.Bold) }
+                enabled = name.isNotBlank(),
+                modifier = Modifier.border(1.dp, accentColor, shape)
+            ) { 
+                val contentColor = if (LocalButtonBackgroundColor.current.luminance() > 0.5f) Color.Black else Color.White
+                Text("Agregar", color = contentColor, fontWeight = FontWeight.Bold) 
+            }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancelar", color = TextGray) }
@@ -681,9 +702,21 @@ fun MonthView(calendar: Calendar, allEntries: List<ColoredEntry>, accentColor: C
 @Composable
 fun MonthDayCell(dayNum: Int, isCurrentMonth: Boolean, isWeekend: Boolean, activityColors: List<Color>, isToday: Boolean, accentColor: Color, modifier: Modifier = Modifier) {
     val weekendRed = Color(0xFFE57373)
+    val buttonBgColor = LocalButtonBackgroundColor.current
+    val dayTextColor = when {
+        isToday -> accentColor
+        !isCurrentMonth -> TextGray.copy(alpha = 0.3f)
+        isWeekend -> weekendRed
+        else -> if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
+    }
+
     Box(modifier = modifier.clip(RoundedCornerShape(4.dp))
-        .background(when { isToday -> accentColor.copy(alpha = 0.1f); isCurrentMonth -> Color.White.copy(alpha = 0.02f); else -> Color.Transparent })
-        .border(if (isToday) 1.5.dp else 0.5.dp, if (isToday) accentColor else if (isCurrentMonth) Color.White.copy(alpha = 0.05f) else Color.Transparent, RoundedCornerShape(4.dp))) {
+        .background(when { 
+            isToday -> accentColor.copy(alpha = 0.25f)
+            isCurrentMonth -> buttonBgColor
+            else -> Color.Transparent 
+        })
+        .border(if (isToday) 2.dp else 1.dp, if (isToday) accentColor else if (isCurrentMonth) accentColor.copy(alpha = 0.4f) else Color.Transparent, RoundedCornerShape(4.dp))) {
 
         if (isWeekend) {
             Canvas(modifier = Modifier.fillMaxSize()) {
@@ -700,7 +733,7 @@ fun MonthDayCell(dayNum: Int, isCurrentMonth: Boolean, isWeekend: Boolean, activ
         }
 
         Column(modifier = Modifier.padding(4.dp)) {
-            Text(dayNum.toString(), color = when { isToday -> accentColor; !isCurrentMonth -> TextGray.copy(alpha = 0.3f); isWeekend -> weekendRed; else -> TextWhite }, fontSize = 12.sp, fontWeight = if (isToday) FontWeight.Black else FontWeight.Bold)
+            Text(dayNum.toString(), color = dayTextColor, fontSize = 12.sp, fontWeight = if (isToday) FontWeight.Black else FontWeight.Bold)
             if (activityColors.isNotEmpty() && isCurrentMonth) {
                 Spacer(Modifier.height(4.dp))
                 activityColors.take(4).forEach { color ->

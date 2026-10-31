@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -45,6 +46,7 @@ import com.zexo.gymcopilot.DataStoreManager
 import com.zexo.gymcopilot.Professor
 import com.zexo.gymcopilot.R
 import com.zexo.gymcopilot.network.NetworkModule
+import com.zexo.gymcopilot.ui.theme.LocalButtonBackgroundColor
 import com.zexo.gymcopilot.ui.theme.PrimaryTurquoise
 import com.zexo.gymcopilot.ui.theme.TextGray
 import com.zexo.gymcopilot.ui.theme.TextWhite
@@ -418,11 +420,12 @@ private fun ProfessorLinkQrDialogInternal(content: String, onDismiss: () -> Unit
                 Spacer(modifier = Modifier.height(24.dp))
                 Button(
                     onClick = onDismiss,
-                    colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                    colors = ButtonDefaults.buttonColors(containerColor = LocalButtonBackgroundColor.current),
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth().height(50.dp)
+                    modifier = Modifier.fillMaxWidth().height(50.dp).border(1.dp, accentColor, RoundedCornerShape(12.dp))
                 ) {
-                    Text("CERRAR", color = Color.Black, fontWeight = FontWeight.ExtraBold)
+                    val contentColor = if (LocalButtonBackgroundColor.current.luminance() > 0.5f) Color.Black else Color.White
+                    Text("CERRAR", color = contentColor, fontWeight = FontWeight.ExtraBold)
                 }
             }
         }

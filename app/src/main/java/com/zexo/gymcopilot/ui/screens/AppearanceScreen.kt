@@ -51,6 +51,7 @@ import coil.compose.AsyncImage
 import com.zexo.gymcopilot.DataStoreManager
 import com.zexo.gymcopilot.R
 import com.zexo.gymcopilot.repository.AttendanceRepository
+import com.zexo.gymcopilot.ui.theme.LocalButtonBackgroundColor
 import com.zexo.gymcopilot.ui.theme.PrimaryTurquoise
 import com.zexo.gymcopilot.ui.theme.TextGray
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -128,6 +129,10 @@ fun AppearanceScreen(
     val gymNameFont by dataStoreManager.getGymNameFont().collectAsState(initial = "Default")
     val savedBtnColor by dataStoreManager.getButtonColor().collectAsState(initial = null)
     val accentColor = if (savedBtnColor != null) Color(savedBtnColor!!) else PrimaryTurquoise
+    val savedBtnBgColor by dataStoreManager.getButtonBackgroundColor().collectAsState(initial = null)
+    val buttonBgColor = if (savedBtnBgColor != null && savedBtnBgColor != 0) Color(savedBtnBgColor!!) else PrimaryTurquoise
+    val savedBottomNavBgColor by dataStoreManager.getBottomNavBackgroundColor().collectAsState(initial = null)
+    val bottomNavBgColor = if (savedBottomNavBgColor != null && savedBottomNavBgColor != 0) Color(savedBottomNavBgColor!!) else Color(0xFF00151C)
     val buttonStyle by dataStoreManager.getButtonStyle().collectAsState(initial = 1)
     val showLogoBorder by dataStoreManager.getShowLogoBorder().collectAsState(initial = true)
     val containerShape = getButtonStyleShape(buttonStyle)
@@ -219,7 +224,7 @@ fun AppearanceScreen(
                 contentPadding = PaddingValues(start = 0.dp, top = 16.dp, end = 0.dp, bottom = 100.dp)
             ) {
                 item {
-                    ExpandableAppearanceSection(title = t["logo"] ?: "Logo", icon = Icons.Default.AddPhotoAlternate, isExpanded = expandedSection == "logo", onToggle = { expandedSection = if (expandedSection == "logo") null else "logo" }, accentColor = accentColor, shape = containerShape) {
+                    ExpandableAppearanceSection(title = t["logo"] ?: "Logo", icon = Icons.Default.AddPhotoAlternate, isExpanded = expandedSection == "logo", onToggle = { expandedSection = if (expandedSection == "logo") null else "logo" }, accentColor = accentColor, buttonBgColor = buttonBgColor, shape = containerShape) {
                         ImagePickerBox(
                             uri = gymLogoUri,
                             label = t["logo_desc"] ?: "",
@@ -275,7 +280,7 @@ fun AppearanceScreen(
                     }
                 }
                 item {
-                    ExpandableAppearanceSection(title = t["bg"] ?: "Background", icon = Icons.Default.Wallpaper, isExpanded = expandedSection == "bg", onToggle = { expandedSection = if (expandedSection == "bg") null else "bg" }, accentColor = accentColor, shape = containerShape) {
+                    ExpandableAppearanceSection(title = t["bg"] ?: "Background", icon = Icons.Default.Wallpaper, isExpanded = expandedSection == "bg", onToggle = { expandedSection = if (expandedSection == "bg") null else "bg" }, accentColor = accentColor, buttonBgColor = buttonBgColor, shape = containerShape) {
                         Column {
                             ColorSelectorGrid(t, mainColors, grayScale, rainbowColors, accentColor = accentColor, onReset = {
                                 scope.launch {
@@ -292,25 +297,25 @@ fun AppearanceScreen(
                     }
                 }
                 item {
-                    ExpandableAppearanceSection(title = t["colors"] ?: "Colors", icon = Icons.Default.Palette, isExpanded = expandedSection == "colors", onToggle = { expandedSection = if (expandedSection == "colors") null else "colors" }, accentColor = accentColor, shape = containerShape) {
+                    ExpandableAppearanceSection(title = t["colors"] ?: "Colors", icon = Icons.Default.Palette, isExpanded = expandedSection == "colors", onToggle = { expandedSection = if (expandedSection == "colors") null else "colors" }, accentColor = accentColor, buttonBgColor = buttonBgColor, shape = containerShape) {
                         Column(modifier = Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                             Text("Color de Fondo de Botones", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            ColorSelectorGrid(t, mainColors, grayScale, rainbowColors, accentColor = accentColor, onReset = {
+                            ColorSelectorGrid(t, mainColors, grayScale, rainbowColors, accentColor = accentColor, selectedColor = buttonBgColor, onReset = {
                                 scope.launch {
                                     val defaultBg = Color(0xFF00222E).toArgb()
-                                    dataStoreManager.setBackgroundColor(defaultBg)
-                                    attendanceRepository?.syncGymInfo(backgroundColor = defaultBg)
+                                    dataStoreManager.setButtonBackgroundColor(defaultBg)
+                                    attendanceRepository?.syncGymInfo(buttonBackgroundColor = defaultBg)
                                 }
                             }) { color ->
                                 scope.launch {
-                                    dataStoreManager.setBackgroundColor(color.toArgb())
-                                    attendanceRepository?.syncGymInfo(backgroundColor = color.toArgb())
+                                    dataStoreManager.setButtonBackgroundColor(color.toArgb())
+                                    attendanceRepository?.syncGymInfo(buttonBackgroundColor = color.toArgb())
                                 }
                             }
 
                             Spacer(Modifier.height(8.dp))
                             Text("Color de Bordes de Botones", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            ColorSelectorGrid(t, mainColors, grayScale, rainbowColors, accentColor = accentColor, onReset = {
+                            ColorSelectorGrid(t, mainColors, grayScale, rainbowColors, accentColor = accentColor, selectedColor = accentColor, onReset = {
                                 scope.launch {
                                     val defaultColor = PrimaryTurquoise.toArgb()
                                     dataStoreManager.setButtonColor(defaultColor)
@@ -322,32 +327,84 @@ fun AppearanceScreen(
                                     attendanceRepository?.syncGymInfo(accentColor = color.toArgb())
                                 }
                             }
+
+                            Spacer(Modifier.height(12.dp))
+                            Text("Vista previa del botón", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Surface(
+                                shape = containerShape,
+                                color = buttonBgColor,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                                    .border(2.dp, accentColor, containerShape)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    val contentColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
+                                    Text("BOTÓN DE MUESTRA", color = contentColor, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                }
+                            }
                         }
                     }
                 }
                 item {
-                    ExpandableAppearanceSection(title = t["style"] ?: "Style", painter = painterResource(id = R.drawable.call_to_action), isExpanded = expandedSection == "style", onToggle = { expandedSection = if (expandedSection == "style") null else "style" }, accentColor = accentColor, shape = containerShape) {
+                    ExpandableAppearanceSection(
+                        title = if (appLanguage == "Español") "Color de Barra de Navegación" else "Bottom Nav Color",
+                        icon = Icons.Default.Navigation,
+                        isExpanded = expandedSection == "bottom_nav",
+                        onToggle = { expandedSection = if (expandedSection == "bottom_nav") null else "bottom_nav" },
+                        accentColor = accentColor,
+                        buttonBgColor = buttonBgColor,
+                        shape = containerShape
+                    ) {
+                        Column(modifier = Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Text(
+                                if (appLanguage == "Español") "Color de Fondo de la Barra Inferior" else "Bottom Navigation Bar Background",
+                                color = TextWhite,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                            ColorSelectorGrid(
+                                t, mainColors, grayScale, rainbowColors,
+                                accentColor = accentColor,
+                                selectedColor = bottomNavBgColor,
+                                onReset = {
+                                    scope.launch {
+                                        dataStoreManager.resetBottomNavBackgroundColor()
+                                        attendanceRepository?.syncGymInfo(bottomNavBackgroundColor = 0)
+                                    }
+                                }
+                            ) { color ->
+                                scope.launch {
+                                    dataStoreManager.setBottomNavBackgroundColor(color.toArgb())
+                                    attendanceRepository?.syncGymInfo(bottomNavBackgroundColor = color.toArgb())
+                                }
+                            }
+                        }
+                    }
+                }
+                item {
+                    ExpandableAppearanceSection(title = t["style"] ?: "Style", painter = painterResource(id = R.drawable.call_to_action), isExpanded = expandedSection == "style", onToggle = { expandedSection = if (expandedSection == "style") null else "style" }, accentColor = accentColor, buttonBgColor = buttonBgColor, shape = containerShape) {
                         Column(modifier = Modifier.padding(top = 16.dp)) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                ButtonStyleOption(0, t["st_straight"] ?: "Straight", getButtonStyleShape(0), buttonStyle, accentColor) {
+                                ButtonStyleOption(0, t["st_straight"] ?: "Straight", getButtonStyleShape(0), buttonStyle, accentColor, buttonBgColor) {
                                     scope.launch {
                                         dataStoreManager.setButtonStyle(0)
                                         attendanceRepository?.syncGymInfo(buttonStyle = 0)
                                     }
                                 }
-                                ButtonStyleOption(1, t["st_rounded"] ?: "Rounded", getButtonStyleShape(1), buttonStyle, accentColor) {
+                                ButtonStyleOption(1, t["st_rounded"] ?: "Rounded", getButtonStyleShape(1), buttonStyle, accentColor, buttonBgColor) {
                                     scope.launch {
                                         dataStoreManager.setButtonStyle(1)
                                         attendanceRepository?.syncGymInfo(buttonStyle = 1)
                                     }
                                 }
-                                ButtonStyleOption(2, t["st_more"] ?: "More", getButtonStyleShape(2), buttonStyle, accentColor) {
+                                ButtonStyleOption(2, t["st_more"] ?: "More", getButtonStyleShape(2), buttonStyle, accentColor, buttonBgColor) {
                                     scope.launch {
                                         dataStoreManager.setButtonStyle(2)
                                         attendanceRepository?.syncGymInfo(buttonStyle = 2)
                                     }
                                 }
-                                ButtonStyleOption(3, t["st_total"] ?: "Total", getButtonStyleShape(3), buttonStyle, accentColor) {
+                                ButtonStyleOption(3, t["st_total"] ?: "Total", getButtonStyleShape(3), buttonStyle, accentColor, buttonBgColor) {
                                     scope.launch {
                                         dataStoreManager.setButtonStyle(3)
                                         attendanceRepository?.syncGymInfo(buttonStyle = 3)
@@ -358,7 +415,7 @@ fun AppearanceScreen(
                     }
                 }
                 item {
-                    ExpandableAppearanceSection(title = t["gym_name"] ?: "Gym Name", icon = Icons.Default.Edit, isExpanded = expandedSection == "name", onToggle = { expandedSection = if (expandedSection == "name") null else "name" }, accentColor = accentColor, shape = containerShape) {
+                    ExpandableAppearanceSection(title = t["gym_name"] ?: "Gym Name", icon = Icons.Default.Edit, isExpanded = expandedSection == "name", onToggle = { expandedSection = if (expandedSection == "name") null else "name" }, accentColor = accentColor, buttonBgColor = buttonBgColor, shape = containerShape) {
                         Column {
                             if (gymApiUrl.isBlank()) {
                                 Card(
@@ -415,7 +472,7 @@ fun AppearanceScreen(
                     }
                 }
                 item {
-                    ExpandableAppearanceSection(title = if (appLanguage == "Español") "Contacto" else "Contact", icon = Icons.Default.LocationOn, isExpanded = expandedSection == "contact", onToggle = { expandedSection = if (expandedSection == "contact") null else "contact" }, accentColor = accentColor, shape = containerShape) {
+                    ExpandableAppearanceSection(title = if (appLanguage == "Español") "Contacto" else "Contact", icon = Icons.Default.LocationOn, isExpanded = expandedSection == "contact", onToggle = { expandedSection = if (expandedSection == "contact") null else "contact" }, accentColor = accentColor, buttonBgColor = buttonBgColor, shape = containerShape) {
                         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                             if (isDataLoaded) {
                                 AppearanceTextField(phoneState, {
@@ -466,8 +523,8 @@ fun AppearanceScreen(
                                 ShortcutUtils.createGymShortcut(context, nameState, gymLogoUri)
                             }
                         },
-                        modifier = Modifier.fillMaxWidth(),
-                        color = Color(0xFF081C24),
+                        modifier = Modifier.fillMaxWidth().border(1.dp, accentColor, containerShape),
+                        color = buttonBgColor,
                         shape = containerShape
                     ) {
                         Row(
@@ -476,6 +533,7 @@ fun AppearanceScreen(
                                 .fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            val contentColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
                             Icon(
                                 imageVector = Icons.Default.AppShortcut,
                                 contentDescription = null,
@@ -485,7 +543,7 @@ fun AppearanceScreen(
                             Spacer(Modifier.width(12.dp))
                             Text(
                                 text = if (appLanguage == "Español") "Instalar Icono en Inicio" else "Install Icon on Home",
-                                color = TextWhite,
+                                color = contentColor,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
                             )
@@ -545,12 +603,13 @@ fun AppearanceScreen(
                                             dataStoreManager.setAppearanceTourDismissed(true)
                                         }
                                     },
-                                    colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                                    colors = ButtonDefaults.buttonColors(containerColor = LocalButtonBackgroundColor.current),
                                     shape = containerShape,
                                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
-                                    modifier = Modifier.height(32.dp)
+                                    modifier = Modifier.height(32.dp).border(1.dp, accentColor, containerShape)
                                 ) {
-                                    Text("¡Entendido!", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                                    val contentColor = if (LocalButtonBackgroundColor.current.luminance() > 0.5f) Color.Black else Color.White
+                                    Text("¡Entendido!", color = contentColor, fontWeight = FontWeight.Black, fontSize = 12.sp)
                                 }
 
                                 OutlinedButton(
@@ -687,15 +746,20 @@ fun ExpandableAppearanceSection(
     isExpanded: Boolean,
     onToggle: () -> Unit,
     accentColor: Color,
+    buttonBgColor: Color = LocalButtonBackgroundColor.current,
     shape: Shape = RoundedCornerShape(16.dp),
     content: @Composable () -> Unit
 ) {
+    val contentColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
+    val iconTint = if (buttonBgColor.luminance() > 0.5f) Color.Black else accentColor
+    val arrowTint = if (buttonBgColor.luminance() > 0.5f) Color.Black.copy(alpha = 0.7f) else TextGray
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(Color(0xFF081C24))
-            .border(1.dp, if (isExpanded) accentColor else Color.Transparent, shape)
+            .background(buttonBgColor)
+            .border(if (isExpanded) 2.dp else 1.dp, if (isExpanded) accentColor else accentColor.copy(alpha = 0.4f), shape)
             .clickable { onToggle() }
             .padding(16.dp)
     ) {
@@ -704,16 +768,16 @@ fun ExpandableAppearanceSection(
             modifier = Modifier.fillMaxWidth()
         ) {
             if (icon != null) {
-                Icon(icon, null, tint = accentColor, modifier = Modifier.size(24.dp))
+                Icon(icon, null, tint = iconTint, modifier = Modifier.size(24.dp))
             } else if (painter != null) {
-                Icon(painter, null, tint = accentColor, modifier = Modifier.size(24.dp))
+                Icon(painter, null, tint = iconTint, modifier = Modifier.size(24.dp))
             }
             Spacer(Modifier.width(12.dp))
-            Text(title, color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f))
+            Text(title, color = contentColor, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f))
             Icon(
                 if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                 null,
-                tint = TextGray
+                tint = arrowTint
             )
         }
         AnimatedVisibility(
@@ -866,6 +930,7 @@ fun ColorSelectorGrid(
     grayScale: List<Color>,
     rainbowColors: List<Color>,
     accentColor: Color,
+    selectedColor: Color? = null,
     onReset: () -> Unit,
     onColorSelected: (Color) -> Unit
 ) {
@@ -877,31 +942,47 @@ fun ColorSelectorGrid(
                 Text(t["reset"] ?: "Factory", color = Color.Red, fontSize = 12.sp)
             }
         }
-        ColorRow(mainColors, onColorSelected)
+        ColorRow(mainColors, selectedColor, onColorSelected)
         Spacer(Modifier.height(12.dp))
         Text(t["gray_col"] ?: "B / W", color = accentColor, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-        ColorRow(grayScale, onColorSelected)
+        ColorRow(grayScale, selectedColor, onColorSelected)
         Spacer(Modifier.height(12.dp))
         Text(t["rainbow_col"] ?: "Rainbow", color = accentColor, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-        ColorRow(rainbowColors, onColorSelected)
+        ColorRow(rainbowColors, selectedColor, onColorSelected)
     }
 }
 
 @Composable
-fun ColorRow(colors: List<Color>, onColorSelected: (Color) -> Unit) {
+fun ColorRow(colors: List<Color>, selectedColor: Color?, onColorSelected: (Color) -> Unit) {
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(vertical = 8.dp)
     ) {
         items(colors) { color ->
+            val isSelected = selectedColor != null && (color.toArgb() == selectedColor.toArgb())
             Box(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
                     .background(color)
-                    .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape)
-                    .clickable { onColorSelected(color) }
-            )
+                    .border(
+                        width = if (isSelected) 3.dp else 1.dp,
+                        color = if (isSelected) Color.White else Color.White.copy(alpha = 0.3f),
+                        shape = CircleShape
+                    )
+                    .clickable { onColorSelected(color) },
+                contentAlignment = Alignment.Center
+            ) {
+                if (isSelected) {
+                    val iconColor = if (color.luminance() > 0.5f) Color.Black else Color.White
+                    Icon(
+                        Icons.Default.Check,
+                        contentDescription = "Selected",
+                        tint = iconColor,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
         }
     }
 }
@@ -913,6 +994,7 @@ fun RowScope.ButtonStyleOption(
     shape: Shape,
     selectedIndex: Int,
     accentColor: Color,
+    buttonBgColor: Color,
     onClick: () -> Unit
 ) {
     val isSelected = index == selectedIndex
@@ -925,12 +1007,17 @@ fun RowScope.ButtonStyleOption(
                 .fillMaxWidth()
                 .height(40.dp)
                 .clip(shape)
-                .background(if (isSelected) accentColor else Color(0xFF00151C))
-                .border(1.dp, if (isSelected) Color.Transparent else accentColor.copy(alpha = 0.3f), shape)
+                .background(buttonBgColor)
+                .border(
+                    width = if (isSelected) 2.5.dp else 1.dp,
+                    color = if (isSelected) accentColor else accentColor.copy(alpha = 0.3f),
+                    shape = shape
+                )
                 .clickable { onClick() },
             contentAlignment = Alignment.Center
         ) {
-            Text("Abc", color = if (isSelected) Color.Black else TextWhite, fontSize = 12.sp)
+            val contentColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
+            Text("Abc", color = contentColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.height(4.dp))
         Text(label, color = if (isSelected) accentColor else TextGray, fontSize = 10.sp)

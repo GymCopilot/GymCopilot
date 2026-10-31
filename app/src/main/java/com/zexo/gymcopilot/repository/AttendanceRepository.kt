@@ -35,7 +35,7 @@ class AttendanceRepository(
             val gymId = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
             val ssId = dataStoreManager.getGymSpreadsheetId().first()
             val request = ProfileSyncRequest(
-                action = "update_profile",
+                action = "update_professor",
                 professorId = professor.id,
                 firstName = professor.firstName,
                 lastName = professor.lastName,
@@ -47,12 +47,22 @@ class AttendanceRepository(
                 timestamp = System.currentTimeMillis(),
                 spreadsheetId = ssId
             )
+            val encProfId = java.net.URLEncoder.encode(professor.id, "UTF-8")
+
             val paramChar = if (gymUrl.contains("?")) "&" else "?"
             val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
-            val requestUrl = "$gymUrl${paramChar}action=update_profile&gymId=$gymId&professorId=${professor.id}&email=${java.net.URLEncoder.encode(professor.email, "UTF-8")}&firstName=${java.net.URLEncoder.encode(professor.firstName, "UTF-8")}&lastName=${java.net.URLEncoder.encode(professor.lastName, "UTF-8")}$ssParam"
+            val requestUrl = "$gymUrl${paramChar}action=update_professor&gymId=$gymId&professorId=$encProfId$ssParam"
+            
             try {
-                GymKtorApiClient.postData(requestUrl, request)
-                Result.success(Unit)
+                val responseText = GymKtorApiClient.postData(requestUrl, request)
+                if (responseText.isNotBlank()) {
+                    Result.success(Unit)
+                } else {
+                    val dynamicService = NetworkModule.getApiService(gymUrl)
+                    val response = dynamicService.postProfileSync(requestUrl, null, request)
+                    if (response.isSuccessful || response.code() == 302) Result.success(Unit)
+                    else Result.failure(Exception("Error syncing profile: ${response.code()}"))
+                }
             } catch (e: Exception) {
                 val dynamicService = NetworkModule.getApiService(gymUrl)
                 val response = dynamicService.postProfileSync(requestUrl, null, request)
@@ -517,6 +527,8 @@ class AttendanceRepository(
         country: String? = null,
         accentColor: Int? = null,
         backgroundColor: Int? = null,
+        buttonBackgroundColor: Int? = null,
+        bottomNavBackgroundColor: Int? = null,
         buttonStyle: Int? = null,
         broadcastMessage: String? = null,
         classInSession: Boolean? = null,
@@ -527,87 +539,85 @@ class AttendanceRepository(
             if (gymUrl.isBlank()) return Result.failure(Exception("URL no configurada"))
             
             val finalName = name ?: dataStoreManager.getGymName().first()
-            val storedLogo = dataStoreManager.getGymLogoUri().first()
-            val effectiveLogo = logoUri ?: storedLogo
-            val finalLogo = if (effectiveLogo != null && (effectiveLogo.startsWith("file://") || effectiveLogo.startsWith("content://"))) {
-                null
-            } else {
-                effectiveLogo
-            }
+            val finalLogo = logoUri ?: dataStoreManager.getGymLogoUri().first()
             val finalPhone = phone ?: dataStoreManager.getGymPhone().first()
             val finalAddress = address ?: dataStoreManager.getGymAddress().first()
             val finalCity = city ?: dataStoreManager.getGymCity().first()
             val finalZip = zip ?: dataStoreManager.getGymPostalCode().first()
             val finalCountry = country ?: dataStoreManager.getGymCountry().first()
             val finalColor = accentColor ?: dataStoreManager.getButtonColor().first()
-        val finalBgColor = backgroundColor ?: dataStoreManager.getBackgroundColor().first()
-        val finalStyle = buttonStyle ?: dataStoreManager.getButtonStyle().first()
-        val finalShowBorder = dataStoreManager.getShowLogoBorder().first()
-        val finalMessage = broadcastMessage ?: dataStoreManager.getBroadcastMessage().first()
-        val finalClass = classInSession ?: dataStoreManager.getClassInSessionManual().first()
-        val finalGymOpen = gymIsOpen ?: dataStoreManager.getGymIsOpen().first()
-        
-        val ssid1 = dataStoreManager.getGymWifiSsid().first()
-        val ssid2 = dataStoreManager.getGymWifiSsid2().first()
-        val ssid3 = dataStoreManager.getGymWifiSsid3().first()
+            val finalBgColor = backgroundColor ?: dataStoreManager.getBackgroundColor().first()
+            val finalButtonBgColor = buttonBackgroundColor ?: dataStoreManager.getButtonBackgroundColor().first()
+            val finalBottomNavBgColor = bottomNavBackgroundColor ?: dataStoreManager.getBottomNavBackgroundColor().first()
+            val finalStyle = buttonStyle ?: dataStoreManager.getButtonStyle().first()
+            val finalShowBorder = dataStoreManager.getShowLogoBorder().first()
+            val finalMessage = broadcastMessage ?: dataStoreManager.getBroadcastMessage().first()
+            val finalClass = classInSession ?: dataStoreManager.getClassInSessionManual().first()
+            val finalGymOpen = gymIsOpen ?: dataStoreManager.getGymIsOpen().first()
+            
+            val ssid1 = dataStoreManager.getGymWifiSsid().first()
+            val ssid2 = dataStoreManager.getGymWifiSsid2().first()
+            val ssid3 = dataStoreManager.getGymWifiSsid3().first()
 
-        val gymId = finalName.lowercase().replace(Regex("[^a-z0-9]"), "_")
-        val userEmail = dataStoreManager.getUserEmail().first()
-        val ssId = dataStoreManager.getGymSpreadsheetId().first()
+            val gymId = finalName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val userEmail = dataStoreManager.getUserEmail().first()
+            val ssId = dataStoreManager.getGymSpreadsheetId().first()
 
-        val request = GymSyncRequest(
-            action = "update_gym_info",
-            name = finalName,
-            logoUri = finalLogo,
-            phone = finalPhone,
-            address = finalAddress,
-            city = finalCity,
-            zip = finalZip,
-            country = finalCountry,
-            accentColor = finalColor,
-            backgroundColor = finalBgColor,
-            buttonStyle = finalStyle,
-            showLogoBorder = finalShowBorder,
-            broadcastMessage = finalMessage,
-            classInSession = finalClass,
-            gymIsOpen = finalGymOpen,
-            wifiSsid = ssid1,
-            wifiSsid2 = ssid2,
-            wifiSsid3 = ssid3,
-            gymId = gymId,
-            email = userEmail,
-            spreadsheetId = ssId
-        )
+            val request = GymSyncRequest(
+                action = "update_gym_info",
+                name = finalName,
+                logoUri = finalLogo,
+                phone = finalPhone,
+                address = finalAddress,
+                city = finalCity,
+                zip = finalZip,
+                country = finalCountry,
+                accentColor = finalColor,
+                backgroundColor = finalBgColor,
+                buttonBackgroundColor = finalButtonBgColor,
+                bottomNavBackgroundColor = finalBottomNavBgColor,
+                buttonStyle = finalStyle,
+                showLogoBorder = finalShowBorder,
+                broadcastMessage = finalMessage,
+                classInSession = finalClass,
+                gymIsOpen = finalGymOpen,
+                wifiSsid = ssid1,
+                wifiSsid2 = ssid2,
+                wifiSsid3 = ssid3,
+                gymId = gymId,
+                email = userEmail,
+                spreadsheetId = ssId
+            )
 
-        val encName = java.net.URLEncoder.encode(finalName, "UTF-8")
-        val encPhone = java.net.URLEncoder.encode(finalPhone, "UTF-8")
-        val encAddress = java.net.URLEncoder.encode(finalAddress, "UTF-8")
-        val encCity = java.net.URLEncoder.encode(finalCity, "UTF-8")
-        val encZip = java.net.URLEncoder.encode(finalZip, "UTF-8")
-        val encCountry = java.net.URLEncoder.encode(finalCountry, "UTF-8")
-        val encMsg = java.net.URLEncoder.encode(finalMessage, "UTF-8")
-        val encEmail = java.net.URLEncoder.encode(userEmail, "UTF-8")
+            val encName = java.net.URLEncoder.encode(finalName, "UTF-8")
+            val encPhone = java.net.URLEncoder.encode(finalPhone, "UTF-8")
+            val encAddress = java.net.URLEncoder.encode(finalAddress, "UTF-8")
+            val encCity = java.net.URLEncoder.encode(finalCity, "UTF-8")
+            val encZip = java.net.URLEncoder.encode(finalZip, "UTF-8")
+            val encCountry = java.net.URLEncoder.encode(finalCountry, "UTF-8")
+            val encMsg = java.net.URLEncoder.encode(finalMessage, "UTF-8")
+            val encEmail = java.net.URLEncoder.encode(userEmail, "UTF-8")
 
-        val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
-        val paramChar = if (gymUrl.contains("?")) "&" else "?"
-        val requestUrl = "$gymUrl${paramChar}action=update_gym_info&gymId=$gymId&email=$encEmail&name=$encName&phone=$encPhone&address=$encAddress&city=$encCity&zip=$encZip&country=$encCountry&accentColor=$finalColor&backgroundColor=$finalBgColor&buttonStyle=$finalStyle&showLogoBorder=$finalShowBorder&classInSession=$finalClass&broadcastMessage=$encMsg&gymIsOpen=$finalGymOpen$ssParam"
+            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+            val paramChar = if (gymUrl.contains("?")) "&" else "?"
+            val requestUrl = "$gymUrl${paramChar}action=update_gym_info&gymId=$gymId&email=$encEmail&name=$encName&phone=$encPhone&address=$encAddress&city=$encCity&zip=$encZip&country=$encCountry&accentColor=$finalColor&backgroundColor=$finalBgColor&buttonBackgroundColor=$finalButtonBgColor&bottomNavBackgroundColor=$finalBottomNavBgColor&buttonStyle=$finalStyle&showLogoBorder=$finalShowBorder&classInSession=$finalClass&broadcastMessage=$encMsg&gymIsOpen=$finalGymOpen$ssParam"
 
-        try {
-            val responseText = GymKtorApiClient.postData(requestUrl, request)
-            if (responseText.isNotBlank()) {
-                Result.success(Unit)
-            } else {
+            try {
+                val responseText = GymKtorApiClient.postData(requestUrl, request)
+                if (responseText.isNotBlank()) {
+                    Result.success(Unit)
+                } else {
+                    val dynamicService = NetworkModule.getApiService(gymUrl)
+                    val response = dynamicService.postGymSync(requestUrl, null, request)
+                    if (response.isSuccessful || response.code() == 302) Result.success(Unit)
+                    else Result.failure(Exception("Error syncing gym info: ${response.code()}"))
+                }
+            } catch (eKtor: Exception) {
                 val dynamicService = NetworkModule.getApiService(gymUrl)
                 val response = dynamicService.postGymSync(requestUrl, null, request)
                 if (response.isSuccessful || response.code() == 302) Result.success(Unit)
                 else Result.failure(Exception("Error syncing gym info: ${response.code()}"))
             }
-        } catch (eKtor: Exception) {
-            val dynamicService = NetworkModule.getApiService(gymUrl)
-            val response = dynamicService.postGymSync(requestUrl, null, request)
-            if (response.isSuccessful || response.code() == 302) Result.success(Unit)
-            else Result.failure(Exception("Error syncing gym info: ${response.code()}"))
-        }
         } catch (e: Exception) { Result.failure(e) }
     }
 
@@ -672,6 +682,8 @@ class AttendanceRepository(
             val remoteSsid1 = if (configRow!!.size() > 15) configRow!![15].asString else ""
             val remoteSsid2 = if (configRow!!.size() > 16) configRow!![16].asString else ""
             val remoteSsid3 = if (configRow!!.size() > 17) configRow!![17].asString else ""
+            val buttonBgColorStr = if (configRow!!.size() > 18) configRow!![18].asString else ""
+            val bottomNavBgColorStr = if (configRow!!.size() > 19) configRow!![19].asString else ""
 
             Log.d("ConfigSync", "Procesando config: color=$colorStr, bgColor=$bgColorStr, style=$styleStr, border=$showBorderStr, ssids=[$remoteSsid1, $remoteSsid2, $remoteSsid3]")
 
@@ -737,6 +749,16 @@ class AttendanceRepository(
             val styleInt = styleStr.toIntOrNull()
             if (styleInt != null) {
                 dataStoreManager.setButtonStyle(styleInt)
+            }
+
+            val buttonBgColorInt = buttonBgColorStr.toIntOrNull()
+            if (buttonBgColorInt != null) {
+                dataStoreManager.setButtonBackgroundColor(buttonBgColorInt)
+            }
+
+            val bottomNavBgColorInt = bottomNavBgColorStr.toIntOrNull()
+            if (bottomNavBgColorInt != null) {
+                dataStoreManager.setBottomNavBackgroundColor(bottomNavBgColorInt)
             }
         }
     }

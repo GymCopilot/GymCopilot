@@ -27,6 +27,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.luminance
+import com.zexo.gymcopilot.ui.theme.LocalButtonBackgroundColor
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.painter.Painter
@@ -426,7 +428,15 @@ fun GuideSectionHeader(title: String, subtitle: String, accentColor: Color) {
 
 @Composable
 fun GuideItem(data: GuideItemData, accentColor: Color, shape: androidx.compose.ui.graphics.Shape) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = shape, colors = CardDefaults.cardColors(containerColor = Color(0xFF081C24).copy(alpha = 0.4f))) {
+    val buttonBgColor = LocalButtonBackgroundColor.current
+    val titleColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
+    val descColor = if (buttonBgColor.luminance() > 0.5f) Color.DarkGray else TextGray
+
+    Card(
+        modifier = Modifier.fillMaxWidth().border(1.dp, accentColor.copy(alpha = 0.3f), shape),
+        shape = shape,
+        colors = CardDefaults.cardColors(containerColor = buttonBgColor)
+    ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
             Box(modifier = Modifier.size(42.dp).background(Color.White.copy(alpha = 0.05f), CircleShape).border(1.dp, (data.iconColor ?: accentColor).copy(alpha = 0.3f), CircleShape), contentAlignment = Alignment.Center) {
                 when (data.icon) {
@@ -436,9 +446,9 @@ fun GuideItem(data: GuideItemData, accentColor: Color, shape: androidx.compose.u
             }
             Spacer(Modifier.width(16.dp))
             Column {
-                Text(text = data.title, color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(text = data.title, color = titleColor, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 Spacer(Modifier.height(4.dp))
-                Text(text = data.description, color = TextGray, fontSize = 12.sp, lineHeight = 16.sp)
+                Text(text = data.description, color = descColor, fontSize = 12.sp, lineHeight = 16.sp)
             }
         }
     }
@@ -460,7 +470,11 @@ fun AssistantConfigCard(
     onGuideClick: (() -> Unit)? = null,
     guideButtonText: String = ""
 ) {
-    Card(modifier = modifier.fillMaxWidth().border(1.dp, accentColor.copy(alpha = 0.3f), shape), shape = shape, colors = CardDefaults.cardColors(containerColor = Color(0xFF081C24).copy(alpha = 0.6f))) {
+    val buttonBgColor = LocalButtonBackgroundColor.current
+    val titleColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
+    val descColor = if (buttonBgColor.luminance() > 0.5f) Color.DarkGray else TextGray
+
+    Card(modifier = modifier.fillMaxWidth().border(1.dp, accentColor.copy(alpha = 0.3f), shape), shape = shape, colors = CardDefaults.cardColors(containerColor = buttonBgColor)) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(modifier = Modifier.size(48.dp).background(Color.LightGray, CircleShape), contentAlignment = Alignment.Center) { 
@@ -468,8 +482,8 @@ fun AssistantConfigCard(
                 }
                 Spacer(Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(title, color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Text(desc, color = TextGray, fontSize = 12.sp)
+                    Text(title, color = titleColor, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Text(desc, color = descColor, fontSize = 12.sp)
                 }
             }
             Spacer(Modifier.height(20.dp))

@@ -66,7 +66,7 @@ fun SubscriptionPlansScreen(
         attendanceRepository?.syncSubscriptionPlansFromServer()
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(GymBackgroundGradient)) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             containerColor = Color.Transparent,
             topBar = {
@@ -247,9 +247,10 @@ fun AddPlanDialog(
                         )
                     }
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = accentColor)
+                colors = ButtonDefaults.buttonColors(containerColor = LocalButtonBackgroundColor.current),
+                modifier = Modifier.border(1.dp, accentColor, RoundedCornerShape(12.dp))
             ) {
-                val contentColor = if (accentColor.luminance() > 0.5f) Color.Black else Color.White
+                val contentColor = if (LocalButtonBackgroundColor.current.luminance() > 0.5f) Color.Black else Color.White
                 Text("CREAR", color = contentColor, fontWeight = FontWeight.Bold)
             }
         },

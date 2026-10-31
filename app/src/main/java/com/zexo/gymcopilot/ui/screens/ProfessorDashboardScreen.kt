@@ -421,7 +421,7 @@ fun ProfessorDashboardScreen(
                         Card(
                             modifier = Modifier.weight(1f).fillMaxHeight().border(1.5.dp, if (classInSession) Color(0xFF2196F3) else accentColor, containerShape),
                             shape = containerShape,
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFF081C24)),
+                            colors = CardDefaults.cardColors(containerColor = LocalButtonBackgroundColor.current),
                             onClick = { 
                                 scope.launch { 
                                     val newState = !classInSession
@@ -575,10 +575,14 @@ fun ProfessorActivityRowItem(member: Member, shape: Shape, accentColor: Color) {
 
 @Composable
 fun ProfessorStatBox(label: String, value: String, icon: ImageVector, color: Color, accentColor: Color, shape: Shape, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val buttonBgColor = LocalButtonBackgroundColor.current
+    val valColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
+    val lblColor = if (buttonBgColor.luminance() > 0.5f) Color.DarkGray else TextGray
+
     Card(
         modifier = modifier.border(1.5.dp, accentColor, shape).clickable { onClick() },
         shape = shape,
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF081C24))
+        colors = CardDefaults.cardColors(containerColor = buttonBgColor)
     ) {
         Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Box(
@@ -588,23 +592,27 @@ fun ProfessorStatBox(label: String, value: String, icon: ImageVector, color: Col
                 Icon(icon, null, tint = color, modifier = Modifier.size(34.dp))
             }
             Spacer(Modifier.height(4.dp))
-            Text(value, color = TextWhite, fontSize = 16.sp, fontWeight = FontWeight.Black)
-            Text(label, color = TextGray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Text(value, color = valColor, fontSize = 16.sp, fontWeight = FontWeight.Black)
+            Text(label, color = lblColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
 
 @Composable
 fun ProfessorMetricCard(label: String, value: String, icon: ImageVector, color: Color, shape: Shape, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val buttonBgColor = LocalButtonBackgroundColor.current
+    val valColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
+    val lblColor = if (buttonBgColor.luminance() > 0.5f) Color.DarkGray else TextGray
+
     Card(
         modifier = modifier.border(1.5.dp, color, shape).clickable { onClick() },
         shape = shape,
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF081C24))
+        colors = CardDefaults.cardColors(containerColor = buttonBgColor)
     ) {
         Row(modifier = Modifier.padding(24.dp).fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(label, color = TextGray, fontSize = 12.sp)
-                Text(value, color = TextWhite, fontSize = 28.sp, fontWeight = FontWeight.Black)
+                Text(label, color = lblColor, fontSize = 12.sp)
+                Text(value, color = valColor, fontSize = 28.sp, fontWeight = FontWeight.Black)
             }
             Box(
                 modifier = Modifier.size(64.dp).background(color.copy(alpha = 0.15f), CircleShape),
@@ -619,9 +627,12 @@ fun ProfessorMetricCard(label: String, value: String, icon: ImageVector, color: 
 @Composable
 fun ProfessorActionCard(text: String, iconPainter: Painter, modifier: Modifier, accentColor: Color, iconColor: Color? = null, shape: Shape, onClick: () -> Unit = {}) {
     val finalIconColor = iconColor ?: accentColor
+    val buttonBgColor = LocalButtonBackgroundColor.current
+    val textColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
+
     Surface(
         modifier = modifier.height(120.dp).clip(shape).clickable { onClick() }.border(1.5.dp, accentColor, shape),
-        color = Color(0xFF081C24)
+        color = buttonBgColor
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize()) {
             Box(
@@ -631,7 +642,7 @@ fun ProfessorActionCard(text: String, iconPainter: Painter, modifier: Modifier, 
                 Icon(iconPainter, null, tint = finalIconColor, modifier = Modifier.size(38.dp))
             }
             Spacer(Modifier.height(8.dp))
-            Text(text, color = TextWhite, fontSize = 11.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 4.dp))
+            Text(text, color = textColor, fontSize = 11.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 4.dp))
         }
     }
 }

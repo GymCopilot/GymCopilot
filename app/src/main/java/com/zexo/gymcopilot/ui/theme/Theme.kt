@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -35,6 +36,9 @@ val GymBackgroundGradient = Brush.verticalGradient(
     0.25f to DarkBackground,
     1.0f to DarkBackground
 )
+
+val LocalButtonBackgroundColor = compositionLocalOf { Color(0xFF00222E) }
+val LocalBottomNavBackgroundColor = compositionLocalOf { Color(0xFF00151C) }
 
 fun getButtonStyleShape(style: Int): Shape {
     return when (style) {

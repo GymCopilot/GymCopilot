@@ -171,6 +171,8 @@ function processAction(action, data, e) {
     var newSsid1 = (data.wifiSsid !== undefined && data.wifiSsid !== null) ? data.wifiSsid : (existingRow[15] || "");
     var newSsid2 = (data.wifiSsid2 !== undefined && data.wifiSsid2 !== null) ? data.wifiSsid2 : (existingRow[16] || "");
     var newSsid3 = (data.wifiSsid3 !== undefined && data.wifiSsid3 !== null) ? data.wifiSsid3 : (existingRow[17] || "");
+    var newButtonBgColor = (data.buttonBackgroundColor !== undefined && data.buttonBackgroundColor !== null && data.buttonBackgroundColor !== "") ? data.buttonBackgroundColor : (existingRow[18] !== undefined ? existingRow[18] : "");
+    var newBottomNavBgColor = (data.bottomNavBackgroundColor !== undefined && data.bottomNavBackgroundColor !== null && data.bottomNavBackgroundColor !== "") ? data.bottomNavBackgroundColor : (existingRow[19] !== undefined ? existingRow[19] : "");
 
     updateRow(sheet, "GYM_CONFIG", 0, [
       "GYM_CONFIG",
@@ -191,6 +193,8 @@ function processAction(action, data, e) {
       newSsid1,
       newSsid2,
       newSsid3,
+      newButtonBgColor,
+      newBottomNavBgColor,
       new Date()
     ]);
     return createJsonResponse({ "status": "success" });
@@ -286,19 +290,39 @@ function processAction(action, data, e) {
     return createJsonResponse({ "status": "success" });
   }
 
-  if (action === "update_profile") {
+  if (action === "update_professor" || action === "update_profile") {
     var sheet = getOrCreateSheet(ss, "Profesores");
     fixProfessorSheetStructure(sheet);
-    updateRow(sheet, data.professorId, 0, [
-      data.professorId,
-      data.firstName,
-      data.lastName,
-      data.email,
-      data.specialty,
-      data.profileColor,
+    var searchEmail = String(data.email || "").trim().toLowerCase();
+    var searchId = String(data.professorId || data.id || "").trim().toLowerCase();
+
+    var values = sheet.getDataRange().getValues();
+    var rowIndex = -1;
+    for (var i = 1; i < values.length; i++) {
+      var rowId = String(values[i][0] || "").trim().toLowerCase();
+      var rowEmail = String(values[i][3] || "").trim().toLowerCase();
+      if ((searchId !== "" && rowId === searchId) || (searchEmail !== "" && rowEmail === searchEmail)) {
+        rowIndex = i + 1;
+        break;
+      }
+    }
+
+    var rowData = [
+      data.professorId || data.id || searchId || ("prof_" + Date.now()),
+      data.firstName !== undefined ? data.firstName : "",
+      data.lastName !== undefined ? data.lastName : "",
+      data.email !== undefined ? data.email : "",
+      data.specialty !== undefined ? data.specialty : "",
+      data.profileColor !== undefined ? data.profileColor : "",
       data.photoUri || "",
       new Date()
-    ]);
+    ];
+
+    if (rowIndex !== -1) {
+      sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
+    } else {
+      sheet.appendRow(rowData);
+    }
     return createJsonResponse({ "status": "success" });
   }
 
@@ -649,6 +673,8 @@ function executeCreateGym(data) {
       "",
       "",
       "",
+      "",
+      "",
       new Date()
     ]);
   } catch (eConfig) {}
@@ -832,7 +858,7 @@ function getOrCreateSheet(ss, name) {
       "Chats":      ["Gimnasio", "Remitente", "Destinatario", "Mensaje", "Timestamp", "Fecha_Servidor"],
       "Rutinas":    ["Fecha", "Email_Alumno", "ID_Profesor", "Estado", "Rutina"],
       "Tienda":     ["ID", "Nombre", "Precio", "Categoría", "Imagen", "Descripción", "Contacto_Metodo", "Contacto_Tel", "Banner_Tipo", "Banner_Texto", "Actualizado"],
-      "Configuracion": ["ID", "Nombre", "Logo", "Telefono", "Direccion", "Ciudad", "CP", "Pais", "Color", "BgColor", "ButtonStyle", "MostrarBordeLogo", "ClaseActiva", "Mensaje", "GimnasioAbierto", "WifiSSID1", "WifiSSID2", "WifiSSID3", "Actualizado"],
+      "Configuracion": ["ID", "Nombre", "Logo", "Telefono", "Direccion", "Ciudad", "CP", "Pais", "Color", "BgColor", "ButtonStyle", "MostrarBordeLogo", "ClaseActiva", "Mensaje", "GimnasioAbierto", "WifiSSID1", "WifiSSID2", "WifiSSID3", "ButtonBgColor", "BottomNavBgColor", "Actualizado"],
       "Planes":     ["ID", "Nombre", "Precio", "Duracion_Dias", "Descripcion", "Actualizado"]
     };
     if (headers[name]) sheet.appendRow(headers[name]);
@@ -899,16 +925,8 @@ function fixRoutineSheetStructure(sheet) {
 }
 
 function fixConfigSheetStructure(sheet) {
-  var expectedHeaders = ["ID", "Nombre", "Logo", "Telefono", "Direccion", "Ciudad", "CP", "Pais", "Color", "BgColor", "ButtonStyle", "MostrarBordeLogo", "ClaseActiva", "Mensaje", "GimnasioAbierto", "WifiSSID1", "WifiSSID2", "WifiSSID3", "Actualizado"];
-  for (var i = 0; i < expectedHeaders.length; i++) {
-    var cell = sheet.getRange(1, i + 1);
-    var headerName = cell.getValue();
-    if (String(headerName).toLowerCase().trim() !== expectedHeaders[i].toLowerCase().trim()) {
-      sheet.insertColumnBefore(i + 1);
-      sheet.getRange(1, i + 1).setValue(expectedHeaders[i]);
-      SpreadsheetApp.flush();
-    }
-  }
+  var expectedHeaders = ["ID", "Nombre", "Logo", "Telefono", "Direccion", "Ciudad", "CP", "Pais", "Color", "BgColor", "ButtonStyle", "MostrarBordeLogo", "ClaseActiva", "Mensaje", "GimnasioAbierto", "WifiSSID1", "WifiSSID2", "WifiSSID3", "ButtonBgColor", "BottomNavBgColor", "Actualizado"];
+  sheet.getRange(1, 1, 1, expectedHeaders.length).setValues([expectedHeaders]);
   var values = sheet.getDataRange().getValues();
   if (values.length > 1) {
     for (var j = values.length - 1; j >= 1; j--) {

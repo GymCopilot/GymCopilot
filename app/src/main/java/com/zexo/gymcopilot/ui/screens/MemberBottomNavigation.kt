@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.zexo.gymcopilot.ui.theme.LocalBottomNavBackgroundColor
 import com.zexo.gymcopilot.ui.theme.TextGray
 
 @Composable
@@ -35,7 +36,7 @@ fun MemberBottomNavigation(
 ) {
     NavigationBar(
         modifier = Modifier.height(56.dp),
-        containerColor = Color(0xFF00151C),
+        containerColor = LocalBottomNavBackgroundColor.current,
         contentColor = Color.White,
         tonalElevation = 8.dp,
         windowInsets = WindowInsets(0, 0, 0, 0)
@@ -78,7 +79,7 @@ fun MemberBottomNavigation(
                                     .size(10.dp)
                                     .offset(x = 1.dp, y = (-1).dp)
                                     .background(Color.Red, CircleShape)
-                                    .border(1.5.dp, Color(0xFF00151C), CircleShape)
+                                    .border(1.5.dp, LocalBottomNavBackgroundColor.current, CircleShape)
                             )
                         }
                     }

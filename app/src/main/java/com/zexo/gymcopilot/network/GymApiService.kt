@@ -125,6 +125,8 @@ data class GymSyncRequest(
     val country: String? = null,
     val accentColor: Int? = null,
     val backgroundColor: Int? = null,
+    val buttonBackgroundColor: Int? = null,
+    val bottomNavBackgroundColor: Int? = null,
     val buttonStyle: Int? = null,
     val showLogoBorder: Boolean? = null,
     val broadcastMessage: String? = null,

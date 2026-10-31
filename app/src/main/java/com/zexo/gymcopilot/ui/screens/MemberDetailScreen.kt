@@ -42,6 +42,7 @@ import com.zexo.gymcopilot.Member
 import com.zexo.gymcopilot.PaymentRecord
 import com.zexo.gymcopilot.R
 import com.zexo.gymcopilot.network.NetworkModule
+import com.zexo.gymcopilot.ui.theme.LocalButtonBackgroundColor
 import com.zexo.gymcopilot.ui.theme.PrimaryTurquoise
 import com.zexo.gymcopilot.ui.theme.TextGray
 import com.zexo.gymcopilot.ui.theme.TextWhite
@@ -876,9 +877,10 @@ fun MemberDetailScreen(
                             Toast.makeText(context, successMsg, Toast.LENGTH_SHORT).show()
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = accentColor)
+                    colors = ButtonDefaults.buttonColors(containerColor = LocalButtonBackgroundColor.current),
+                    modifier = Modifier.border(1.dp, accentColor, RoundedCornerShape(14.dp))
                 ) {
-                    val contentColor = if (accentColor.luminance() > 0.5f) Color.Black else Color.White
+                    val contentColor = if (LocalButtonBackgroundColor.current.luminance() > 0.5f) Color.Black else Color.White
                     Text("REGISTRAR", color = contentColor, fontWeight = FontWeight.Bold)
                 }
             },
@@ -896,9 +898,11 @@ fun MemberDetailScreen(
             confirmButton = {
                 Button(
                     onClick = { showAlreadyPaidDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = accentColor)
+                    colors = ButtonDefaults.buttonColors(containerColor = LocalButtonBackgroundColor.current),
+                    modifier = Modifier.border(1.dp, accentColor, RoundedCornerShape(14.dp))
                 ) {
-                    Text("ENTENDIDO", fontWeight = FontWeight.Bold)
+                    val contentColor = if (LocalButtonBackgroundColor.current.luminance() > 0.5f) Color.Black else Color.White
+                    Text("ENTENDIDO", color = contentColor, fontWeight = FontWeight.Bold)
                 }
             },
             title = { Text("Pago Detectado", color = TextWhite, fontWeight = FontWeight.Bold) },
@@ -913,9 +917,11 @@ fun MemberDetailScreen(
             confirmButton = {
                 Button(
                     onClick = { showNoPlanWarning = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = accentColor)
+                    colors = ButtonDefaults.buttonColors(containerColor = LocalButtonBackgroundColor.current),
+                    modifier = Modifier.border(1.dp, accentColor, RoundedCornerShape(14.dp))
                 ) {
-                    Text("ENTENDIDO", fontWeight = FontWeight.Bold)
+                    val contentColor = if (LocalButtonBackgroundColor.current.luminance() > 0.5f) Color.Black else Color.White
+                    Text("ENTENDIDO", color = contentColor, fontWeight = FontWeight.Bold)
                 }
             },
             title = { Text("Plan no seleccionado", color = TextWhite, fontWeight = FontWeight.Bold) },
@@ -962,11 +968,11 @@ fun MemberDetailScreen(
                     
                     Button(
                         onClick = { showQrDialog = false },
-                        colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                        colors = ButtonDefaults.buttonColors(containerColor = LocalButtonBackgroundColor.current),
                         shape = containerShape,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().border(1.dp, accentColor, containerShape)
                     ) {
-                        val contentColor = if (accentColor.luminance() > 0.5f) Color.Black else Color.White
+                        val contentColor = if (LocalButtonBackgroundColor.current.luminance() > 0.5f) Color.Black else Color.White
                         Text(t["close"] ?: "", color = contentColor, fontWeight = FontWeight.Bold)
                     }
                 }

@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -211,9 +212,7 @@ fun RoutineDashboardScreen(
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(GymBackgroundGradient)
+        modifier = Modifier.fillMaxSize()
     ) {
         Scaffold(
             containerColor = Color.Transparent,
@@ -538,8 +537,10 @@ fun CategoryItem(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    val backgroundColor = if (isSelected) accentColor.copy(alpha = 0.2f) else Color(0xFF1A242D)
-    val borderColor = if (isSelected) accentColor else Color.Transparent
+    val buttonBgColor = LocalButtonBackgroundColor.current
+    val backgroundColor = if (isSelected) accentColor.copy(alpha = 0.25f) else buttonBgColor
+    val borderColor = if (isSelected) accentColor else accentColor.copy(alpha = 0.4f)
+    val textColor = if (isSelected) accentColor else (if (buttonBgColor.luminance() > 0.5f) Color.Black else Color.LightGray)
 
     Surface(
         onClick = onClick,
@@ -562,13 +563,13 @@ fun CategoryItem(
             Icon(
                 painter = iconPainter,
                 contentDescription = label,
-                tint = if (isSelected) accentColor else Color.White,
+                tint = if (isSelected) accentColor else (if (buttonBgColor.luminance() > 0.5f) Color.Black else Color.White),
                 modifier = Modifier.size(42.dp)
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = label,
-                color = if (isSelected) accentColor else Color.LightGray,
+                color = textColor,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1
@@ -680,10 +681,12 @@ fun AssignMemberDialog(
                     Spacer(Modifier.width(16.dp))
                     Button(
                         onClick = { onAssign(selectedEmails) },
-                        colors = ButtonDefaults.buttonColors(containerColor = accentColor),
-                        shape = RoundedCornerShape(8.dp)
+                        colors = ButtonDefaults.buttonColors(containerColor = LocalButtonBackgroundColor.current),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.border(1.dp, accentColor, RoundedCornerShape(8.dp))
                     ) {
-                        Text("ASIGNAR", color = Color.Black, fontWeight = FontWeight.Bold)
+                        val contentColor = if (LocalButtonBackgroundColor.current.luminance() > 0.5f) Color.Black else Color.White
+                        Text("ASIGNAR", color = contentColor, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -967,12 +970,16 @@ fun QuickActionItem(
     onClick: () -> Unit = {},
     icon: @Composable () -> Unit
 ) {
+    val buttonBgColor = LocalButtonBackgroundColor.current
+    val textColor = if (isSelected) accentColor
+                    else (if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite)
+
     Column(
         modifier = modifier
             .height(100.dp)
             .clip(shape)
-            .background(if (isSelected) accentColor.copy(alpha = 0.1f) else Color(0xFF00222E))
-            .border(1.2.dp, if (isSelected) accentColor else accentColor.copy(alpha = 0.2f), shape)
+            .background(if (isSelected) accentColor.copy(alpha = 0.25f) else buttonBgColor)
+            .border(1.2.dp, if (isSelected) accentColor else accentColor.copy(alpha = 0.4f), shape)
             .clickable { onClick() }
             .padding(vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -982,7 +989,7 @@ fun QuickActionItem(
         Spacer(Modifier.height(8.dp))
         Text(
             text = label,
-            color = if (isSelected) accentColor else TextWhite,
+            color = textColor,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,

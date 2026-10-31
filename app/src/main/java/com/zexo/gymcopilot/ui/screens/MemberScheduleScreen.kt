@@ -20,6 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.luminance
+import com.zexo.gymcopilot.ui.theme.LocalButtonBackgroundColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -130,7 +132,7 @@ fun MemberScheduleScreen(
                 onChatClick = onChatClick, accentColor = accentColor
             )
         },
-        containerColor = Color(0xFF081C24)
+        containerColor = Color.Transparent
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
             assignedProfessor?.let {
@@ -222,15 +224,18 @@ fun WeekViewReadOnly(
 
                 val dayName = java.text.SimpleDateFormat("EEE", locale).format(date).uppercase()
 
+                val buttonBgColor = LocalButtonBackgroundColor.current
+                val textNormalColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
+
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .height(56.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(if (isSelected) accentColor.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.05f))
+                        .background(if (isSelected) accentColor.copy(alpha = 0.25f) else buttonBgColor)
                         .border(
                             width = if (isSelected) 2.dp else 1.dp,
-                            color = if (isSelected) accentColor else Color.White.copy(alpha = 0.1f),
+                            color = if (isSelected) accentColor else accentColor.copy(alpha = 0.4f),
                             shape = RoundedCornerShape(12.dp)
                         )
                         .clickable { onDaySelected(date) },
@@ -241,7 +246,7 @@ fun WeekViewReadOnly(
                         color = when {
                             isSelected -> accentColor
                             isWeekend -> Color(0xFFE53935)
-                            else -> TextWhite
+                            else -> textNormalColor
                         },
                         fontSize = 11.sp,
                         fontWeight = FontWeight.ExtraBold

@@ -52,7 +52,7 @@ fun GymConfigScreen(
 
     val title = if (currentLanguage == "Español") "Idioma" else "Language"
 
-    Box(modifier = Modifier.fillMaxSize().background(GymBackgroundGradient)) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             topBar = {
                 TopAppBar(

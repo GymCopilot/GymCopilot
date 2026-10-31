@@ -11,6 +11,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -39,6 +40,7 @@ import androidx.core.content.ContextCompat
 import com.zexo.gymcopilot.DataStoreManager
 import com.zexo.gymcopilot.R
 import com.zexo.gymcopilot.ui.theme.GymBackgroundGradient
+import com.zexo.gymcopilot.ui.theme.LocalButtonBackgroundColor
 import com.zexo.gymcopilot.ui.theme.PrimaryTurquoise
 import com.zexo.gymcopilot.ui.theme.TextWhite
 import com.zexo.gymcopilot.ui.theme.TextGray
@@ -131,7 +133,7 @@ fun NetworkConfigScreen(
 
     val title = if (currentLanguage == "Español") "Configuración de Red" else "Network Config"
 
-    Box(modifier = Modifier.fillMaxSize().background(GymBackgroundGradient)) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -320,9 +322,11 @@ fun NetworkConfigScreen(
                                         Toast.makeText(context, "Código incorrecto", Toast.LENGTH_SHORT).show()
                                     }
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = accentColor)
+                                colors = ButtonDefaults.buttonColors(containerColor = LocalButtonBackgroundColor.current),
+                                modifier = Modifier.border(1.dp, accentColor, RoundedCornerShape(14.dp))
                             ) {
-                                Text("VALIDAR", color = if (accentColor.luminance() > 0.5f) Color.Black else Color.White, fontWeight = FontWeight.Bold)
+                                val contentColor = if (LocalButtonBackgroundColor.current.luminance() > 0.5f) Color.Black else Color.White
+                                Text("VALIDAR", color = contentColor, fontWeight = FontWeight.Bold)
                             }
                         },
                         dismissButton = {

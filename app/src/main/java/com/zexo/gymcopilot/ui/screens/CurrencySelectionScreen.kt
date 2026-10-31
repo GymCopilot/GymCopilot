@@ -52,7 +52,7 @@ fun CurrencySelectionScreen(
 
     val title = if (appLanguage == "Español") "Moneda" else "Currency"
 
-    Box(modifier = Modifier.fillMaxSize().background(GymBackgroundGradient)) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             topBar = {
                 TopAppBar(

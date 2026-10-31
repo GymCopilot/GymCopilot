@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.DataStoreManager
 import com.zexo.gymcopilot.Member
 import com.zexo.gymcopilot.ScheduleEntry
+import com.zexo.gymcopilot.ui.theme.LocalButtonBackgroundColor
 import com.zexo.gymcopilot.ui.theme.PrimaryTurquoise
 import com.zexo.gymcopilot.ui.theme.TextGray
 import com.zexo.gymcopilot.ui.theme.TextWhite
@@ -579,9 +581,10 @@ fun ClassDialog(
             Button(
                 onClick = { if (name.isNotBlank() && selectedDays.isNotEmpty()) onConfirm(startTime, endTime, name, selectedDays.toList()) },
                 enabled = name.isNotBlank() && selectedDays.isNotEmpty(),
-                colors = ButtonDefaults.buttonColors(containerColor = accentColor)
+                colors = ButtonDefaults.buttonColors(containerColor = LocalButtonBackgroundColor.current),
+                modifier = Modifier.border(1.dp, accentColor, RoundedCornerShape(14.dp))
             ) {
-                val contentColor = if (accentColor.luminance() > 0.5f) Color.Black else Color.White
+                val contentColor = if (LocalButtonBackgroundColor.current.luminance() > 0.5f) Color.Black else Color.White
                 Text("ACEPTAR", color = contentColor, fontWeight = FontWeight.Bold)
             }
         },

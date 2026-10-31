@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -555,9 +556,7 @@ fun RoutineCreationScreen(
         )
     }
 
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .background(GymBackgroundGradient)) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             containerColor = Color.Transparent,
             topBar = {
@@ -976,18 +975,19 @@ fun LazyItemScope.ExerciseCard(
                                 }
                             },
                             enabled = canConfirm,
-                            modifier = Modifier.fillMaxSize(),
-                            colors = ButtonDefaults.buttonColors(containerColor = accentColor, contentColor = Color.Black),
+                            modifier = Modifier.fillMaxSize().border(1.dp, accentColor, RoundedCornerShape(10.dp)),
+                            colors = ButtonDefaults.buttonColors(containerColor = LocalButtonBackgroundColor.current),
                             shape = RoundedCornerShape(10.dp)
                         ) {
+                            val iconColor = if (LocalButtonBackgroundColor.current.luminance() > 0.5f) Color.Black else Color.White
                             Image(
                                 painter = painterResource(id = R.drawable.checked),
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp),
-                                colorFilter = ColorFilter.tint(Color.Black)
+                                colorFilter = ColorFilter.tint(iconColor)
                             )
                             Spacer(Modifier.width(4.dp))
-                            Text("Listo", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                            Text("Listo", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = iconColor)
                         }
                     } else {
                         Row(modifier = Modifier.fillMaxSize()) {
@@ -1209,13 +1209,17 @@ fun ChoiceChip(
     modifier: Modifier = Modifier,
     iconRes: Int? = null
 ) {
+    val buttonBgColor = LocalButtonBackgroundColor.current
+    val contentColor = if (selected) (if (accentColor.luminance() > 0.5f) Color.Black else Color.White)
+                       else (if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite)
+
     Surface(
         modifier = modifier
             .padding(4.dp)
-            .clickable { onClick() },
-        color = if (selected) accentColor else Color.White.copy(alpha = 0.05f),
-        shape = RoundedCornerShape(12.dp),
-        border = if (selected) null else BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+            .clickable { onClick() }
+            .border(1.5.dp, if (selected) accentColor else accentColor.copy(alpha = 0.4f), RoundedCornerShape(12.dp)),
+        color = if (selected) accentColor else buttonBgColor,
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(
             modifier = Modifier
@@ -1229,13 +1233,13 @@ fun ChoiceChip(
                     painter = painterResource(id = iconRes),
                     contentDescription = null,
                     modifier = Modifier.size(34.dp),
-                    colorFilter = ColorFilter.tint(if (selected) Color.Black else TextWhite)
+                    colorFilter = ColorFilter.tint(contentColor)
                 )
                 Spacer(Modifier.height(8.dp))
             }
             Text(
                 text = text,
-                color = if (selected) Color.Black else TextWhite,
+                color = contentColor,
                 fontSize = 12.sp,
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                 textAlign = TextAlign.Center

@@ -21,6 +21,7 @@ import androidx.compose.ui.res.painterResource
 import com.zexo.gymcopilot.R
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.zexo.gymcopilot.ui.theme.LocalBottomNavBackgroundColor
 import com.zexo.gymcopilot.ui.theme.TextGray
 
 @Composable
@@ -37,7 +38,7 @@ fun ProfessorBottomNavigation(
 ) {
     NavigationBar(
         modifier = Modifier.height(56.dp),
-        containerColor = Color(0xFF00151C),
+        containerColor = LocalBottomNavBackgroundColor.current,
         contentColor = Color.White,
         tonalElevation = 8.dp,
         windowInsets = WindowInsets(0, 0, 0, 0)
@@ -81,7 +82,7 @@ fun ProfessorBottomNavigation(
                                     .size(11.dp)
                                     .offset(x = 1.dp, y = (-1).dp)
                                     .background(Color.Red, CircleShape)
-                                    .border(1.dp, Color(0xFF00151C), CircleShape)
+                                    .border(1.dp, LocalBottomNavBackgroundColor.current, CircleShape)
                             )
                         }
                     }

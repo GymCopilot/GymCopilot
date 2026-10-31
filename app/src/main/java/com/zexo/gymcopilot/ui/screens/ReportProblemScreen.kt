@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Build
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -24,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.DataStoreManager
 import com.zexo.gymcopilot.R
+import com.zexo.gymcopilot.ui.theme.LocalButtonBackgroundColor
 import com.zexo.gymcopilot.ui.theme.PrimaryTurquoise
 import com.zexo.gymcopilot.ui.theme.TextGray
 import com.zexo.gymcopilot.ui.theme.TextWhite
@@ -130,12 +132,13 @@ fun ReportProblemScreen(onBack: () -> Unit) {
                         }
                         context.startActivity(intent)
                     },
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    modifier = Modifier.fillMaxWidth().height(50.dp).border(1.dp, accentColor, shape),
                     shape = shape,
-                    colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                    colors = ButtonDefaults.buttonColors(containerColor = LocalButtonBackgroundColor.current),
                     enabled = problemDescription.isNotBlank()
                 ) {
-                    Text(t["button"]!!, color = if (accentColor.luminance() > 0.5f) Color.Black else Color.White, fontWeight = FontWeight.Black)
+                    val contentColor = if (LocalButtonBackgroundColor.current.luminance() > 0.5f) Color.Black else Color.White
+                    Text(t["button"]!!, color = contentColor, fontWeight = FontWeight.Black)
                 }
             }
         }

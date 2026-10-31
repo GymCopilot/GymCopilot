@@ -45,6 +45,8 @@ import com.zexo.gymcopilot.ui.theme.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -116,10 +118,12 @@ fun AddProfessorScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            val base64 = getBase64FromUri(context, it)
-            if (base64 != null) {
-                photoUri = "data:image/png;base64,$base64"
+            val persistentUri = if (it.scheme == "content") {
+                saveImageToInternalStorage(context, it)
+            } else {
+                it
             }
+            photoUri = persistentUri?.toString() ?: it.toString()
         }
     }
 
@@ -163,6 +167,18 @@ fun AddProfessorScreen(
                                 return@IconButton
                             }
                             coroutineScope.launch {
+                                val persistentUri = photoUri?.let { uriStr ->
+                                    val uri = Uri.parse(uriStr)
+                                    if (uri.scheme == "content") {
+                                        saveImageToInternalStorage(context, uri)
+                                    } else {
+                                        uri
+                                    }
+                                }
+
+                                val base64Image = persistentUri?.let { getBase64FromUri(context, it) }
+                                val imageToSync = if (base64Image != null) "data:image/png;base64,$base64Image" else null
+
                                 val professor = Professor(
                                     id = currentId,
                                     firstName = firstName,
@@ -175,13 +191,18 @@ fun AddProfessorScreen(
                                     specialty = specialty,
                                     emergencyContact = emergencyContact,
                                     bankAccount = bankAccount,
-                                    photoUri = photoUri,
+                                    photoUri = persistentUri?.toString() ?: photoUri,
                                     profileColor = selectedColor?.toArgb()
                                 )
-                                dataStoreManager.updateProfessor(professor)
+                                if (professorId != null) {
+                                    dataStoreManager.updateProfessor(professor)
+                                } else {
+                                    dataStoreManager.addProfessor(professor)
+                                }
                                 
-                                // Bidirectional sync with spreadsheet
-                                attendanceRepository?.syncProfessorProfile(professor)
+                                // Bidirectional sync with spreadsheet (using optimized imageToSync)
+                                val professorForSync = professor.copy(photoUri = imageToSync)
+                                attendanceRepository?.syncProfessorProfile(professorForSync)
                                 
                                 val savedMsg = if (appLanguage == "Español") "Profesor guardado" else "Professor saved"
                                 Toast.makeText(context, savedMsg, Toast.LENGTH_SHORT).show()
@@ -401,6 +422,23 @@ fun AddProfessorScreen(
                 Spacer(Modifier.height(20.dp))
             }
         }
+    }
+}
+
+private fun saveImageToInternalStorage(context: Context, uri: Uri): Uri? {
+    return try {
+        val inputStream = context.contentResolver.openInputStream(uri)
+        val fileName = "prof_${System.currentTimeMillis()}.jpg"
+        val file = File(context.filesDir, fileName)
+        val outputStream = FileOutputStream(file)
+        inputStream?.use { input ->
+            outputStream.use { output ->
+                input.copyTo(output)
+            }
+        }
+        Uri.fromFile(file)
+    } catch (e: Exception) {
+        null
     }
 }
 

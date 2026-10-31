@@ -47,7 +47,7 @@ fun ChatSharedScreen(
     var messages by remember { mutableStateOf(listOf<ChatMessage>()) }
 
     var activeGymName by remember { mutableStateOf("Gym 26") }
-    var activeGymUrl by remember { mutableStateOf("https://script.google.com/macros/s/AKfycbyrN53_uZ4ECfRyp-Qwb2sGSYjv-g7OeR5ERbAQxLdirOL7qvL6rfaxXsjJShc28P-a/exec") }
+    var activeGymUrl by remember { mutableStateOf("https://script.google.com/macros/s/AKfycbzXYYMu43-ATeyxQmwdF3CuRYXi7KbpChyTQEBFIsWh7SCHv2XugxsWen61oBeDdzw/exec") }
     var userEmail by remember { mutableStateOf("socio@gymcopilot.com") }
 
     LaunchedEffect(Unit) {

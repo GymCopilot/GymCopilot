@@ -28,6 +28,9 @@ import com.zexo.gymcopilot.ui.theme.GymCopilotTheme
 import com.zexo.gymcopilot.ui.theme.GymBackgroundGradient
 import com.zexo.gymcopilot.ui.theme.DarkBackground
 import com.zexo.gymcopilot.ui.theme.PrimaryTurquoise
+import com.zexo.gymcopilot.ui.theme.LocalButtonBackgroundColor
+import com.zexo.gymcopilot.ui.theme.LocalBottomNavBackgroundColor
+import androidx.compose.runtime.CompositionLocalProvider
 import com.zexo.gymcopilot.repository.AttendanceRepository
 import com.zexo.gymcopilot.repository.ScheduleRepository
 import com.zexo.gymcopilot.repository.GoogleCloudRepository
@@ -61,6 +64,22 @@ class MainActivity : ComponentActivity() {
             val gymName by dataStoreManager.getGymName().collectAsState(initial = null)
             val gymLogoUri by dataStoreManager.getGymLogoUri().collectAsState(initial = null)
             val buttonColor by dataStoreManager.getButtonColor().collectAsState(initial = null)
+            val buttonBgColorInt by dataStoreManager.getButtonBackgroundColor().collectAsState(initial = null)
+            val buttonBgColor = remember(buttonBgColorInt) {
+                if (buttonBgColorInt != null && buttonBgColorInt != 0) {
+                    Color(buttonBgColorInt!!)
+                } else {
+                    Color(0xFF00222E)
+                }
+            }
+            val bottomNavBgColorInt by dataStoreManager.getBottomNavBackgroundColor().collectAsState(initial = null)
+            val bottomNavBgColor = remember(bottomNavBgColorInt) {
+                if (bottomNavBgColorInt != null && bottomNavBgColorInt != 0) {
+                    Color(bottomNavBgColorInt!!)
+                } else {
+                    Color(0xFF00151C)
+                }
+            }
             val lockExpirationTime by dataStoreManager.getAppLockExpirationTime().collectAsState(initial = 0L)
             
             var isAppLocked by remember { mutableStateOf(false) }
@@ -161,73 +180,78 @@ class MainActivity : ComponentActivity() {
             }
 
             GymCopilotTheme {
-                val navController = rememberNavController()
-                
-                if (showSplash) {
-                    SplashScreen(
-                        gymName = gymName,
-                        gymLogoUri = gymLogoUri,
-                        accentColor = accentColor
-                    )
-                } else {
-                    // 1. Capa Base: Fondo sólido de seguridad para evitar transparencia al sistema
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(DarkBackground)
-                    ) {
-                        // 2. Capa Decorativa: Gradiente o Color personalizado
+                CompositionLocalProvider(
+                    LocalButtonBackgroundColor provides buttonBgColor,
+                    LocalBottomNavBackgroundColor provides bottomNavBgColor
+                ) {
+                    val navController = rememberNavController()
+                    
+                    if (showSplash) {
+                        SplashScreen(
+                            gymName = gymName,
+                            gymLogoUri = gymLogoUri,
+                            accentColor = accentColor
+                        )
+                    } else {
+                        // 1. Capa Base: Fondo sólido de seguridad para evitar transparencia al sistema
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .then(
-                                    if (backgroundColor != null) {
-                                        Modifier.background(backgroundColor)
-                                    } else {
-                                        Modifier.background(GymBackgroundGradient)
-                                    }
-                                )
+                                .background(DarkBackground)
                         ) {
-                            // 3. Imagen de fondo (opcional)
-                            if (!gymBackgroundUri.isNullOrBlank()) {
-                                AsyncImage(
-                                    model = gymBackgroundUri,
-                                    contentDescription = null,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop,
-                                    alpha = 0.4f
-                                )
-                            }
-
-                            Scaffold(
-                                modifier = Modifier.fillMaxSize(),
-                                containerColor = Color.Transparent
-                            ) { innerPadding ->
-                                // Se agrega fillMaxSize() para asegurar que el contenido sea visible
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(innerPadding)
-                                ) {
-                                    GymNavGraph(
-                                        navController = navController,
-                                        attendanceRepository = attendanceRepository,
-                                        scheduleRepository = scheduleRepository,
-                                        googleCloudRepository = googleCloudRepository,
-                                        dataStoreManager = dataStoreManager,
-                                        billingManager = billingManager,
-                                        initialUserRole = userRole,
-                                        initialIsSubscribed = isSubscribed
+                            // 2. Capa Decorativa: Gradiente o Color personalizado
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .then(
+                                        if (backgroundColor != null) {
+                                            Modifier.background(backgroundColor)
+                                        } else {
+                                            Modifier.background(GymBackgroundGradient)
+                                        }
+                                    )
+                            ) {
+                                // 3. Imagen de fondo (opcional)
+                                if (!gymBackgroundUri.isNullOrBlank()) {
+                                    AsyncImage(
+                                        model = gymBackgroundUri,
+                                        contentDescription = null,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop,
+                                        alpha = 0.4f
                                     )
                                 }
-                            }
 
-                            // Capa de Bloqueo
-                            if (isAppLocked) {
-                                AppLockOverlay(
-                                    dataStoreManager = dataStoreManager,
-                                    onUnlock = { isAppLocked = false }
-                                )
+                                Scaffold(
+                                    modifier = Modifier.fillMaxSize(),
+                                    containerColor = Color.Transparent
+                                ) { innerPadding ->
+                                    // Se agrega fillMaxSize() para asegurar que el contenido sea visible
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(innerPadding)
+                                    ) {
+                                        GymNavGraph(
+                                            navController = navController,
+                                            attendanceRepository = attendanceRepository,
+                                            scheduleRepository = scheduleRepository,
+                                            googleCloudRepository = googleCloudRepository,
+                                            dataStoreManager = dataStoreManager,
+                                            billingManager = billingManager,
+                                            initialUserRole = userRole,
+                                            initialIsSubscribed = isSubscribed
+                                        )
+                                    }
+                                }
+
+                                // Capa de Bloqueo
+                                if (isAppLocked) {
+                                    AppLockOverlay(
+                                        dataStoreManager = dataStoreManager,
+                                        onUnlock = { isAppLocked = false }
+                                    )
+                                }
                             }
                         }
                     }

@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.zexo.gymcopilot.DataStoreManager
 import com.zexo.gymcopilot.R
+import com.zexo.gymcopilot.ui.theme.LocalButtonBackgroundColor
 import com.zexo.gymcopilot.ui.theme.PrimaryTurquoise
 import com.zexo.gymcopilot.ui.theme.TextGray
 import com.zexo.gymcopilot.ui.theme.TextWhite
@@ -159,6 +160,9 @@ fun StoreScreen(
                 }
 
                 item {
+                    val buttonBgColor = LocalButtonBackgroundColor.current
+                    val contentColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
+
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -166,7 +170,7 @@ fun StoreScreen(
                             .clip(buttonShape)
                             .clickable { onViewPublicStoreClick() }
                             .border(1.5.dp, appAccentColor, buttonShape),
-                        color = appAccentColor.copy(alpha = 0.1f)
+                        color = buttonBgColor
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 20.dp),
@@ -175,7 +179,7 @@ fun StoreScreen(
                         ) {
                             Icon(Icons.Default.Storefront, null, tint = appAccentColor)
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text(t["view_store"] ?: "", color = TextWhite, fontWeight = FontWeight.Bold)
+                            Text(t["view_store"] ?: "", color = contentColor, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -245,25 +249,27 @@ fun ActiveCategoryRow(
 ) {
     val categorySavedColor by DataStoreManager(LocalContext.current).getCategoryColor(categoryId).collectAsState(initial = null)
     val bgColor = if (categorySavedColor != null) Color(categorySavedColor!!) else defaultColor
+    val buttonBgColor = LocalButtonBackgroundColor.current
+    val contentColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
             .border(
-                width = if (isSelected) 2.dp else 1.dp,
-                color = if (isSelected) accentColor else Color.White.copy(alpha = 0.1f),
+                width = if (isSelected) 2.5.dp else 1.5.dp,
+                color = if (isSelected) accentColor else accentColor.copy(alpha = 0.5f),
                 shape = shape
             )
             .clickable { onClick() },
-        color = if (isSelected) accentColor.copy(alpha = 0.1f) else Color.White.copy(alpha = 0.05f)
+        color = buttonBgColor
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(40.dp).background(bgColor, RoundedCornerShape(8.dp)))
             Spacer(modifier = Modifier.width(16.dp))
             Text(
                 text = displayName,
-                color = TextWhite,
+                color = contentColor,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.weight(1f)
@@ -286,13 +292,16 @@ fun StoreConfigButton(
     shape: androidx.compose.ui.graphics.Shape,
     onClick: () -> Unit
 ) {
+    val buttonBgColor = LocalButtonBackgroundColor.current
+    val contentColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
+
     Surface(
         modifier = modifier
             .height(110.dp)
             .clip(shape)
             .clickable { onClick() }
             .border(1.5.dp, accentColor, shape),
-        color = Color(0xFF081C24)
+        color = buttonBgColor
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -311,7 +320,7 @@ fun StoreConfigButton(
             Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = text,
-                color = TextWhite,
+                color = contentColor,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,

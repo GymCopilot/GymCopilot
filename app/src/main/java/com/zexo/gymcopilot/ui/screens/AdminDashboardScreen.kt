@@ -79,6 +79,7 @@ import com.zexo.gymcopilot.network.NetworkModule
 import com.zexo.gymcopilot.repository.AttendanceRepository
 import com.zexo.gymcopilot.repository.ScheduleRepository
 import com.zexo.gymcopilot.repository.GoogleCloudRepository
+import com.zexo.gymcopilot.ui.theme.LocalButtonBackgroundColor
 import com.zexo.gymcopilot.ui.theme.PrimaryTurquoise
 import com.zexo.gymcopilot.ui.theme.TextGray
 import com.zexo.gymcopilot.ui.theme.TextWhite
@@ -2245,8 +2246,14 @@ fun QrDisplayDialog(onDismiss: () -> Unit, gymName: String, gymApiUrl: String, a
                 Spacer(Modifier.height(16.dp))
                 Text("Los socios deben escanear este QR para integrarse y marcar asistencia.", color = TextGray, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 8.dp))
                 Spacer(Modifier.height(24.dp))
-                Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(containerColor = accentColor), shape = shape, modifier = Modifier.fillMaxWidth()) {
-                    Text("Cerrar", color = if (accentColor.luminance() > 0.5f) Color.Black else Color.White, fontWeight = FontWeight.Bold)
+                Button(
+                    onClick = onDismiss,
+                    colors = ButtonDefaults.buttonColors(containerColor = LocalButtonBackgroundColor.current),
+                    shape = shape,
+                    modifier = Modifier.fillMaxWidth().border(1.dp, accentColor, shape)
+                ) {
+                    val contentColor = if (LocalButtonBackgroundColor.current.luminance() > 0.5f) Color.Black else Color.White
+                    Text("Cerrar", color = contentColor, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -2255,14 +2262,18 @@ fun QrDisplayDialog(onDismiss: () -> Unit, gymName: String, gymApiUrl: String, a
 
 @Composable
 fun OccupancyCard(label: String, accentColor: Color, shape: Shape) {
-    Card(modifier = Modifier.fillMaxWidth().border(1.5.dp, accentColor, shape), shape = shape, colors = CardDefaults.cardColors(containerColor = Color(0xFF00222E))) {
+    val buttonBgColor = LocalButtonBackgroundColor.current
+    val valColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
+    val lblColor = if (buttonBgColor.luminance() > 0.5f) Color.DarkGray else TextGray
+
+    Card(modifier = Modifier.fillMaxWidth().border(1.5.dp, accentColor, shape), shape = shape, colors = CardDefaults.cardColors(containerColor = buttonBgColor)) {
         Column(modifier = Modifier.padding(24.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
-                    Text(label, color = TextGray, fontSize = 14.sp)
+                    Text(label, color = lblColor, fontSize = 14.sp)
                     Row(verticalAlignment = Alignment.Bottom) {
-                        Text("32", color = TextWhite, fontSize = 42.sp, fontWeight = FontWeight.Black)
-                        Text(" / 60", color = TextGray, fontSize = 22.sp, modifier = Modifier.padding(bottom = 8.dp, start = 4.dp))
+                        Text("32", color = valColor, fontSize = 42.sp, fontWeight = FontWeight.Black)
+                        Text(" / 60", color = lblColor, fontSize = 22.sp, modifier = Modifier.padding(bottom = 8.dp, start = 4.dp))
                     }
                 }
                 Icon(Icons.Default.Speed, null, tint = accentColor, modifier = Modifier.size(48.dp))
@@ -2302,7 +2313,11 @@ data class MetricData(
 
 @Composable
 fun SmallMetricCard(data: MetricData, modifier: Modifier, accentColor: Color, shape: Shape) {
-    Card(modifier = modifier.border(1.5.dp, accentColor.copy(alpha = 0.4f), shape).clickable(enabled = data.onClick != null) { data.onClick?.invoke() }, shape = shape, colors = CardDefaults.cardColors(containerColor = Color(0xFF00222E))) {
+    val buttonBgColor = LocalButtonBackgroundColor.current
+    val valColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
+    val lblColor = if (buttonBgColor.luminance() > 0.5f) Color.DarkGray else TextGray
+
+    Card(modifier = modifier.border(1.5.dp, accentColor.copy(alpha = 0.4f), shape).clickable(enabled = data.onClick != null) { data.onClick?.invoke() }, shape = shape, colors = CardDefaults.cardColors(containerColor = buttonBgColor)) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             val contentWeight = if (data.isSecure) 3f else 1f
             Row(modifier = Modifier.weight(contentWeight), verticalAlignment = Alignment.CenterVertically) {
@@ -2311,8 +2326,8 @@ fun SmallMetricCard(data: MetricData, modifier: Modifier, accentColor: Color, sh
                 }
                 Spacer(modifier = Modifier.width(10.dp))
                 Column {
-                    Text(data.value, color = TextWhite, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(data.label, color = TextGray, fontSize = 10.sp, lineHeight = 11.sp)
+                    Text(data.value, color = valColor, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(data.label, color = lblColor, fontSize = 10.sp, lineHeight = 11.sp)
                 }
             }
             if (data.isSecure) {

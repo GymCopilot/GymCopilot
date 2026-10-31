@@ -46,6 +46,7 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import com.zexo.gymcopilot.DataStoreManager
 import com.zexo.gymcopilot.R
+import com.zexo.gymcopilot.ui.theme.LocalButtonBackgroundColor
 import com.zexo.gymcopilot.ui.theme.PrimaryTurquoise
 import com.zexo.gymcopilot.ui.theme.TextGray
 import com.zexo.gymcopilot.ui.theme.TextWhite
@@ -131,7 +132,7 @@ fun AppSettingsScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF00151C))) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -346,12 +347,13 @@ fun AppSettingsScreen(
                                                     dataStoreManager.setSettingsTourSkinDismissed(true)
                                                 }
                                             },
-                                            colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                                            colors = ButtonDefaults.buttonColors(containerColor = LocalButtonBackgroundColor.current),
                                             shape = buttonShape,
                                             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
-                                            modifier = Modifier.height(32.dp)
+                                            modifier = Modifier.height(32.dp).border(1.dp, accentColor, buttonShape)
                                         ) {
-                                            Text("¡Entendido!", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                                            val contentColor = if (LocalButtonBackgroundColor.current.luminance() > 0.5f) Color.Black else Color.White
+                                            Text("¡Entendido!", color = contentColor, fontWeight = FontWeight.Black, fontSize = 12.sp)
                                         }
                                     }
                                 }
@@ -426,10 +428,11 @@ fun AppSettingsScreen(
             confirmButton = {
                 Button(
                     onClick = { showUpdatesDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = accentColor),
-                    shape = buttonShape
+                    colors = ButtonDefaults.buttonColors(containerColor = LocalButtonBackgroundColor.current),
+                    shape = buttonShape,
+                    modifier = Modifier.border(1.dp, accentColor, buttonShape)
                 ) {
-                    val contentColor = if (accentColor.luminance() > 0.5f) Color.Black else Color.White
+                    val contentColor = if (LocalButtonBackgroundColor.current.luminance() > 0.5f) Color.Black else Color.White
                     Text(if (appLanguage == "Español") "ENTENDIDO" else "GOT IT", color = contentColor, fontWeight = FontWeight.Bold)
                 }
             }
@@ -514,15 +517,17 @@ fun SettingsCard(
     cardColor: Color,
     circleColor: Color? = null,
     shape: Shape,
+    buttonBgColor: Color = LocalButtonBackgroundColor.current,
     onClick: () -> Unit
 ) {
-    val backgroundColor = Color(0xFF081C24)
+    val contentColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
+    val descColor = if (buttonBgColor.luminance() > 0.5f) Color.DarkGray else TextGray
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(backgroundColor)
+            .background(buttonBgColor)
             .border(
                 width = 1.5.dp,
                 color = accentColor,
@@ -558,8 +563,8 @@ fun SettingsCard(
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = title, color = TextWhite, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Text(text = description, color = TextGray, fontSize = 14.sp)
+                Text(text = title, color = contentColor, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(text = description, color = descColor, fontSize = 14.sp)
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
