@@ -13,6 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="GymCopilot">
     <meta name="mobile-web-app-capable" content="yes">
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <style>
         html, body {
             width: 100%;
@@ -140,50 +141,69 @@
                     if (manualCode && callback) callback(manualCode);
                 };
 
-                navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } } })
-                    .then(function(stream) {
-                        activeStream = stream;
-                        video.srcObject = stream;
-                        video.play();
+                function startStream(stream) {
+                    activeStream = stream;
+                    video.srcObject = stream;
+                    video.play().catch(function() {});
 
-                        intervalId = setInterval(function() {
-                            if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                                canvasElement.width = video.videoWidth;
-                                canvasElement.height = video.videoHeight;
-                                if (canvasElement.width > 0 && canvasElement.height > 0) {
-                                    canvasContext.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
-                                    var imageData = canvasContext.getImageData(0, 0, canvasElement.width, canvasElement.height);
+                    intervalId = setInterval(function() {
+                        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                            canvasElement.width = video.videoWidth;
+                            canvasElement.height = video.videoHeight;
+                            if (canvasElement.width > 0 && canvasElement.height > 0) {
+                                canvasContext.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+                                var imageData = canvasContext.getImageData(0, 0, canvasElement.width, canvasElement.height);
 
-                                    // Try jsQR if loaded
-                                    if (typeof jsQR === 'function') {
-                                        var code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
-                                        if (code && code.data) {
-                                            stopCamera();
-                                            if (callback) callback(code.data);
-                                            return;
-                                        }
-                                    }
-
-                                    // Fallback to BarcodeDetector if available
-                                    if ('BarcodeDetector' in window) {
-                                        var detector = new BarcodeDetector({ formats: ['qr_code'] });
-                                        detector.detect(video).then(function(barcodes) {
-                                            if (barcodes.length > 0) {
-                                                var qrText = barcodes[0].rawValue;
-                                                stopCamera();
-                                                if (callback) callback(qrText);
-                                            }
-                                        }).catch(function() {});
+                                // Try jsQR if loaded
+                                if (typeof jsQR === 'function') {
+                                    var code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+                                    if (code && code.data) {
+                                        stopCamera();
+                                        if (callback) callback(code.data);
+                                        return;
                                     }
                                 }
+
+                                // Fallback to BarcodeDetector if available
+                                if ('BarcodeDetector' in window) {
+                                    var detector = new BarcodeDetector({ formats: ['qr_code'] });
+                                    detector.detect(video).then(function(barcodes) {
+                                        if (barcodes.length > 0) {
+                                            var qrText = barcodes[0].rawValue;
+                                            stopCamera();
+                                            if (callback) callback(qrText);
+                                        }
+                                    }).catch(function() {});
+                                }
                             }
-                        }, 250);
-                    })
-                    .catch(function(err) {
+                        }
+                    }, 250);
+                }
+
+                function tryCamera(constraintsList, index) {
+                    if (index >= constraintsList.length) {
                         stopCamera();
-                        var manualCode = prompt("No se pudo acceder a la cámara. Ingresa el código QR o Email del socio:");
+                        var manualCode = prompt("No se pudo acceder a la cámara (asegúrate de otorgar permisos de cámara en el navegador). Ingresa el código QR o Email del socio:");
                         if (manualCode && callback) callback(manualCode);
-                    });
+                        return;
+                    }
+                    navigator.mediaDevices.getUserMedia(constraintsList[index])
+                        .then(function(stream) {
+                            startStream(stream);
+                        })
+                        .catch(function(err) {
+                            tryCamera(constraintsList, index + 1);
+                        });
+                }
+
+                var constraintsToTry = [
+                    { video: { facingMode: "environment" } },
+                    { video: { facingMode: { ideal: "environment" } } },
+                    { video: { facingMode: { exact: "environment" } } },
+                    { video: true }
+                ];
+
+                tryCamera(constraintsToTry, 0);
             } else {
                 var manualCode = prompt("Ingresa el código QR o Email del socio:");
                 if (manualCode && callback) callback(manualCode);
