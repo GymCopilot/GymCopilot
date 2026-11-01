@@ -129,20 +129,25 @@
             manualContainer.appendChild(submitManualBtn);
 
             var actionRow = document.createElement('div');
-            actionRow.style.cssText = 'margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center;';
+            actionRow.style.cssText = 'margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;';
+
+            var fileBtn = document.createElement('button');
+            fileBtn.style.cssText = 'background:transparent;color:#00e5ff;border:1px solid #00e5ff;padding:10px 18px;font-size:13px;font-weight:bold;border-radius:20px;cursor:pointer;';
+            fileBtn.innerText = '📷 SUBIR FOTO DE QR';
 
             var manualBtn = document.createElement('button');
-            manualBtn.style.cssText = 'background:transparent;color:#00e5ff;border:1px solid #00e5ff;padding:10px 20px;font-size:13px;font-weight:bold;border-radius:20px;cursor:pointer;';
-            manualBtn.innerText = 'INGRESAR TOKEN / EMAIL MANUAL';
+            manualBtn.style.cssText = 'background:transparent;color:#00e5ff;border:1px solid #00e5ff;padding:10px 18px;font-size:13px;font-weight:bold;border-radius:20px;cursor:pointer;';
+            manualBtn.innerText = 'INGRESAR MANUAL';
 
             var retryBtn = document.createElement('button');
-            retryBtn.style.cssText = 'background:transparent;color:#ffb74d;border:1px solid #ffb74d;padding:10px 20px;font-size:13px;font-weight:bold;border-radius:20px;cursor:pointer;display:none;';
+            retryBtn.style.cssText = 'background:transparent;color:#ffb74d;border:1px solid #ffb74d;padding:10px 18px;font-size:13px;font-weight:bold;border-radius:20px;cursor:pointer;display:none;';
             retryBtn.innerText = 'REINTENTAR CÁMARA';
 
             var closeBtn = document.createElement('button');
-            closeBtn.style.cssText = 'background:#00e5ff;color:#000;border:none;padding:10px 24px;font-size:13px;font-weight:bold;border-radius:20px;cursor:pointer;';
+            closeBtn.style.cssText = 'background:#00e5ff;color:#000;border:none;padding:10px 22px;font-size:13px;font-weight:bold;border-radius:20px;cursor:pointer;';
             closeBtn.innerText = 'CANCELAR';
 
+            actionRow.appendChild(fileBtn);
             actionRow.appendChild(manualBtn);
             actionRow.appendChild(retryBtn);
             actionRow.appendChild(closeBtn);
@@ -156,6 +161,55 @@
 
             var activeStream = null;
             var intervalId = null;
+
+            // Hidden file input for scanning QR from photo gallery or system camera
+            var qrFileInput = document.getElementById('gym_copilot_qr_file_input');
+            if (!qrFileInput) {
+                qrFileInput = document.createElement('input');
+                qrFileInput.type = 'file';
+                qrFileInput.id = 'gym_copilot_qr_file_input';
+                qrFileInput.accept = 'image/*';
+                qrFileInput.style.display = 'none';
+                document.body.appendChild(qrFileInput);
+            }
+
+            fileBtn.onclick = function() {
+                qrFileInput.value = '';
+                qrFileInput.click();
+            };
+
+            qrFileInput.onchange = function(e) {
+                var file = e.target.files[0];
+                if (!file) return;
+                var reader = new FileReader();
+                reader.onload = function(evt) {
+                    var img = new Image();
+                    img.onload = function() {
+                        var tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = img.width;
+                        tempCanvas.height = img.height;
+                        var ctx = tempCanvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        var imgData = ctx.getImageData(0, 0, img.width, img.height);
+
+                        var scannedCode = null;
+                        if (typeof jsQR === 'function') {
+                            var code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "dontInvert" });
+                            if (code && code.data) scannedCode = code.data;
+                        }
+
+                        if (scannedCode) {
+                            stopCamera();
+                            if (callback) callback(scannedCode);
+                        } else {
+                            hint.innerText = "⚠️ No se detectó ningún código QR en la imagen. Intenta con otra foto o ingresa el código manualmente.";
+                            hint.style.color = "#ff8a80";
+                        }
+                    };
+                    img.src = evt.target.result;
+                };
+                reader.readAsDataURL(file);
+            };
 
             function stopCamera() {
                 if (intervalId) clearInterval(intervalId);
@@ -249,7 +303,7 @@
                     })
                     .catch(function(err) {
                         if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                            onCameraError("Permiso de cámara denegado. Concede permisos en tu navegador y reintenta.");
+                            onCameraError("Permiso de cámara denegado. Haz clic en el icono 🔒 en la barra de tu navegador para dar permiso, o sube una foto de tu QR abajo.");
                         } else {
                             tryCamera(constraintsList, index + 1);
                         }
