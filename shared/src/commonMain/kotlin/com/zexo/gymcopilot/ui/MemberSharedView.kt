@@ -56,7 +56,7 @@ fun MemberDashboardSharedScreen(
 ) {
     val coroutineScope = rememberCoroutineScope()
     var showQrDialog by remember { mutableStateOf(false) }
-    var showCheckInDialog by remember { mutableStateOf(false) }
+    var showCheckInSuccessBanner by remember { mutableStateOf(false) }
     var showTimerDialog by remember { mutableStateOf(false) }
     var showHelpScreen by remember { mutableStateOf(false) }
     var showMemberProfileScreen by remember { mutableStateOf(false) }
@@ -474,7 +474,72 @@ fun MemberDashboardSharedScreen(
                             iconTint = Color(0xFF00C853),
                             modifier = Modifier.weight(1f)
                         ) {
-                            showCheckInDialog = true
+                            launchQrScanner { scannedCode ->
+                                val cleanCode = scannedCode.trim()
+                                if (cleanCode.startsWith("MEMBERLINK|")) {
+                                    val parts = cleanCode.split("|")
+                                    if (parts.size >= 4) {
+                                        activeFirstName = parts[1]
+                                        activeLastName = parts[2]
+                                        activeEmail = parts[3]
+                                        if (parts.size >= 5 && parts[4].isNotBlank()) activeGymUrl = parts[4]
+                                        if (parts.size >= 6 && parts[5].isNotBlank()) activeGymName = parts[5]
+                                    }
+                                } else if (cleanCode.startsWith("MEMBER_LINK:")) {
+                                    val parts = cleanCode.split(":")
+                                    if (parts.size >= 5) {
+                                        activeEmail = parts[2]
+                                        activeFirstName = parts[3]
+                                        activeLastName = parts[4]
+                                    }
+                                } else if (cleanCode.contains("@")) {
+                                    activeEmail = cleanCode.trim()
+                                }
+
+                                saveLocalMemberProfile(
+                                    LocalMemberData(
+                                        firstName = activeFirstName,
+                                        lastName = activeLastName,
+                                        email = activeEmail,
+                                        phone = activePhone,
+                                        address = activeAddress,
+                                        weight = activeWeight,
+                                        height = activeHeight,
+                                        photoUri = activePhotoUri,
+                                        gymName = activeGymName,
+                                        gymApiUrl = activeGymUrl
+                                    )
+                                )
+
+                                showCheckInSuccessBanner = true
+
+                                coroutineScope.launch {
+                                    try {
+                                        val gymIdVal = activeGymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+                                        val syncReq = MemberSyncRequest(
+                                            action = "update_member",
+                                            firstName = activeFirstName,
+                                            lastName = activeLastName,
+                                            email = activeEmail,
+                                            phone = activePhone,
+                                            address = activeAddress,
+                                            weight = activeWeight,
+                                            height = activeHeight,
+                                            photoUri = activePhotoUri,
+                                            membershipStatus = "ACTIVO"
+                                        )
+                                        GymKtorApiClient.postData(activeGymUrl, syncReq)
+
+                                        val checkInReq = CheckInRequest(
+                                            action = "check_in",
+                                            gymId = gymIdVal,
+                                            memberEmail = activeEmail,
+                                            timestamp = 0L
+                                        )
+                                        GymKtorApiClient.postData(activeGymUrl, checkInReq)
+                                    } catch (t: Throwable) { }
+                                }
+                            }
                         }
                     }
 
@@ -583,238 +648,34 @@ fun MemberDashboardSharedScreen(
         )
     }
 
-    if (showCheckInDialog) {
-        var checkInSuccess by remember { mutableStateOf(false) }
-
+    if (showCheckInSuccessBanner) {
         AlertDialog(
-            onDismissRequest = { showCheckInDialog = false },
-            title = { Text("Check-in con Cámara QR", color = TextWhite, fontWeight = FontWeight.Bold) },
+            onDismissRequest = { showCheckInSuccessBanner = false },
+            title = { Text("Asistencia Registrada", color = TextWhite, fontWeight = FontWeight.Bold) },
             text = {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
+                Surface(
+                    color = Color(0xFF00C853).copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.5.dp, Color(0xFF00C853)),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    if (checkInSuccess) {
-                        Surface(
-                            color = Color(0xFF00C853).copy(alpha = 0.2f),
-                            shape = RoundedCornerShape(16.dp),
-                            border = BorderStroke(1.5.dp, Color(0xFF00C853)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.padding(16.dp)
-                            ) {
-                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF00C853), modifier = Modifier.size(48.dp))
-                                Spacer(Modifier.height(8.dp))
-                                Text("¡Asistencia Registrada Exitosamente!", color = Color(0xFF00C853), fontWeight = FontWeight.Black, fontSize = 15.sp, textAlign = TextAlign.Center)
-                            }
-                        }
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .size(200.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(Color(0xFF00151C))
-                                .border(BorderStroke(2.dp, PrimaryTurquoise), RoundedCornerShape(20.dp))
-                                .clickable {
-                                    launchQrScanner { scannedCode ->
-                                        val cleanCode = scannedCode.trim()
-                                        if (cleanCode.startsWith("MEMBERLINK|")) {
-                                            val parts = cleanCode.split("|")
-                                            if (parts.size >= 4) {
-                                                activeFirstName = parts[1]
-                                                activeLastName = parts[2]
-                                                activeEmail = parts[3]
-                                                if (parts.size >= 5 && parts[4].isNotBlank()) activeGymUrl = parts[4]
-                                                if (parts.size >= 6 && parts[5].isNotBlank()) activeGymName = parts[5]
-                                            }
-                                        } else if (cleanCode.startsWith("MEMBER_LINK:")) {
-                                            val parts = cleanCode.split(":")
-                                            if (parts.size >= 5) {
-                                                activeEmail = parts[2]
-                                                activeFirstName = parts[3]
-                                                activeLastName = parts[4]
-                                            }
-                                        } else if (cleanCode.contains("@")) {
-                                            activeEmail = cleanCode.trim()
-                                        }
-
-                                        // Guardar en almacenamiento local persistente (LocalStorage)
-                                        saveLocalMemberProfile(
-                                            LocalMemberData(
-                                                firstName = activeFirstName,
-                                                lastName = activeLastName,
-                                                email = activeEmail,
-                                                phone = activePhone,
-                                                address = activeAddress,
-                                                weight = activeWeight,
-                                                height = activeHeight,
-                                                photoUri = activePhotoUri,
-                                                gymName = activeGymName,
-                                                gymApiUrl = activeGymUrl
-                                            )
-                                        )
-
-                                        checkInSuccess = true
-
-                                        // Registrar asistencia y actualizar miembro HTTP POST en Google Sheets DB
-                                        coroutineScope.launch {
-                                            try {
-                                                val syncReq = MemberSyncRequest(
-                                                    action = "update_member",
-                                                    firstName = activeFirstName,
-                                                    lastName = activeLastName,
-                                                    email = activeEmail,
-                                                    phone = activePhone,
-                                                    address = activeAddress,
-                                                    weight = activeWeight,
-                                                    height = activeHeight,
-                                                    photoUri = activePhotoUri,
-                                                    membershipStatus = "ACTIVO"
-                                                )
-                                                GymKtorApiClient.postData(activeGymUrl, syncReq)
-
-                                                val checkInReq = CheckInRequest(
-                                                    action = "check_in",
-                                                    gymId = activeGymName,
-                                                    memberEmail = activeEmail,
-                                                    timestamp = 0L
-                                                )
-                                                GymKtorApiClient.postData(activeGymUrl, checkInReq)
-                                            } catch (t: Throwable) { }
-                                        }
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(Icons.Default.QrCodeScanner, contentDescription = "Escanear", tint = PrimaryTurquoise, modifier = Modifier.size(64.dp))
-                                Spacer(Modifier.height(12.dp))
-                                Text("Toca para abrir la cámara trasera", color = TextGray, fontSize = 12.sp)
-                            }
-                        }
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF00C853), modifier = Modifier.size(48.dp))
+                        Spacer(Modifier.height(8.dp))
+                        Text("¡Asistencia Registrada Exitosamente!", color = Color(0xFF00C853), fontWeight = FontWeight.Black, fontSize = 15.sp, textAlign = TextAlign.Center)
                     }
                 }
             },
             containerColor = Color(0xFF081C24),
             confirmButton = {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (!checkInSuccess) {
-                        Button(
-                            onClick = {
-                                checkInSuccess = true
-                                coroutineScope.launch {
-                                    try {
-                                        val gymIdVal = activeGymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
-                                        val syncReq = MemberSyncRequest(
-                                            action = "update_member",
-                                            firstName = activeFirstName,
-                                            lastName = activeLastName,
-                                            email = activeEmail,
-                                            phone = activePhone,
-                                            address = activeAddress,
-                                            weight = activeWeight,
-                                            height = activeHeight,
-                                            photoUri = activePhotoUri,
-                                            membershipStatus = "ACTIVO"
-                                        )
-                                        GymKtorApiClient.postData(activeGymUrl, syncReq)
-
-                                        val checkInReq = CheckInRequest(
-                                            action = "check_in",
-                                            gymId = gymIdVal,
-                                            memberEmail = activeEmail,
-                                            timestamp = 0L
-                                        )
-                                        GymKtorApiClient.postData(activeGymUrl, checkInReq)
-                                    } catch (t: Throwable) {
-                                        println("Error check-in: ${t.message}")
-                                    }
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise)
-                        ) {
-                            Text("MARCAR PRESENTE", color = Color.Black, fontWeight = FontWeight.Bold)
-                        }
-
-                        Button(
-                            onClick = {
-                                launchQrScanner { scannedCode ->
-                                    val cleanCode = scannedCode.trim()
-                                    if (cleanCode.startsWith("MEMBERLINK|")) {
-                                        val parts = cleanCode.split("|")
-                                        if (parts.size >= 4) {
-                                            activeFirstName = parts[1]
-                                            activeLastName = parts[2]
-                                            activeEmail = parts[3]
-                                            if (parts.size >= 5 && parts[4].isNotBlank()) activeGymUrl = parts[4]
-                                            if (parts.size >= 6 && parts[5].isNotBlank()) activeGymName = parts[5]
-                                        }
-                                    } else if (cleanCode.startsWith("MEMBER_LINK:")) {
-                                        val parts = cleanCode.split(":")
-                                        if (parts.size >= 5) {
-                                            activeEmail = parts[2]
-                                            activeFirstName = parts[3]
-                                            activeLastName = parts[4]
-                                        }
-                                    } else if (cleanCode.contains("@")) {
-                                        activeEmail = cleanCode.trim()
-                                    }
-
-                                    saveLocalMemberProfile(
-                                        LocalMemberData(
-                                            firstName = activeFirstName,
-                                            lastName = activeLastName,
-                                            email = activeEmail,
-                                            phone = activePhone,
-                                            address = activeAddress,
-                                            weight = activeWeight,
-                                            height = activeHeight,
-                                            photoUri = activePhotoUri,
-                                            gymName = activeGymName,
-                                            gymApiUrl = activeGymUrl
-                                        )
-                                    )
-
-                                    checkInSuccess = true
-
-                                    coroutineScope.launch {
-                                        try {
-                                            val gymIdVal = activeGymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
-                                            val syncReq = MemberSyncRequest(
-                                                action = "update_member",
-                                                firstName = activeFirstName,
-                                                lastName = activeLastName,
-                                                email = activeEmail,
-                                                phone = activePhone,
-                                                address = activeAddress,
-                                                weight = activeWeight,
-                                                height = activeHeight,
-                                                photoUri = activePhotoUri,
-                                                membershipStatus = "ACTIVO"
-                                            )
-                                            GymKtorApiClient.postData(activeGymUrl, syncReq)
-
-                                            val checkInReq = CheckInRequest(
-                                                action = "check_in",
-                                                gymId = gymIdVal,
-                                                memberEmail = activeEmail,
-                                                timestamp = 0L
-                                            )
-                                            GymKtorApiClient.postData(activeGymUrl, checkInReq)
-                                        } catch (t: Throwable) { }
-                                    }
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853))
-                        ) {
-                            Text("ESCANEAR QR", color = Color.Black, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                    TextButton(onClick = { showCheckInDialog = false }) {
-                        Text("CERRAR", color = TextWhite)
-                    }
+                Button(
+                    onClick = { showCheckInSuccessBanner = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise)
+                ) {
+                    Text("ACEPTAR", color = Color.Black, fontWeight = FontWeight.Bold)
                 }
             }
         )
