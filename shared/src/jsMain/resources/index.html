@@ -42,6 +42,19 @@
             });
         }
 
+        function invokeKotlinCb(cb, arg) {
+            if (!cb) return;
+            try {
+                if (typeof cb === 'function') {
+                    cb(arg);
+                } else if (cb && typeof cb.invoke === 'function') {
+                    cb.invoke(arg);
+                }
+            } catch (e) {
+                console.error("Kotlin callback error:", e);
+            }
+        }
+
         window.gymCopilotImageCallback = null;
         document.getElementById('gym_copilot_image_input').addEventListener('change', function(e) {
             var file = e.target.files[0];
@@ -49,7 +62,7 @@
                 var reader = new FileReader();
                 reader.onload = function(evt) {
                     if (window.gymCopilotImageCallback) {
-                        window.gymCopilotImageCallback(evt.target.result);
+                        invokeKotlinCb(window.gymCopilotImageCallback, evt.target.result);
                     }
                 };
                 reader.readAsDataURL(file);
@@ -67,147 +80,198 @@
 
         window.launchGymCopilotScannerKotlin = function(kotlinCallback) {
             window.openGymCopilotQrScanner(function(code) {
-                if (kotlinCallback) {
-                    kotlinCallback(code);
-                }
+                invokeKotlinCb(kotlinCallback, code);
             });
         };
 
         window.openGymCopilotQrScanner = function(callback) {
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                var oldOverlay = document.getElementById('qr_camera_overlay');
-                if (oldOverlay) oldOverlay.remove();
+            var oldOverlay = document.getElementById('qr_camera_overlay');
+            if (oldOverlay && oldOverlay.parentNode) oldOverlay.parentNode.removeChild(oldOverlay);
 
-                var overlay = document.createElement('div');
-                overlay.id = 'qr_camera_overlay';
-                overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,15,22,0.96);z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:sans-serif;color:white;';
+            var overlay = document.createElement('div');
+            overlay.id = 'qr_camera_overlay';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,15,22,0.96);z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:sans-serif;color:white;box-sizing:border-box;padding:16px;';
 
-                var title = document.createElement('div');
-                title.style.cssText = 'font-size:18px;font-weight:bold;color:#00e5ff;margin-bottom:16px;text-align:center;padding:0 16px;';
-                title.innerText = 'Escaneando Código QR con Cámara';
+            var title = document.createElement('div');
+            title.style.cssText = 'font-size:18px;font-weight:bold;color:#00e5ff;margin-bottom:16px;text-align:center;padding:0 16px;';
+            title.innerText = 'Escaneando Código QR con Cámara';
 
-                var videoContainer = document.createElement('div');
-                videoContainer.style.cssText = 'position:relative;width:280px;height:280px;border-radius:20px;overflow:hidden;border:3px solid #00e5ff;box-shadow:0 0 24px rgba(0,229,255,0.5);background:#000;';
+            var videoContainer = document.createElement('div');
+            videoContainer.style.cssText = 'position:relative;width:280px;height:280px;border-radius:20px;overflow:hidden;border:3px solid #00e5ff;box-shadow:0 0 24px rgba(0,229,255,0.5);background:#000;display:flex;align-items:center;justify-content:center;';
 
-                var video = document.createElement('video');
-                video.style.cssText = 'width:100%;height:100%;object-fit:cover;';
-                video.setAttribute('playsinline', 'true');
-                video.setAttribute('autoplay', 'true');
+            var video = document.createElement('video');
+            video.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+            video.setAttribute('playsinline', 'true');
+            video.setAttribute('autoplay', 'true');
 
-                videoContainer.appendChild(video);
+            videoContainer.appendChild(video);
 
-                var canvasElement = document.createElement('canvas');
-                var canvasContext = canvasElement.getContext('2d', { willReadFrequently: true });
+            var canvasElement = document.createElement('canvas');
+            var canvasContext = canvasElement.getContext('2d', { willReadFrequently: true });
 
-                var hint = document.createElement('div');
-                hint.style.cssText = 'font-size:13px;color:#aaa;margin-top:16px;text-align:center;padding:0 20px;';
-                hint.innerText = 'Apunta la cámara al código QR de asistencia';
+            var hint = document.createElement('div');
+            hint.style.cssText = 'font-size:13px;color:#aaa;margin-top:16px;text-align:center;padding:0 20px;max-width:320px;line-height:1.4;';
+            hint.innerText = 'Apunta la cámara al código QR de asistencia';
 
-                var manualBtn = document.createElement('button');
-                manualBtn.style.cssText = 'margin-top:16px;background:transparent;color:#00e5ff;border:1px solid #00e5ff;padding:10px 24px;font-size:13px;font-weight:bold;border-radius:20px;cursor:pointer;';
-                manualBtn.innerText = 'INGRESAR TOKEN / EMAIL MANUAL';
+            var manualContainer = document.createElement('div');
+            manualContainer.style.cssText = 'margin-top:16px;display:none;flex-direction:column;align-items:center;width:100%;max-width:320px;';
 
-                var closeBtn = document.createElement('button');
-                closeBtn.style.cssText = 'margin-top:12px;background:#00e5ff;color:#000;border:none;padding:10px 28px;font-size:13px;font-weight:bold;border-radius:20px;cursor:pointer;';
-                closeBtn.innerText = 'CANCELAR';
+            var manualInput = document.createElement('input');
+            manualInput.type = 'text';
+            manualInput.placeholder = 'Ingresa código QR, Token o Email...';
+            manualInput.style.cssText = 'width:100%;padding:12px;border-radius:12px;border:1px solid #00e5ff;background:#001a24;color:white;font-size:14px;outline:none;box-sizing:border-box;text-align:center;';
 
-                overlay.appendChild(title);
-                overlay.appendChild(videoContainer);
-                overlay.appendChild(hint);
-                overlay.appendChild(manualBtn);
-                overlay.appendChild(closeBtn);
-                document.body.appendChild(overlay);
+            var submitManualBtn = document.createElement('button');
+            submitManualBtn.style.cssText = 'margin-top:10px;width:100%;background:#00e5ff;color:#000;border:none;padding:12px;font-size:14px;font-weight:bold;border-radius:12px;cursor:pointer;';
+            submitManualBtn.innerText = 'ACEPTAR';
 
-                var activeStream = null;
-                var intervalId = null;
+            manualContainer.appendChild(manualInput);
+            manualContainer.appendChild(submitManualBtn);
 
-                function stopCamera() {
-                    if (intervalId) clearInterval(intervalId);
-                    if (activeStream) {
-                        activeStream.getTracks().forEach(function(track) { track.stop(); });
-                    }
-                    if (overlay && overlay.parentNode) {
-                        overlay.parentNode.removeChild(overlay);
-                    }
+            var actionRow = document.createElement('div');
+            actionRow.style.cssText = 'margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center;';
+
+            var manualBtn = document.createElement('button');
+            manualBtn.style.cssText = 'background:transparent;color:#00e5ff;border:1px solid #00e5ff;padding:10px 20px;font-size:13px;font-weight:bold;border-radius:20px;cursor:pointer;';
+            manualBtn.innerText = 'INGRESAR TOKEN / EMAIL MANUAL';
+
+            var retryBtn = document.createElement('button');
+            retryBtn.style.cssText = 'background:transparent;color:#ffb74d;border:1px solid #ffb74d;padding:10px 20px;font-size:13px;font-weight:bold;border-radius:20px;cursor:pointer;display:none;';
+            retryBtn.innerText = 'REINTENTAR CÁMARA';
+
+            var closeBtn = document.createElement('button');
+            closeBtn.style.cssText = 'background:#00e5ff;color:#000;border:none;padding:10px 24px;font-size:13px;font-weight:bold;border-radius:20px;cursor:pointer;';
+            closeBtn.innerText = 'CANCELAR';
+
+            actionRow.appendChild(manualBtn);
+            actionRow.appendChild(retryBtn);
+            actionRow.appendChild(closeBtn);
+
+            overlay.appendChild(title);
+            overlay.appendChild(videoContainer);
+            overlay.appendChild(hint);
+            overlay.appendChild(manualContainer);
+            overlay.appendChild(actionRow);
+            document.body.appendChild(overlay);
+
+            var activeStream = null;
+            var intervalId = null;
+
+            function stopCamera() {
+                if (intervalId) clearInterval(intervalId);
+                if (activeStream) {
+                    activeStream.getTracks().forEach(function(track) { track.stop(); });
+                    activeStream = null;
                 }
+                if (overlay && overlay.parentNode) {
+                    overlay.parentNode.removeChild(overlay);
+                }
+            }
 
-                closeBtn.onclick = function() {
+            closeBtn.onclick = function() {
+                stopCamera();
+            };
+
+            function submitManual() {
+                var code = manualInput.value.trim();
+                if (code) {
                     stopCamera();
-                };
+                    if (callback) callback(code);
+                }
+            }
 
-                manualBtn.onclick = function() {
-                    stopCamera();
-                    var manualCode = prompt("Ingresa el código QR, Token (MEMBERLINK|...) o Email del socio:");
-                    if (manualCode && callback) callback(manualCode);
-                };
+            submitManualBtn.onclick = submitManual;
+            manualInput.onkeypress = function(e) {
+                if (e.key === 'Enter') submitManual();
+            };
 
-                function startStream(stream) {
-                    activeStream = stream;
-                    video.srcObject = stream;
-                    video.play().catch(function() {});
+            manualBtn.onclick = function() {
+                manualContainer.style.display = 'flex';
+                manualInput.focus();
+            };
 
-                    intervalId = setInterval(function() {
-                        if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                            canvasElement.width = video.videoWidth;
-                            canvasElement.height = video.videoHeight;
-                            if (canvasElement.width > 0 && canvasElement.height > 0) {
-                                canvasContext.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
-                                var imageData = canvasContext.getImageData(0, 0, canvasElement.width, canvasElement.height);
+            retryBtn.onclick = function() {
+                retryBtn.style.display = 'none';
+                hint.innerText = 'Apunta la cámara al código QR de asistencia';
+                hint.style.color = '#aaa';
+                tryCamera(constraintsToTry, 0);
+            };
 
-                                // Try jsQR if loaded
-                                if (typeof jsQR === 'function') {
-                                    var code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
-                                    if (code && code.data) {
-                                        stopCamera();
-                                        if (callback) callback(code.data);
-                                        return;
-                                    }
-                                }
+            function startStream(stream) {
+                activeStream = stream;
+                video.srcObject = stream;
+                video.play().catch(function() {});
 
-                                // Fallback to BarcodeDetector if available
-                                if ('BarcodeDetector' in window) {
-                                    var detector = new BarcodeDetector({ formats: ['qr_code'] });
-                                    detector.detect(video).then(function(barcodes) {
-                                        if (barcodes.length > 0) {
-                                            var qrText = barcodes[0].rawValue;
-                                            stopCamera();
-                                            if (callback) callback(qrText);
-                                        }
-                                    }).catch(function() {});
+                intervalId = setInterval(function() {
+                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                        canvasElement.width = video.videoWidth;
+                        canvasElement.height = video.videoHeight;
+                        if (canvasElement.width > 0 && canvasElement.height > 0) {
+                            canvasContext.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+                            var imageData = canvasContext.getImageData(0, 0, canvasElement.width, canvasElement.height);
+
+                            if (typeof jsQR === 'function') {
+                                var code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+                                if (code && code.data) {
+                                    stopCamera();
+                                    if (callback) callback(code.data);
+                                    return;
                                 }
                             }
+
+                            if ('BarcodeDetector' in window) {
+                                var detector = new BarcodeDetector({ formats: ['qr_code'] });
+                                detector.detect(video).then(function(barcodes) {
+                                    if (barcodes.length > 0) {
+                                        var qrText = barcodes[0].rawValue;
+                                        stopCamera();
+                                        if (callback) callback(qrText);
+                                    }
+                                }).catch(function() {});
+                            }
                         }
-                    }, 250);
-                }
-
-                function tryCamera(constraintsList, index) {
-                    if (index >= constraintsList.length) {
-                        stopCamera();
-                        var manualCode = prompt("No se pudo acceder a la cámara (asegúrate de otorgar permisos de cámara en el navegador). Ingresa el código QR o Email del socio:");
-                        if (manualCode && callback) callback(manualCode);
-                        return;
                     }
-                    navigator.mediaDevices.getUserMedia(constraintsList[index])
-                        .then(function(stream) {
-                            startStream(stream);
-                        })
-                        .catch(function(err) {
-                            tryCamera(constraintsList, index + 1);
-                        });
-                }
-
-                var constraintsToTry = [
-                    { video: { facingMode: "environment" } },
-                    { video: { facingMode: { ideal: "environment" } } },
-                    { video: { facingMode: { exact: "environment" } } },
-                    { video: true }
-                ];
-
-                tryCamera(constraintsToTry, 0);
-            } else {
-                var manualCode = prompt("Ingresa el código QR o Email del socio:");
-                if (manualCode && callback) callback(manualCode);
+                }, 250);
             }
+
+            function tryCamera(constraintsList, index) {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    onCameraError("El navegador no soporta acceso a la cámara.");
+                    return;
+                }
+                if (index >= constraintsList.length) {
+                    onCameraError("No se pudo acceder a la cámara. Revisa los permisos de tu navegador.");
+                    return;
+                }
+                navigator.mediaDevices.getUserMedia(constraintsList[index])
+                    .then(function(stream) {
+                        startStream(stream);
+                    })
+                    .catch(function(err) {
+                        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                            onCameraError("Permiso de cámara denegado. Concede permisos en tu navegador y reintenta.");
+                        } else {
+                            tryCamera(constraintsList, index + 1);
+                        }
+                    });
+            }
+
+            function onCameraError(msg) {
+                hint.innerText = '⚠️ ' + msg;
+                hint.style.color = '#ff8a80';
+                manualContainer.style.display = 'flex';
+                retryBtn.style.display = 'inline-block';
+                manualInput.focus();
+            }
+
+            var constraintsToTry = [
+                { video: { facingMode: { ideal: "environment" } } },
+                { video: { facingMode: "environment" } },
+                { video: true }
+            ];
+
+            tryCamera(constraintsToTry, 0);
+        };
         };
 
         let deferredPrompt = null;
