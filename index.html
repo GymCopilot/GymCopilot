@@ -116,23 +116,13 @@
                 hint.style.cssText = 'font-size:13px;color:#aaa;margin-top:16px;text-align:center;padding:0 20px;';
                 hint.innerText = 'Apunta la cámara al código QR de asistencia';
 
-                var permBtn = document.createElement('button');
-                permBtn.style.cssText = 'margin-top:14px;background:#00e5ff;color:#000;border:none;padding:12px 24px;font-size:13px;font-weight:bold;border-radius:20px;cursor:pointer;display:none;box-shadow:0 0 12px rgba(0,229,255,0.4);';
-                permBtn.innerText = '📷 ACTIVAR CÁMARA / CONCEDER PERMISO';
-
-                var manualBtn = document.createElement('button');
-                manualBtn.style.cssText = 'margin-top:12px;background:transparent;color:#00e5ff;border:1px solid #00e5ff;padding:10px 24px;font-size:13px;font-weight:bold;border-radius:20px;cursor:pointer;';
-                manualBtn.innerText = 'INGRESAR TOKEN / EMAIL MANUAL';
-
                 var closeBtn = document.createElement('button');
-                closeBtn.style.cssText = 'margin-top:12px;background:#00e5ff;color:#000;border:none;padding:10px 28px;font-size:13px;font-weight:bold;border-radius:20px;cursor:pointer;';
+                closeBtn.style.cssText = 'margin-top:20px;background:#00e5ff;color:#000;border:none;padding:12px 32px;font-size:14px;font-weight:bold;border-radius:20px;cursor:pointer;';
                 closeBtn.innerText = 'CANCELAR';
 
                 overlay.appendChild(title);
                 overlay.appendChild(videoContainer);
                 overlay.appendChild(hint);
-                overlay.appendChild(permBtn);
-                overlay.appendChild(manualBtn);
                 overlay.appendChild(closeBtn);
                 document.body.appendChild(overlay);
 
@@ -151,19 +141,6 @@
 
                 closeBtn.onclick = function() {
                     stopCamera();
-                };
-
-                manualBtn.onclick = function() {
-                    stopCamera();
-                    var manualCode = prompt("Ingresa el código QR, Token (MEMBERLINK|...) o Email del socio:");
-                    if (manualCode && callback) invokeKotlinCb(callback, manualCode);
-                };
-
-                permBtn.onclick = function() {
-                    permBtn.style.display = 'none';
-                    hint.innerText = 'Solicitando permiso de cámara...';
-                    hint.style.color = '#00e5ff';
-                    requestCameraPermission();
                 };
 
                 function startScanningStream(stream) {
@@ -206,9 +183,8 @@
                 }
 
                 function handleCameraError(msg) {
-                    hint.innerText = msg || "Permiso de cámara requerido. Toca 'ACTIVAR CÁMARA' para solicitar el permiso en tu teléfono.";
+                    hint.innerText = msg || "Permiso de cámara denegado o no disponible. Habilita el acceso a la cámara en la configuración de tu navegador para escanear.";
                     hint.style.color = "#ff8a80";
-                    permBtn.style.display = "inline-block";
                 }
 
                 function requestCameraPermission() {
@@ -225,14 +201,13 @@
                         }
                         navigator.mediaDevices.getUserMedia(constraintsToTry[index])
                             .then(function(stream) {
-                                permBtn.style.display = 'none';
                                 hint.innerText = 'Apunta la cámara al código QR de asistencia';
                                 hint.style.color = '#aaa';
                                 startScanningStream(stream);
                             })
                             .catch(function(err) {
                                 if (err && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) {
-                                    handleCameraError("Permiso denegado. Toca 'ACTIVAR CÁMARA' o autoriza la cámara en la barra de tu navegador.");
+                                    handleCameraError("Permiso de cámara denegado. Habilita la cámara en la configuración de tu navegador para escanear.");
                                 } else {
                                     tryConstraints(index + 1);
                                 }
@@ -245,7 +220,7 @@
                 if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                     requestCameraPermission();
                 } else {
-                    handleCameraError("Tu navegador no soporta el acceso a la cámara. Usa el ingreso manual.");
+                    handleCameraError("Tu navegador no soporta el acceso a la cámara.");
                 }
             }
         };
