@@ -116,8 +116,12 @@
                 hint.style.cssText = 'font-size:13px;color:#aaa;margin-top:16px;text-align:center;padding:0 20px;';
                 hint.innerText = 'Apunta la cámara al código QR de asistencia';
 
+                var permBtn = document.createElement('button');
+                permBtn.style.cssText = 'margin-top:14px;background:#00e5ff;color:#000;border:none;padding:12px 24px;font-size:13px;font-weight:bold;border-radius:20px;cursor:pointer;display:none;box-shadow:0 0 12px rgba(0,229,255,0.4);';
+                permBtn.innerText = '📷 ACTIVAR CÁMARA / CONCEDER PERMISO';
+
                 var manualBtn = document.createElement('button');
-                manualBtn.style.cssText = 'margin-top:16px;background:transparent;color:#00e5ff;border:1px solid #00e5ff;padding:10px 24px;font-size:13px;font-weight:bold;border-radius:20px;cursor:pointer;';
+                manualBtn.style.cssText = 'margin-top:12px;background:transparent;color:#00e5ff;border:1px solid #00e5ff;padding:10px 24px;font-size:13px;font-weight:bold;border-radius:20px;cursor:pointer;';
                 manualBtn.innerText = 'INGRESAR TOKEN / EMAIL MANUAL';
 
                 var closeBtn = document.createElement('button');
@@ -127,6 +131,7 @@
                 overlay.appendChild(title);
                 overlay.appendChild(videoContainer);
                 overlay.appendChild(hint);
+                overlay.appendChild(permBtn);
                 overlay.appendChild(manualBtn);
                 overlay.appendChild(closeBtn);
                 document.body.appendChild(overlay);
@@ -152,6 +157,13 @@
                     stopCamera();
                     var manualCode = prompt("Ingresa el código QR, Token (MEMBERLINK|...) o Email del socio:");
                     if (manualCode && callback) invokeKotlinCb(callback, manualCode);
+                };
+
+                permBtn.onclick = function() {
+                    permBtn.style.display = 'none';
+                    hint.innerText = 'Solicitando permiso de cámara...';
+                    hint.style.color = '#00e5ff';
+                    requestCameraPermission();
                 };
 
                 function startScanningStream(stream) {
@@ -193,22 +205,47 @@
                     }, 250);
                 }
 
-                function handleCameraError(err) {
-                    hint.innerText = "No se pudo acceder a la cámara. Puedes ingresar el código manualmente en el botón de abajo.";
+                function handleCameraError(msg) {
+                    hint.innerText = msg || "Permiso de cámara requerido. Toca 'ACTIVAR CÁMARA' para solicitar el permiso en tu teléfono.";
                     hint.style.color = "#ff8a80";
+                    permBtn.style.display = "inline-block";
+                }
+
+                function requestCameraPermission() {
+                    var constraintsToTry = [
+                        { video: { facingMode: { ideal: "environment" } } },
+                        { video: { facingMode: "environment" } },
+                        { video: true }
+                    ];
+
+                    function tryConstraints(index) {
+                        if (index >= constraintsToTry.length) {
+                            handleCameraError();
+                            return;
+                        }
+                        navigator.mediaDevices.getUserMedia(constraintsToTry[index])
+                            .then(function(stream) {
+                                permBtn.style.display = 'none';
+                                hint.innerText = 'Apunta la cámara al código QR de asistencia';
+                                hint.style.color = '#aaa';
+                                startScanningStream(stream);
+                            })
+                            .catch(function(err) {
+                                if (err && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) {
+                                    handleCameraError("Permiso denegado. Toca 'ACTIVAR CÁMARA' o autoriza la cámara en la barra de tu navegador.");
+                                } else {
+                                    tryConstraints(index + 1);
+                                }
+                            });
+                    }
+
+                    tryConstraints(0);
                 }
 
                 if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } } })
-                        .then(startScanningStream)
-                        .catch(function(err) {
-                            navigator.mediaDevices.getUserMedia({ video: true })
-                                .then(startScanningStream)
-                                .catch(handleCameraError);
-                        });
+                    requestCameraPermission();
                 } else {
-                    hint.innerText = "Navegador no soporta cámara. Puedes ingresar el código manualmente.";
-                    hint.style.color = "#ff8a80";
+                    handleCameraError("Tu navegador no soporta el acceso a la cámara. Usa el ingreso manual.");
                 }
             }
         };
