@@ -55,8 +55,11 @@ fun MemberDashboardSharedScreen(
     onTabSelected: (Int) -> Unit = {}
 ) {
     val coroutineScope = rememberCoroutineScope()
-    var showQrDialog by remember { mutableStateOf(false) }
+    var gymIsOpen by remember { mutableStateOf(true) }
+    var classInSession by remember { mutableStateOf(false) }
+    var showLogoBorder by remember { mutableStateOf(true) }
     var showCheckInSuccessBanner by remember { mutableStateOf(false) }
+    var showQrDialog by remember { mutableStateOf(false) }
     var showTimerDialog by remember { mutableStateOf(false) }
     var showHelpScreen by remember { mutableStateOf(false) }
     var showMemberProfileScreen by remember { mutableStateOf(false) }
@@ -213,6 +216,18 @@ fun MemberDashboardSharedScreen(
                                             activePhotoUri = logoUriVal
                                         }
                                     }
+                                    if (row.size > 11) {
+                                        val borderStr = row[11].jsonPrimitive.content
+                                        showLogoBorder = borderStr.lowercase() != "false"
+                                    }
+                                    if (row.size > 12) {
+                                        val classStr = row[12].jsonPrimitive.content
+                                        classInSession = classStr.lowercase() == "true"
+                                    }
+                                    if (row.size > 14) {
+                                        val openStr = row[14].jsonPrimitive.content
+                                        gymIsOpen = openStr.lowercase() != "false"
+                                    }
                                     if (row.size > 13) {
                                         val rawMsg = row[13].jsonPrimitive.content
                                         val isIsoDate = rawMsg.matches(Regex("""\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.*"""))
@@ -248,9 +263,6 @@ fun MemberDashboardSharedScreen(
             }
         }
     }
-
-    val gymIsOpen = true
-    val classInSession = false
 
     val logoBitmap = remember(activePhotoUri, customLogoUri) {
         val uri = activePhotoUri ?: customLogoUri
@@ -346,10 +358,13 @@ fun MemberDashboardSharedScreen(
                         // RECUADRO DE LOGO 1:1
                         Box(
                             modifier = Modifier
-                                .size(110.dp)
+                                .size(121.dp)
                                 .clip(RoundedCornerShape(20.dp))
                                 .background(Color(0xFF00151C))
-                                .border(BorderStroke(2.dp, PrimaryTurquoise), RoundedCornerShape(20.dp))
+                                .then(
+                                    if (showLogoBorder) Modifier.border(BorderStroke(2.dp, PrimaryTurquoise), RoundedCornerShape(20.dp))
+                                    else Modifier
+                                )
                                 .clickable { showMemberProfileScreen = true },
                             contentAlignment = Alignment.Center
                         ) {
@@ -715,23 +730,23 @@ fun StatusChip(
         color = color.copy(alpha = 0.15f),
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(1.dp, color.copy(alpha = 0.4f)),
-        modifier = modifier
+        modifier = modifier.height(42.dp)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
             Box(
                 modifier = Modifier
-                    .size(8.dp)
+                    .size(9.dp)
                     .clip(CircleShape)
                     .background(color)
             )
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = text,
-                fontSize = 9.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = color
             )
