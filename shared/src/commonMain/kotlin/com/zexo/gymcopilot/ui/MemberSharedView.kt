@@ -458,8 +458,8 @@ fun MemberDashboardSharedScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         MemberActionSquareCard(
-                            title = "Mi QR Login",
-                            iconVector = Icons.Default.QrCode2,
+                            title = "QR Login",
+                            iconPainter = painterResource(Res.drawable.qr_code),
                             iconBg = Color(0xFF00363A),
                             iconTint = PrimaryTurquoise,
                             modifier = Modifier.weight(1f)
@@ -742,7 +742,8 @@ fun StatusChip(
 @Composable
 fun MemberActionSquareCard(
     title: String,
-    iconVector: ImageVector,
+    iconVector: ImageVector? = null,
+    iconPainter: Painter? = null,
     iconBg: Color,
     iconTint: Color,
     modifier: Modifier = Modifier,
@@ -764,15 +765,24 @@ fun MemberActionSquareCard(
             Surface(
                 color = iconBg,
                 shape = CircleShape,
-                modifier = Modifier.size(46.dp)
+                modifier = Modifier.size(56.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = iconVector,
-                        contentDescription = title,
-                        tint = iconTint,
-                        modifier = Modifier.size(24.dp)
-                    )
+                    if (iconVector != null) {
+                        Icon(
+                            imageVector = iconVector,
+                            contentDescription = title,
+                            tint = iconTint,
+                            modifier = Modifier.size(29.dp)
+                        )
+                    } else if (iconPainter != null) {
+                        Icon(
+                            painter = iconPainter,
+                            contentDescription = title,
+                            tint = iconTint,
+                            modifier = Modifier.size(29.dp)
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
