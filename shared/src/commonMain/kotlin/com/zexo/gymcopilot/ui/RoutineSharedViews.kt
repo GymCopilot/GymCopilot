@@ -37,6 +37,15 @@ fun FullRoutinesSection(
     var showTimerModal by remember { mutableStateOf(false) }
     var favoritesFilterActive by remember { mutableStateOf(false) }
     var showCategoryDialog by remember { mutableStateOf(false) }
+    var showCreationScreen by remember { mutableStateOf(false) }
+
+    if (showCreationScreen) {
+        RoutineCreationSharedScreen(
+            onBack = { showCreationScreen = false },
+            apiClient = apiClient
+        )
+        return
+    }
 
     val mockRoutines = remember {
         listOf(
@@ -196,7 +205,7 @@ fun FullRoutinesSection(
                             label = "Nueva Rutina",
                             accentColor = PrimaryTurquoise,
                             modifier = Modifier.weight(1f),
-                            onClick = { /* Action */ }
+                            onClick = { showCreationScreen = true }
                         ) {
                             Icon(Icons.Outlined.Description, contentDescription = null, tint = PrimaryTurquoise, modifier = Modifier.size(28.dp))
                         }
