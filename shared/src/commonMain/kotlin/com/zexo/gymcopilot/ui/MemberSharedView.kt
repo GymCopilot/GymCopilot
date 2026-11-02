@@ -730,10 +730,10 @@ fun StatusChip(
         color = color.copy(alpha = 0.15f),
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(1.dp, color.copy(alpha = 0.4f)),
-        modifier = modifier.height(42.dp)
+        modifier = modifier.wrapContentHeight()
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
@@ -748,7 +748,8 @@ fun StatusChip(
                 text = text,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = color
+                color = color,
+                maxLines = 1
             )
         }
     }
@@ -769,11 +770,11 @@ fun MemberActionSquareCard(
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(1.dp, PrimaryTurquoise.copy(alpha = 0.4f)),
         modifier = modifier
-            .height(110.dp)
+            .wrapContentHeight()
             .clickable { onClick() }
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(14.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp, horizontal = 14.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -800,13 +801,14 @@ fun MemberActionSquareCard(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = title,
                 color = TextWhite,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                maxLines = 1
             )
         }
     }
