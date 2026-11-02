@@ -378,6 +378,8 @@ fun MemberFullDashboard(
     when (currentTab) {
         0 -> MemberDashboardSharedScreen("Gym 19", "socio@gymcopilot.com", null, apiClient, currentTab, {})
         1 -> RealPublicStoreView(onTabSelected = {})
+        2 -> FullClassesScheduleSection()
+        3 -> FullRoutinesSection()
         4 -> ChatSharedScreen(apiClient = apiClient)
         else -> MemberDashboardSharedScreen("Gym 19", "socio@gymcopilot.com", null, apiClient, currentTab, {})
     }
