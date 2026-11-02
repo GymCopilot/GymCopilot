@@ -172,72 +172,7 @@ fun ClassScheduleCard(
     }
 }
 
-@Composable
-fun RoutineCard(
-    exerciseName: String,
-    sets: String,
-    reps: String,
-    rest: String,
-    isCompleted: Boolean,
-    onToggle: () -> Unit
-) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = if (isCompleted) SurfaceColor.copy(alpha = 0.5f) else SurfaceColor
-        ),
-        shape = RoundedCornerShape(12.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .clickable { onToggle() }
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                Checkbox(
-                    checked = isCompleted,
-                    onCheckedChange = { onToggle() },
-                    colors = CheckboxDefaults.colors(checkedColor = PrimaryTurquoise)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Column {
-                    Text(
-                        text = exerciseName,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isCompleted) TextGray else TextWhite,
-                        fontSize = 15.sp
-                    )
-                    Text(
-                        text = "$sets series x $reps reps • Descanso: $rest",
-                        fontSize = 12.sp,
-                        color = TextGray
-                    )
-                }
-            }
 
-            Surface(
-                color = if (isCompleted) PrimaryTurquoise else Color.Transparent,
-                shape = CircleShape,
-                border = if (!isCompleted) ButtonDefaults.outlinedButtonBorder(enabled = true) else null,
-                modifier = Modifier.size(28.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = if (isCompleted) "✓" else "",
-                        color = Color.Black,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
-                }
-            }
-        }
-    }
-}
 
 @Composable
 fun ProductCard(
@@ -523,27 +458,6 @@ fun FullClassesScheduleSection() {
     }
 }
 
-@Composable
-fun FullRoutinesSection() {
-    var check1 by remember { mutableStateOf(true) }
-    var check2 by remember { mutableStateOf(false) }
-
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
-    ) {
-        item {
-            Text(text = "Mis Rutinas y Ejercicios", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextWhite)
-            Spacer(modifier = Modifier.height(12.dp))
-        }
-        item {
-            RoutineCard("Press Inclinado con Mancuernas", "4", "10 - 12", "90 seg", check1) { check1 = !check1 }
-            RoutineCard("Sentadilla Libre con Barra", "4", "10", "90 seg", check2) { check2 = !check2 }
-            RoutineCard("Remo con Barra T", "3", "12", "60 seg", false) {}
-            RoutineCard("Fondos en Paralelas", "4", "10", "90 seg", false) {}
-        }
-    }
-}
 
 @Composable
 fun FullStoreSection() {
