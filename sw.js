@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gymcopilot-v7';
+const CACHE_NAME = 'gymcopilot-v8';
 const ASSETS = [
     './',
     './index.html',
