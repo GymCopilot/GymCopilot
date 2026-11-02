@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.text.font.FontWeight
@@ -36,6 +37,8 @@ data class ExerciseEntryShared(
     var isLocked: Boolean = false
 )
 
+data class LevelItem(val name: String, val stars: Int)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RoutineCreationSharedScreen(
@@ -54,10 +57,11 @@ fun RoutineCreationSharedScreen(
     val selectedDays = remember { mutableStateListOf<String>("LU", "MI", "VI") }
     var routineType by remember { mutableStateOf("Personal") }
     var routineStatus by remember { mutableStateOf("Activa") }
+    val selectedProfessorIds = remember { mutableStateListOf<String>() }
 
     val exercises = remember {
         mutableStateListOf(
-            ExerciseEntryShared(name = "Press Inclinado con Mancuernas", series = "4", reps = "10 - 12", weight = "22 kg", rest = "90 seg", category = "PECHO")
+            ExerciseEntryShared(name = "Press Inclinado con Mancuernas", series = "4", reps = "12", weight = "0 kg", rest = "60 seg", category = "PECHO")
         )
     }
 
@@ -249,21 +253,40 @@ fun RoutineCreationSharedScreen(
                         }
 
                         Text("Nivel", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        val levels = listOf("Principiante", "Intermedio", "Avanzado")
+                        val levels = listOf(
+                            LevelItem("Principiante", 1),
+                            LevelItem("Intermedio", 3),
+                            LevelItem("Avanzado", 5)
+                        )
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            levels.forEach { lvl ->
+                            levels.forEach { (lvl, starsCount) ->
                                 val isSelected = selectedLevel == lvl
                                 Card(
                                     onClick = { selectedLevel = lvl },
                                     colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryTurquoise else Color(0xFF0F151B)),
                                     border = BorderStroke(1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)),
                                     shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.weight(1f).height(50.dp)
+                                    modifier = Modifier.weight(1f).height(65.dp)
                                 ) {
-                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Column(
+                                        modifier = Modifier.fillMaxSize().padding(4.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                            repeat(starsCount) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Star,
+                                                    contentDescription = null,
+                                                    tint = if (isSelected) Color.Black else PrimaryTurquoise,
+                                                    modifier = Modifier.size(12.dp)
+                                                )
+                                            }
+                                        }
+                                        Spacer(Modifier.height(4.dp))
                                         Text(
                                             text = lvl,
                                             color = if (isSelected) Color.Black else TextWhite,
@@ -383,6 +406,25 @@ fun RoutineCreationSharedScreen(
                         Text("Profesor asignado principal (Tú)", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(6.dp))
                         Text("Se asignará automáticamente al creador de la rutina.", color = TextGray, fontSize = 12.sp)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            listOf("Prof. Gabriel Fernández", "Prof. Laura Benítez").forEach { profName ->
+                                val isProfSelected = selectedProfessorIds.contains(profName)
+                                FilterChip(
+                                    selected = isProfSelected,
+                                    onClick = {
+                                        if (isProfSelected) selectedProfessorIds.remove(profName) else selectedProfessorIds.add(profName)
+                                    },
+                                    label = { Text(profName, fontSize = 11.sp) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = PrimaryTurquoise,
+                                        selectedLabelColor = Color.Black,
+                                        containerColor = Color(0xFF0F151B),
+                                        labelColor = TextWhite
+                                    )
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -478,92 +520,143 @@ fun RoutineExerciseItemCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedTextField(
-                    value = exercise.name,
-                    onValueChange = { onUpdate(exercise.copy(name = it)) },
-                    placeholder = { Text("Nombre del ejercicio", color = TextGray) },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFF0F151B),
-                        unfocusedContainerColor = Color(0xFF0F151B),
-                        focusedBorderColor = PrimaryTurquoise,
-                        unfocusedBorderColor = Color.Transparent,
-                        focusedTextColor = TextWhite,
-                        unfocusedTextColor = TextWhite
-                    ),
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.weight(1f)
-                )
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = Color.Red)
-                }
-            }
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = exercise.series,
-                    onValueChange = { onUpdate(exercise.copy(series = it)) },
-                    label = { Text("Series", fontSize = 10.sp) },
-                    singleLine = true,
-                    modifier = Modifier.weight(1f),
-                    colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color(0xFF0F151B), unfocusedContainerColor = Color(0xFF0F151B), focusedBorderColor = PrimaryTurquoise, focusedTextColor = TextWhite, unfocusedTextColor = TextWhite)
-                )
-                OutlinedTextField(
-                    value = exercise.reps,
-                    onValueChange = { onUpdate(exercise.copy(reps = it)) },
-                    label = { Text("Reps", fontSize = 10.sp) },
-                    singleLine = true,
-                    modifier = Modifier.weight(1f),
-                    colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color(0xFF0F151B), unfocusedContainerColor = Color(0xFF0F151B), focusedBorderColor = PrimaryTurquoise, focusedTextColor = TextWhite, unfocusedTextColor = TextWhite)
-                )
-                OutlinedTextField(
-                    value = exercise.weight,
-                    onValueChange = { onUpdate(exercise.copy(weight = it)) },
-                    label = { Text("Peso", fontSize = 10.sp) },
-                    singleLine = true,
-                    modifier = Modifier.weight(1f),
-                    colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color(0xFF0F151B), unfocusedContainerColor = Color(0xFF0F151B), focusedBorderColor = PrimaryTurquoise, focusedTextColor = TextWhite, unfocusedTextColor = TextWhite)
-                )
-                OutlinedTextField(
-                    value = exercise.rest,
-                    onValueChange = { onUpdate(exercise.copy(rest = it)) },
-                    label = { Text("Descanso", fontSize = 10.sp) },
-                    singleLine = true,
-                    modifier = Modifier.weight(1f),
-                    colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color(0xFF0F151B), unfocusedContainerColor = Color(0xFF0F151B), focusedBorderColor = PrimaryTurquoise, focusedTextColor = TextWhite, unfocusedTextColor = TextWhite)
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    IconButton(onClick = onMoveUp, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.KeyboardArrowUp, null, tint = PrimaryTurquoise)
-                    }
-                    IconButton(onClick = onMoveDown, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.KeyboardArrowDown, null, tint = PrimaryTurquoise)
-                    }
-                }
-                Surface(
-                    color = Color(0xFF00C853).copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(8.dp)
+            // Sección superior con Icono de Ejercicio (izq) y Selector de regiones del cuerpo + botón Personal (der)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                // Cuadro izquierdo con icono de ejercicio / silueta
+                Box(
+                    modifier = Modifier
+                        .size(130.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFF0F151B))
+                        .border(1.dp, PrimaryTurquoise.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "Configurado",
-                        color = Color(0xFF00C853),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    Image(
+                        painter = painterResource(Res.drawable.fitness_center),
+                        contentDescription = null,
+                        modifier = Modifier.size(54.dp),
+                        colorFilter = ColorFilter.tint(PrimaryTurquoise)
                     )
                 }
+
+                // Cuadro derecho con selector de región muscular + botón PERSONAL
+                Column(
+                    modifier = Modifier.weight(1f).height(130.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F151B)),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
+                        modifier = Modifier.weight(1f).fillMaxWidth()
+                    ) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("CUÁDRICEPS", color = TextGray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.height(2.dp))
+                                Text(exercise.category, color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                                Spacer(Modifier.height(2.dp))
+                                Text("ABDOMINALES", color = TextGray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+
+                    Button(
+                        onClick = { /* Personal action */ },
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F151B)),
+                        border = BorderStroke(1.dp, PrimaryTurquoise.copy(alpha = 0.3f)),
+                        contentPadding = PaddingValues(0.dp),
+                        modifier = Modifier.fillMaxWidth().height(36.dp)
+                    ) {
+                        Icon(Icons.Default.Add, null, tint = PrimaryTurquoise, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("PERSONAL", color = PrimaryTurquoise, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                    }
+                }
+            }
+
+            // Tarjeta central que indica el nombre del ejercicio
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF252D36)),
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Box(modifier = Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "Seleccione un ejercicio de ${exercise.category}",
+                        color = TextWhite,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            // 5 campos de parámetros: Series, Reps, Peso, Descanso, Tiempo
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ParameterBox("Series", exercise.series, Modifier.weight(1f))
+                ParameterBox("Reps", exercise.reps, Modifier.weight(1f))
+                ParameterBox("Peso", exercise.weight, Modifier.weight(1.1f))
+                ParameterBox("Descanso", exercise.rest, Modifier.weight(1.2f))
+                ParameterBox("Tiempo", exercise.time, Modifier.weight(1f))
+            }
+
+            // Fila inferior: Botones de posición (^ y v), Botón "Listo" (con check) y Botón de basura
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onMoveUp, modifier = Modifier.size(40.dp).background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(10.dp))) {
+                    Icon(Icons.Default.KeyboardArrowUp, null, tint = PrimaryTurquoise)
+                }
+                IconButton(onClick = onMoveDown, modifier = Modifier.size(40.dp).background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(10.dp))) {
+                    Icon(Icons.Default.KeyboardArrowDown, null, tint = PrimaryTurquoise)
+                }
+
+                Button(
+                    onClick = { onUpdate(exercise.copy(isLocked = true)) },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF252D36)),
+                    border = BorderStroke(1.dp, PrimaryTurquoise),
+                    modifier = Modifier.weight(1f).height(44.dp)
+                ) {
+                    Image(
+                        painter = painterResource(Res.drawable.checked),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        colorFilter = ColorFilter.tint(Color.White)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text("Listo", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                }
+
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(Icons.Default.Delete, null, tint = Color.Red, modifier = Modifier.size(22.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ParameterBox(label: String, value: String, modifier: Modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, color = TextGray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(4.dp))
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF0F151B)),
+            shape = RoundedCornerShape(8.dp),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
+            modifier = Modifier.fillMaxWidth().height(42.dp)
+        ) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(value, color = TextWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
             }
         }
     }
