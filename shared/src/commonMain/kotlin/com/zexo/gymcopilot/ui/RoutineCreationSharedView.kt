@@ -14,7 +14,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
@@ -181,14 +183,16 @@ fun RoutineCreationSharedScreen(
                                             Image(
                                                 painter = painterResource(iconRes),
                                                 contentDescription = label,
-                                                modifier = Modifier.size(30.dp)
+                                                modifier = Modifier.size(30.dp),
+                                                colorFilter = ColorFilter.tint(if (isSelected) Color.Black else TextWhite)
                                             )
                                             Spacer(Modifier.height(4.dp))
                                             Text(
                                                 text = label,
                                                 color = if (isSelected) Color.Black else TextWhite,
                                                 fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold
+                                                fontWeight = FontWeight.Bold,
+                                                textAlign = TextAlign.Center
                                             )
                                         }
                                     }
@@ -198,12 +202,12 @@ fun RoutineCreationSharedScreen(
 
                         Text("Objetivo", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         val objectives = listOf(
-                            Triple("Hipertrofia", "Hipertrofia", Res.drawable.force),
+                            Triple("Hipertrofia", "Hipertrofia", Res.drawable.hypertrophy),
                             Triple("Fuerza", "Fuerza", Res.drawable.force),
-                            Triple("Resistencia", "Resistencia", Res.drawable.cardio),
+                            Triple("Resistencia", "Resistencia", Res.drawable.g_sprint),
                             Triple("Definición", "Definición", Res.drawable.definition),
                             Triple("Cardio", "Cardio", Res.drawable.cardio),
-                            Triple("Rehabilitación", "Rehabilitación", Res.drawable.ayuda)
+                            Triple("Rehabilitación", "Rehabilitación", Res.drawable.rehabilitation)
                         )
                         objectives.chunked(3).forEach { rowItems ->
                             Row(
@@ -227,14 +231,16 @@ fun RoutineCreationSharedScreen(
                                             Image(
                                                 painter = painterResource(iconRes),
                                                 contentDescription = label,
-                                                modifier = Modifier.size(28.dp)
+                                                modifier = Modifier.size(28.dp),
+                                                colorFilter = ColorFilter.tint(if (isSelected) Color.Black else TextWhite)
                                             )
                                             Spacer(Modifier.height(4.dp))
                                             Text(
                                                 text = label,
                                                 color = if (isSelected) Color.Black else TextWhite,
                                                 fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold
+                                                fontWeight = FontWeight.Bold,
+                                                textAlign = TextAlign.Center
                                             )
                                         }
                                     }
@@ -249,18 +255,24 @@ fun RoutineCreationSharedScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             levels.forEach { lvl ->
-                                FilterChip(
-                                    selected = selectedLevel == lvl,
+                                val isSelected = selectedLevel == lvl
+                                Card(
                                     onClick = { selectedLevel = lvl },
-                                    label = { Text(lvl, fontSize = 12.sp) },
-                                    modifier = Modifier.weight(1f),
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = PrimaryTurquoise,
-                                        selectedLabelColor = Color.Black,
-                                        containerColor = Color(0xFF0F151B),
-                                        labelColor = TextWhite
-                                    )
-                                )
+                                    colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryTurquoise else Color(0xFF0F151B)),
+                                    border = BorderStroke(1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.weight(1f).height(50.dp)
+                                ) {
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = lvl,
+                                            color = if (isSelected) Color.Black else TextWhite,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -278,63 +290,80 @@ fun RoutineCreationSharedScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         Text("Días recomendados", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        val days = listOf("LU", "MA", "MI", "JU", "VI", "SÁ", "DO")
+                        val daysMap = listOf("LU" to "L", "MA" to "M", "MI" to "M", "JU" to "J", "VI" to "V", "SÁ" to "S", "DO" to "D")
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            days.forEach { day ->
-                                val isSelected = selectedDays.contains(day)
-                                FilterChip(
-                                    selected = isSelected,
+                            daysMap.forEach { (fullKey, shortLetter) ->
+                                val isSelected = selectedDays.contains(fullKey)
+                                Card(
                                     onClick = {
-                                        if (isSelected) selectedDays.remove(day) else selectedDays.add(day)
+                                        if (isSelected) selectedDays.remove(fullKey) else selectedDays.add(fullKey)
                                     },
-                                    label = { Text(day, fontSize = 10.sp) },
-                                    modifier = Modifier.weight(1f),
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = PrimaryTurquoise,
-                                        selectedLabelColor = Color.Black,
-                                        containerColor = Color(0xFF0F151B),
-                                        labelColor = TextWhite
-                                    )
-                                )
+                                    colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryTurquoise else Color(0xFF0F151B)),
+                                    border = BorderStroke(1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.weight(1f).height(46.dp)
+                                ) {
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = shortLetter,
+                                            color = if (isSelected) Color.Black else TextWhite,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
                             }
                         }
 
                         Text("Tipo de rutina", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             listOf("Personal", "Asignable").forEach { type ->
-                                FilterChip(
-                                    selected = routineType == type,
+                                val isSelected = routineType == type
+                                Card(
                                     onClick = { routineType = type },
-                                    label = { Text(type) },
-                                    modifier = Modifier.weight(1f),
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = PrimaryTurquoise,
-                                        selectedLabelColor = Color.Black,
-                                        containerColor = Color(0xFF0F151B),
-                                        labelColor = TextWhite
-                                    )
-                                )
+                                    colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryTurquoise else Color(0xFF0F151B)),
+                                    border = BorderStroke(1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.weight(1f).height(50.dp)
+                                ) {
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = type,
+                                            color = if (isSelected) Color.Black else TextWhite,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
                             }
                         }
 
                         Text("Estado", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             listOf("Borrador", "Activa", "Archivada").forEach { st ->
-                                FilterChip(
-                                    selected = routineStatus == st,
+                                val isSelected = routineStatus == st
+                                Card(
                                     onClick = { routineStatus = st },
-                                    label = { Text(st) },
-                                    modifier = Modifier.weight(1f),
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = PrimaryTurquoise,
-                                        selectedLabelColor = Color.Black,
-                                        containerColor = Color(0xFF0F151B),
-                                        labelColor = TextWhite
-                                    )
-                                )
+                                    colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryTurquoise else Color(0xFF0F151B)),
+                                    border = BorderStroke(1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.weight(1f).height(50.dp)
+                                ) {
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = st,
+                                            color = if (isSelected) Color.Black else TextWhite,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

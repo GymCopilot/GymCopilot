@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.model.Exercise
 import com.zexo.gymcopilot.model.Routine
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
+import gymcopilot.shared.generated.resources.*
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun FullRoutinesSection(
@@ -207,7 +209,7 @@ fun FullRoutinesSection(
                             modifier = Modifier.weight(1f),
                             onClick = { showCreationScreen = true }
                         ) {
-                            Icon(Icons.Outlined.Description, contentDescription = null, tint = PrimaryTurquoise, modifier = Modifier.size(28.dp))
+                            Icon(painter = painterResource(Res.drawable.assignment_add), contentDescription = null, tint = PrimaryTurquoise, modifier = Modifier.size(28.dp))
                         }
                         QuickActionSharedItem(
                             label = "Favoritas",
