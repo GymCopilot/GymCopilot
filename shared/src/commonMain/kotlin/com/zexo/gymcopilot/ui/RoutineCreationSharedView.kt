@@ -525,7 +525,7 @@ fun RoutineExerciseItemCard(
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             // Sección superior con Icono de Ejercicio (izq) y Selector de regiones del cuerpo + botón Personal (der)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                // Cuadro izquierdo con icono de ejercicio / silueta dinámico
+                // Cuadro izquierdo con icono de ejercicio / silueta dinámico que se desplaza con la rueda de ejercicios
                 Box(
                     modifier = Modifier
                         .size(130.dp)
@@ -534,11 +534,14 @@ fun RoutineExerciseItemCard(
                         .border(1.dp, PrimaryTurquoise.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Image(
-                        painter = painterResource(getExerciseIconShared(exercise.name)),
-                        contentDescription = null,
-                        modifier = Modifier.size(80.dp),
-                        colorFilter = ColorFilter.tint(PrimaryTurquoise)
+                    WheelPickerScrollSharedImages(
+                        options = exercisesList,
+                        currentValue = exercise.name,
+                        accentColor = PrimaryTurquoise,
+                        onValueChange = { newEx ->
+                            onUpdate(exercise.copy(name = newEx))
+                        },
+                        containerHeight = 130.dp
                     )
                 }
 
@@ -614,7 +617,7 @@ fun RoutineExerciseItemCard(
                 ParameterWheelBox("Tiempo", exercise.time, (0..600 step 5).map { it.toString() }, activeField == "time", itemHeight, PrimaryTurquoise, { t -> onUpdate(exercise.copy(time = t)) }, { activeField = "time" }, Modifier.weight(1f), " s")
             }
 
-            // Fila inferior: Botones de posición (^ y v), Botón "Listo" (con check) y Botón de basura
+            // Fila inferior: Botones de posición (^ y v), Botón "Listo" / "Agregado" (con lápiz al editar) y Botón de basura
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -627,24 +630,61 @@ fun RoutineExerciseItemCard(
                     Icon(Icons.Default.KeyboardArrowDown, null, tint = PrimaryTurquoise)
                 }
 
-                Button(
-                    onClick = {
-                        activeField = null
-                        onUpdate(exercise.copy(isLocked = true))
-                    },
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF252D36)),
-                    border = BorderStroke(1.dp, PrimaryTurquoise),
-                    modifier = Modifier.weight(1f).height(44.dp)
-                ) {
-                    Image(
-                        painter = painterResource(Res.drawable.checked),
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        colorFilter = ColorFilter.tint(Color.White)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text("Listo", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                if (exercise.isLocked) {
+                    Row(
+                        modifier = Modifier.weight(1f).height(44.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            modifier = Modifier.weight(0.75f).fillMaxHeight(),
+                            color = Color(0xFF252D36),
+                            shape = RoundedCornerShape(topStart = 10.dp, bottomStart = 10.dp),
+                            border = BorderStroke(1.dp, PrimaryTurquoise)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Image(
+                                        painter = painterResource(Res.drawable.checked),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        colorFilter = ColorFilter.tint(PrimaryTurquoise)
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("Agregado", color = PrimaryTurquoise, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                        Button(
+                            onClick = { onUpdate(exercise.copy(isLocked = false)) },
+                            modifier = Modifier.weight(0.25f).fillMaxHeight(),
+                            shape = RoundedCornerShape(topEnd = 10.dp, bottomEnd = 10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray),
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Icon(Icons.Default.Edit, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            activeField = null
+                            onUpdate(exercise.copy(isLocked = true))
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF252D36)),
+                        border = BorderStroke(1.dp, PrimaryTurquoise),
+                        modifier = Modifier.weight(1f).height(44.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(Res.drawable.checked),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            colorFilter = ColorFilter.tint(Color.White)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text("Listo", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
 
                 IconButton(
@@ -718,6 +758,71 @@ fun WheelPickerScrollShared(
                     fontSize = if (isCentered) 14.sp else 11.sp,
                     fontWeight = if (isCentered) FontWeight.Black else FontWeight.Normal,
                     textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun WheelPickerScrollSharedImages(
+    options: List<String>,
+    currentValue: String,
+    accentColor: Color,
+    onValueChange: (String) -> Unit,
+    containerHeight: androidx.compose.ui.unit.Dp = 130.dp
+) {
+    val itemHeight = 130.dp
+    val verticalPadding = (containerHeight - itemHeight) / 2
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = options.indexOf(currentValue).coerceAtLeast(0))
+    val snapFlingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+
+    val centerIndex by remember {
+        derivedStateOf {
+            val layoutInfo = listState.layoutInfo
+            val center = layoutInfo.viewportStartOffset + (layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset) / 2
+            layoutInfo.visibleItemsInfo.minByOrNull { item ->
+                val itemCenter = item.offset + item.size / 2
+                kotlin.math.abs(itemCenter - center)
+            }?.index ?: -1
+        }
+    }
+
+    LaunchedEffect(currentValue, options) {
+        val targetIndex = options.indexOf(currentValue).coerceAtLeast(0)
+        if (!listState.isScrollInProgress && listState.firstVisibleItemIndex != targetIndex) {
+            listState.scrollToItem(targetIndex)
+        }
+    }
+
+    LaunchedEffect(listState.isScrollInProgress) {
+        if (!listState.isScrollInProgress) {
+            if (centerIndex in options.indices) {
+                onValueChange(options[centerIndex])
+            }
+        }
+    }
+
+    LazyColumn(
+        state = listState,
+        flingBehavior = snapFlingBehavior,
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        contentPadding = PaddingValues(vertical = verticalPadding.coerceAtLeast(0.dp))
+    ) {
+        itemsIndexed(options) { index, item ->
+            val isCentered = centerIndex == index
+            Box(
+                modifier = Modifier
+                    .height(itemHeight)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(getExerciseIconShared(item)),
+                    contentDescription = item,
+                    modifier = Modifier.size(if (isCentered) 90.dp else 50.dp),
+                    colorFilter = ColorFilter.tint(if (isCentered) accentColor else accentColor.copy(alpha = 0.2f))
                 )
             }
         }
