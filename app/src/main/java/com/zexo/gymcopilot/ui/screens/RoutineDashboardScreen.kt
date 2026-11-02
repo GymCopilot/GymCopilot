@@ -260,7 +260,7 @@ fun RoutineDashboardScreen(
                             .padding(horizontal = 20.dp, vertical = 12.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        val statModifier = Modifier.weight(1f).height(90.dp)
+                        val statModifier = Modifier.weight(1f).height(120.dp)
                         StatBox(label = "Total", value = totalCount.toString(), icon = Icons.Outlined.Description, color = accentColor, accentColor = accentColor, shape = containerShape, isSelected = false, onClick = {}, modifier = statModifier)
                         StatBox(label = "Completadas", value = completedCount.toString(), icon = Icons.Default.CheckCircle, color = Color(0xFF4CAF50), accentColor = accentColor, shape = containerShape, isSelected = false, onClick = {}, modifier = statModifier)
                         StatBox(label = "Asignadas", value = assignedCount.toString(), icon = Icons.Default.Group, color = Color(0xFF2196F3), accentColor = accentColor, shape = containerShape, isSelected = false, onClick = {}, modifier = statModifier)
