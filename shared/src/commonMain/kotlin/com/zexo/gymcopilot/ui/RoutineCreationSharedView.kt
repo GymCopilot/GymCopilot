@@ -1,9 +1,11 @@
 package com.zexo.gymcopilot.ui
 
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -37,7 +39,53 @@ data class ExerciseEntryShared(
     var isLocked: Boolean = false
 )
 
-data class LevelItem(val name: String, val stars: Int)
+data class LevelItemShared(val name: String, val stars: Int)
+
+val PREDEFINED_EXERCISES_SHARED = mapOf(
+    "PECHO" to listOf(
+        "Press banca horizontal", "Press banco inclinado barra", "Press plano mancuerna",
+        "Aperturas mancuerna", "Flexiones clásicas", "Cruce de poleas"
+    ),
+    "ESPALDA" to listOf(
+        "Remo con barra", "Peso muerto barra", "Jalón frontal polea",
+        "Remo unilateral mancuerna", "Dominadas", "Face Pull polea"
+    ),
+    "HOMBROS" to listOf(
+        "Press militar barra", "Press militar mancuerna", "Elevaciones laterales mancuerna"
+    ),
+    "BÍCEPS" to listOf(
+        "Curl barra recta", "Curl alternado mancuerna", "Curl martillo mancuerna"
+    ),
+    "TRÍCEPS" to listOf(
+        "Press francés barra", "Extensión de tríceps en polea", "Fondos"
+    ),
+    "PIERNA" to listOf(
+        "Sentadilla Libre con Barra", "Prensa 45°", "Extensiones de Cuádriceps", "Curl Femoral Tumbado", "Hip Thrust"
+    ),
+    "ABDOMINALES" to listOf(
+        "Crunch suelo", "Elevación de piernas", "Plancha", "Russian Twist"
+    )
+)
+
+fun getExerciseIconShared(exerciseName: String): org.jetbrains.compose.resources.DrawableResource {
+    val name = exerciseName.lowercase().trim()
+    return when {
+        name.contains("pecho") -> Res.drawable.g_categoria_pecho
+        name.contains("espalda") -> Res.drawable.g_categoria_espalda
+        name.contains("hombros") -> Res.drawable.g_categoria_hombros
+        name.contains("bíceps") || name.contains("biceps") -> Res.drawable.g_categoria_biceps
+        name.contains("tríceps") || name.contains("triceps") -> Res.drawable.g_categoria_triceps
+        name.contains("pierna") || name.contains("sentadilla") || name.contains("prensa") -> Res.drawable.g_categoria_piernas
+        name.contains("abdominal") || name.contains("plancha") || name.contains("crunch") -> Res.drawable.g_categoria_abdominales
+        name.contains("press banca") || name.contains("horizontal") -> Res.drawable.g_pressbancapechohorizontal
+        name.contains("inclinado") -> Res.drawable.g_pressinclinado
+        name.contains("aperturas") -> Res.drawable.g_aperturas
+        name.contains("remo") -> Res.drawable.g_remo
+        name.contains("jalón") || name.contains("jalon") -> Res.drawable.g_jalonfrontal
+        name.contains("dominada") -> Res.drawable.g_dominada
+        else -> Res.drawable.fitness_center
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,7 +100,6 @@ fun RoutineCreationSharedScreen(
     var selectedObjective by remember { mutableStateOf("Hipertrofia") }
     var selectedLevel by remember { mutableStateOf("Intermedio") }
     val selectedDuration by remember { mutableStateOf("60 min") }
-    var selectedCategory by remember { mutableStateOf("FullBody") }
 
     val selectedDays = remember { mutableStateListOf<String>("LU", "MI", "VI") }
     var routineType by remember { mutableStateOf("Personal") }
@@ -61,7 +108,7 @@ fun RoutineCreationSharedScreen(
 
     val exercises = remember {
         mutableStateListOf(
-            ExerciseEntryShared(name = "Press Inclinado con Mancuernas", series = "4", reps = "12", weight = "0 kg", rest = "60 seg", category = "PECHO")
+            ExerciseEntryShared(name = "Press banca horizontal", series = "4", reps = "12", weight = "0 kg", rest = "60 seg", category = "PECHO")
         )
     }
 
@@ -156,54 +203,6 @@ fun RoutineCreationSharedScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
 
-                        Text("Grupo Muscular", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        val muscleGroups = listOf(
-                            Triple("Pecho", "Pecho", Res.drawable.g_categoria_pecho),
-                            Triple("Espalda", "Espalda", Res.drawable.g_categoria_espalda),
-                            Triple("FullBody", "FullBody", Res.drawable.g_categoria_cuerpocompleto),
-                            Triple("Pierna", "Pierna", Res.drawable.g_categoria_piernas),
-                            Triple("Brazo", "Brazo", Res.drawable.g_categoria_brazos),
-                            Triple("Abdomen", "Abdomen", Res.drawable.g_categoria_abdominales)
-                        )
-                        muscleGroups.chunked(3).forEach { rowItems ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                rowItems.forEach { (group, label, iconRes) ->
-                                    val isSelected = selectedCategory == group
-                                    Card(
-                                        onClick = { selectedCategory = group },
-                                        colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryTurquoise else Color(0xFF0F151B)),
-                                        border = BorderStroke(1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)),
-                                        shape = RoundedCornerShape(12.dp),
-                                        modifier = Modifier.weight(1f).height(75.dp)
-                                    ) {
-                                        Column(
-                                            modifier = Modifier.fillMaxSize().padding(4.dp),
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.Center
-                                        ) {
-                                            Image(
-                                                painter = painterResource(iconRes),
-                                                contentDescription = label,
-                                                modifier = Modifier.size(30.dp),
-                                                colorFilter = ColorFilter.tint(if (isSelected) Color.Black else TextWhite)
-                                            )
-                                            Spacer(Modifier.height(4.dp))
-                                            Text(
-                                                text = label,
-                                                color = if (isSelected) Color.Black else TextWhite,
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                textAlign = TextAlign.Center
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
                         Text("Objetivo", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         val objectives = listOf(
                             Triple("Hipertrofia", "Hipertrofia", Res.drawable.hypertrophy),
@@ -254,18 +253,18 @@ fun RoutineCreationSharedScreen(
 
                         Text("Nivel", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         val levels = listOf(
-                            LevelItem("Principiante", 1),
-                            LevelItem("Intermedio", 3),
-                            LevelItem("Avanzado", 5)
+                            LevelItemShared("Principiante", 1),
+                            LevelItemShared("Intermedio", 3),
+                            LevelItemShared("Avanzado", 5)
                         )
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            levels.forEach { (lvl, starsCount) ->
-                                val isSelected = selectedLevel == lvl
+                            levels.forEach { lvlItem ->
+                                val isSelected = selectedLevel == lvlItem.name
                                 Card(
-                                    onClick = { selectedLevel = lvl },
+                                    onClick = { selectedLevel = lvlItem.name },
                                     colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryTurquoise else Color(0xFF0F151B)),
                                     border = BorderStroke(1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)),
                                     shape = RoundedCornerShape(12.dp),
@@ -277,7 +276,7 @@ fun RoutineCreationSharedScreen(
                                         verticalArrangement = Arrangement.Center
                                     ) {
                                         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                                            repeat(starsCount) {
+                                            repeat(lvlItem.stars) {
                                                 Icon(
                                                     imageVector = Icons.Default.Star,
                                                     contentDescription = null,
@@ -288,7 +287,7 @@ fun RoutineCreationSharedScreen(
                                         }
                                         Spacer(Modifier.height(4.dp))
                                         Text(
-                                            text = lvl,
+                                            text = lvlItem.name,
                                             color = if (isSelected) Color.Black else TextWhite,
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
@@ -439,7 +438,7 @@ fun RoutineCreationSharedScreen(
                     RoutineSectionHeader("4. Constructor de ejercicios")
                     IconButton(
                         onClick = {
-                            exercises.add(ExerciseEntryShared(name = "Nuevo Ejercicio", series = "4", reps = "12", weight = "0 kg", rest = "60 seg"))
+                            exercises.add(ExerciseEntryShared(name = "Press banca horizontal", series = "4", reps = "12", weight = "0 kg", rest = "60 seg", category = "PECHO"))
                         },
                         modifier = Modifier
                             .size(36.dp)
@@ -513,6 +512,10 @@ fun RoutineExerciseItemCard(
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit
 ) {
+    var activeField by remember { mutableStateOf<String?>(null) }
+    val categories = PREDEFINED_EXERCISES_SHARED.keys.toList()
+    val exercisesList = PREDEFINED_EXERCISES_SHARED[exercise.category] ?: listOf(exercise.name)
+
     Card(
         colors = CardDefaults.cardColors(containerColor = SurfaceColor),
         shape = RoundedCornerShape(16.dp),
@@ -522,7 +525,7 @@ fun RoutineExerciseItemCard(
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             // Sección superior con Icono de Ejercicio (izq) y Selector de regiones del cuerpo + botón Personal (der)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                // Cuadro izquierdo con icono de ejercicio / silueta
+                // Cuadro izquierdo con icono de ejercicio / silueta dinámico
                 Box(
                     modifier = Modifier
                         .size(130.dp)
@@ -532,9 +535,9 @@ fun RoutineExerciseItemCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
-                        painter = painterResource(Res.drawable.fitness_center),
+                        painter = painterResource(getExerciseIconShared(exercise.name)),
                         contentDescription = null,
-                        modifier = Modifier.size(54.dp),
+                        modifier = Modifier.size(80.dp),
                         colorFilter = ColorFilter.tint(PrimaryTurquoise)
                     )
                 }
@@ -544,21 +547,25 @@ fun RoutineExerciseItemCard(
                     modifier = Modifier.weight(1f).height(130.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F151B)),
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
-                        modifier = Modifier.weight(1f).fillMaxWidth()
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFF0F151B))
+                            .border(1.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("CUÁDRICEPS", color = TextGray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.height(2.dp))
-                                Text(exercise.category, color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Black)
-                                Spacer(Modifier.height(2.dp))
-                                Text("ABDOMINALES", color = TextGray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
+                        WheelPickerScrollShared(
+                            options = categories,
+                            currentValue = exercise.category,
+                            onValueChange = { newCat ->
+                                val defaultEx = PREDEFINED_EXERCISES_SHARED[newCat]?.firstOrNull() ?: newCat
+                                onUpdate(exercise.copy(category = newCat, name = defaultEx))
+                            },
+                            unit = "",
+                            containerHeight = 110.dp
+                        )
                     }
 
                     Button(
@@ -576,31 +583,35 @@ fun RoutineExerciseItemCard(
                 }
             }
 
-            // Tarjeta central que indica el nombre del ejercicio
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF252D36)),
-                shape = RoundedCornerShape(10.dp),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
-                modifier = Modifier.fillMaxWidth()
+            // Tarjeta central que indica el nombre del ejercicio (WheelPickerScroll de ejercicios)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFF252D36))
+                    .border(1.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(10.dp)),
+                contentAlignment = Alignment.Center
             ) {
-                Box(modifier = Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "Seleccione un ejercicio de ${exercise.category}",
-                        color = TextWhite,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    )
-                }
+                WheelPickerScrollShared(
+                    options = exercisesList,
+                    currentValue = exercise.name,
+                    onValueChange = { newEx ->
+                        onUpdate(exercise.copy(name = newEx))
+                    },
+                    unit = "",
+                    containerHeight = 60.dp
+                )
             }
 
-            // 5 campos de parámetros: Series, Reps, Peso, Descanso, Tiempo
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ParameterBox("Series", exercise.series, Modifier.weight(1f))
-                ParameterBox("Reps", exercise.reps, Modifier.weight(1f))
-                ParameterBox("Peso", exercise.weight, Modifier.weight(1.1f))
-                ParameterBox("Descanso", exercise.rest, Modifier.weight(1.2f))
-                ParameterBox("Tiempo", exercise.time, Modifier.weight(1f))
+            // 5 campos de parámetros con Ruedas WheelPickerScroll: Series, Reps, Peso, Descanso, Tiempo
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Top) {
+                val itemHeight = if (activeField != null) 100.dp else 42.dp
+                ParameterWheelBox("Series", exercise.series, (1..20).map { it.toString() }, activeField == "series", itemHeight, PrimaryTurquoise, { s -> onUpdate(exercise.copy(series = s)) }, { activeField = "series" }, Modifier.weight(1f))
+                ParameterWheelBox("Reps", exercise.reps, (1..50).map { it.toString() }, activeField == "reps", itemHeight, PrimaryTurquoise, { r -> onUpdate(exercise.copy(reps = r)) }, { activeField = "reps" }, Modifier.weight(1f))
+                ParameterWheelBox("Peso", exercise.weight, (0..300).map { it.toString() }, activeField == "weight", itemHeight, PrimaryTurquoise, { w -> onUpdate(exercise.copy(weight = w)) }, { activeField = "weight" }, Modifier.weight(1.1f), " kg")
+                ParameterWheelBox("Descanso", exercise.rest, (0..300 step 15).map { it.toString() }, activeField == "rest", itemHeight, PrimaryTurquoise, { d -> onUpdate(exercise.copy(rest = d)) }, { activeField = "rest" }, Modifier.weight(1.2f), " seg")
+                ParameterWheelBox("Tiempo", exercise.time, (0..600 step 5).map { it.toString() }, activeField == "time", itemHeight, PrimaryTurquoise, { t -> onUpdate(exercise.copy(time = t)) }, { activeField = "time" }, Modifier.weight(1f), " s")
             }
 
             // Fila inferior: Botones de posición (^ y v), Botón "Listo" (con check) y Botón de basura
@@ -617,7 +628,10 @@ fun RoutineExerciseItemCard(
                 }
 
                 Button(
-                    onClick = { onUpdate(exercise.copy(isLocked = true)) },
+                    onClick = {
+                        activeField = null
+                        onUpdate(exercise.copy(isLocked = true))
+                    },
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF252D36)),
                     border = BorderStroke(1.dp, PrimaryTurquoise),
@@ -645,18 +659,118 @@ fun RoutineExerciseItemCard(
 }
 
 @Composable
-fun ParameterBox(label: String, value: String, modifier: Modifier) {
+fun WheelPickerScrollShared(
+    options: List<String>,
+    currentValue: String,
+    onValueChange: (String) -> Unit,
+    unit: String,
+    containerHeight: androidx.compose.ui.unit.Dp = 100.dp
+) {
+    val itemHeight = 36.dp
+    val verticalPadding = (containerHeight - itemHeight) / 2
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = options.indexOf(currentValue).coerceAtLeast(0))
+    val snapFlingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+
+    val centerIndex by remember {
+        derivedStateOf {
+            val layoutInfo = listState.layoutInfo
+            val center = layoutInfo.viewportStartOffset + (layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset) / 2
+            layoutInfo.visibleItemsInfo.minByOrNull { item ->
+                val itemCenter = item.offset + item.size / 2
+                kotlin.math.abs(itemCenter - center)
+            }?.index ?: -1
+        }
+    }
+
+    LaunchedEffect(currentValue, options) {
+        val targetIndex = options.indexOf(currentValue).coerceAtLeast(0)
+        if (!listState.isScrollInProgress && listState.firstVisibleItemIndex != targetIndex) {
+            listState.scrollToItem(targetIndex)
+        }
+    }
+
+    LaunchedEffect(listState.isScrollInProgress) {
+        if (!listState.isScrollInProgress) {
+            if (centerIndex in options.indices) {
+                onValueChange(options[centerIndex])
+            }
+        }
+    }
+
+    LazyColumn(
+        state = listState,
+        flingBehavior = snapFlingBehavior,
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        contentPadding = PaddingValues(vertical = verticalPadding.coerceAtLeast(0.dp))
+    ) {
+        itemsIndexed(options) { index, item ->
+            val isCentered = centerIndex == index
+            Box(
+                modifier = Modifier
+                    .height(itemHeight)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (isCentered) "$item$unit" else item,
+                    color = if (isCentered) Color.White else Color.White.copy(alpha = 0.25f),
+                    fontSize = if (isCentered) 14.sp else 11.sp,
+                    fontWeight = if (isCentered) FontWeight.Black else FontWeight.Normal,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ParameterWheelBox(
+    label: String,
+    value: String,
+    options: List<String>,
+    isActive: Boolean,
+    height: androidx.compose.ui.unit.Dp,
+    accentColor: Color,
+    onValueChange: (String) -> Unit,
+    onActivate: () -> Unit,
+    modifier: Modifier,
+    unit: String = ""
+) {
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label, color = TextGray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF0F151B)),
-            shape = RoundedCornerShape(8.dp),
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
-            modifier = Modifier.fillMaxWidth().height(42.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(height)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xFF0F151B))
+                .border(1.dp, if (isActive) accentColor else Color.White.copy(alpha = 0.05f), RoundedCornerShape(8.dp))
+                .clickable { onActivate() },
+            contentAlignment = Alignment.Center
         ) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(value, color = TextWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            if (isActive) {
+                WheelPickerScrollShared(
+                    options = options,
+                    currentValue = value,
+                    onValueChange = onValueChange,
+                    unit = unit,
+                    containerHeight = height
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                )
+            } else {
+                Text(
+                    text = "$value$unit",
+                    color = Color.White,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }
