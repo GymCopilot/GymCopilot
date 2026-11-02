@@ -9,12 +9,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.model.Exercise
@@ -31,6 +35,8 @@ fun FullRoutinesSection(
     var searchQuery by remember { mutableStateOf("") }
     var selectedRoutine by remember { mutableStateOf<Routine?>(null) }
     var showTimerModal by remember { mutableStateOf(false) }
+    var favoritesFilterActive by remember { mutableStateOf(false) }
+    var showCategoryDialog by remember { mutableStateOf(false) }
 
     val mockRoutines = remember {
         listOf(
@@ -87,16 +93,23 @@ fun FullRoutinesSection(
 
     val categories = listOf("Todas", "Hipertrofia", "Fuerza", "Cardio", "Movilidad")
 
-    val filteredRoutines = remember(mockRoutines, selectedCategory, searchQuery) {
+    val filteredRoutines = remember(mockRoutines, selectedCategory, searchQuery, favoritesFilterActive) {
         var list = mockRoutines
         if (selectedCategory != "Todas") {
             list = list.filter { it.category.equals(selectedCategory, ignoreCase = true) }
+        }
+        if (favoritesFilterActive) {
+            list = list.filter { it.isFavorite }
         }
         if (searchQuery.isNotBlank()) {
             list = list.filter { it.name.contains(searchQuery, ignoreCase = true) || it.description.contains(searchQuery, ignoreCase = true) }
         }
         list
     }
+
+    val totalCount = mockRoutines.size
+    val completedCount = mockRoutines.count { it.status == "Completada" }
+    val assignedCount = mockRoutines.size
 
     if (selectedRoutine != null) {
         RoutineDetailSharedView(
@@ -108,36 +121,44 @@ fun FullRoutinesSection(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(top = 16.dp, bottom = 90.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Header Title
             item {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Text(
-                            text = "Mis Rutinas y Planes",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Black,
-                            color = TextWhite
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Selecciona una rutina para ver los ejercicios y entrenar",
-                            fontSize = 12.sp,
-                            color = TextGray
-                        )
-                    }
+                    Text(
+                        text = "Rutinas",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Black,
+                        color = TextWhite
+                    )
                     IconButton(
                         onClick = { showTimerModal = true },
                         modifier = Modifier
-                            .size(42.dp)
+                            .size(40.dp)
                             .background(PrimaryTurquoise.copy(alpha = 0.15f), CircleShape)
                     ) {
                         Icon(Icons.Default.Timer, contentDescription = "Timer", tint = PrimaryTurquoise)
                     }
+                }
+            }
+
+            // Top 3 Stat Cards (Height 120.dp)
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    val statModifier = Modifier.weight(1f).height(120.dp)
+                    StatBoxShared(label = "Total", value = totalCount.toString(), icon = Icons.Outlined.Description, color = PrimaryTurquoise, modifier = statModifier)
+                    StatBoxShared(label = "Completadas", value = completedCount.toString(), icon = Icons.Default.CheckCircle, color = Color(0xFF4CAF50), modifier = statModifier)
+                    StatBoxShared(label = "Asignadas", value = assignedCount.toString(), icon = Icons.Default.Group, color = Color(0xFF2196F3), modifier = statModifier)
                 }
             }
 
@@ -146,50 +167,75 @@ fun FullRoutinesSection(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text("Buscar rutina por nombre...", color = TextGray) },
+                    placeholder = { Text("Buscar rutinas...", color = TextGray, fontSize = 14.sp) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = PrimaryTurquoise) },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = SurfaceColor,
-                        unfocusedContainerColor = SurfaceColor,
+                        focusedContainerColor = Color(0xFF00222E),
+                        unfocusedContainerColor = Color(0xFF00222E),
                         focusedBorderColor = PrimaryTurquoise,
-                        unfocusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.1f),
                         focusedTextColor = TextWhite,
                         unfocusedTextColor = TextWhite
                     ),
                     shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
                 )
             }
 
-            // Categories Filter Chips
+            // Quick Actions Section ("Nueva Rutina", "Favoritas", "Categorías")
             item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    categories.forEach { cat ->
-                        val isSelected = selectedCategory == cat
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { selectedCategory = cat },
-                            label = { Text(cat, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = PrimaryTurquoise,
-                                selectedLabelColor = Color.Black,
-                                containerColor = SurfaceColor,
-                                labelColor = TextWhite
-                            ),
-                            border = FilterChipDefaults.filterChipBorder(
-                                enabled = true,
-                                selected = isSelected,
-                                borderColor = if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)
+                Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                    Text(text = "Acciones rápidas", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        QuickActionSharedItem(
+                            label = "Nueva Rutina",
+                            accentColor = PrimaryTurquoise,
+                            modifier = Modifier.weight(1f),
+                            onClick = { /* Action */ }
+                        ) {
+                            Icon(Icons.Outlined.Description, contentDescription = null, tint = PrimaryTurquoise, modifier = Modifier.size(28.dp))
+                        }
+                        QuickActionSharedItem(
+                            label = "Favoritas",
+                            accentColor = PrimaryTurquoise,
+                            modifier = Modifier.weight(1f),
+                            isSelected = favoritesFilterActive,
+                            onClick = { favoritesFilterActive = !favoritesFilterActive }
+                        ) {
+                            Icon(
+                                imageVector = if (favoritesFilterActive) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                                contentDescription = null,
+                                tint = if (favoritesFilterActive) Color(0xFFFFD700) else PrimaryTurquoise,
+                                modifier = Modifier.size(28.dp)
                             )
-                        )
+                        }
+                        QuickActionSharedItem(
+                            label = "Categorías",
+                            accentColor = PrimaryTurquoise,
+                            modifier = Modifier.weight(1f),
+                            isSelected = selectedCategory != "Todas",
+                            onClick = { showCategoryDialog = true }
+                        ) {
+                            Icon(Icons.Default.FilterList, contentDescription = null, tint = PrimaryTurquoise, modifier = Modifier.size(28.dp))
+                        }
                     }
                 }
+            }
+
+            // Mis Rutinas section header
+            item {
+                Text(
+                    text = "Mis rutinas",
+                    color = TextWhite,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
             }
 
             // Routine Cards List
@@ -210,8 +256,10 @@ fun FullRoutinesSection(
                 }
             } else {
                 items(filteredRoutines) { routine ->
-                    RoutineSharedCard(routine = routine) {
-                        selectedRoutine = routine
+                    Box(modifier = Modifier.padding(horizontal = 20.dp)) {
+                        RoutineSharedCard(routine = routine) {
+                            selectedRoutine = routine
+                        }
                     }
                 }
             }
@@ -220,6 +268,90 @@ fun FullRoutinesSection(
 
     if (showTimerModal) {
         SharedTimerDialog(onDismiss = { showTimerModal = false })
+    }
+
+    if (showCategoryDialog) {
+        AlertDialog(
+            onDismissRequest = { showCategoryDialog = false },
+            title = { Text("Filtrar por Categoría", color = TextWhite, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    categories.forEach { cat ->
+                        TextButton(
+                            onClick = {
+                                selectedCategory = cat
+                                showCategoryDialog = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(cat, color = if (selectedCategory == cat) PrimaryTurquoise else TextWhite, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showCategoryDialog = false }) {
+                    Text("Cerrar", color = PrimaryTurquoise)
+                }
+            },
+            containerColor = Color(0xFF001F29),
+            shape = RoundedCornerShape(20.dp)
+        )
+    }
+}
+
+@Composable
+fun StatBoxShared(label: String, value: String, icon: ImageVector, color: Color, modifier: Modifier = Modifier) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = SurfaceColor),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(modifier = Modifier.size(36.dp), contentAlignment = Alignment.Center) {
+                Icon(icon, null, tint = color, modifier = Modifier.fillMaxSize())
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(value, color = TextWhite, fontSize = 18.sp, fontWeight = FontWeight.Black)
+            Text(label, color = TextGray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+fun QuickActionSharedItem(
+    label: String,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+    isSelected: Boolean = false,
+    onClick: () -> Unit = {},
+    icon: @Composable () -> Unit
+) {
+    Column(
+        modifier = modifier
+            .height(100.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(if (isSelected) accentColor.copy(alpha = 0.25f) else SurfaceColor)
+            .border(1.2.dp, if (isSelected) accentColor else accentColor.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+            .clickable { onClick() }
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        icon()
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = label,
+            color = if (isSelected) accentColor else TextWhite,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
@@ -404,13 +536,12 @@ fun ExerciseItemCard(
 ) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = if (isCompleted) SurfaceColor.copy(alpha = 0.5f) else SurfaceColor
+            containerColor = SurfaceColor
         ),
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, if (isCompleted) Color(0xFF00C853).copy(alpha = 0.4f) else PrimaryTurquoise.copy(alpha = 0.2f)),
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onToggle() }
     ) {
         Row(
             modifier = Modifier

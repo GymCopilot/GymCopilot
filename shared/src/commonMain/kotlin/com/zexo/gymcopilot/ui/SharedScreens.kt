@@ -373,15 +373,16 @@ fun ProfessorFullDashboard(
 fun MemberFullDashboard(
     apiClient: GymKtorApiClient,
     currentTab: Int,
-    onNavigate: (String) -> Unit
+    onNavigate: (String) -> Unit,
+    onTabSelected: (Int) -> Unit = {}
 ) {
     when (currentTab) {
-        0 -> MemberDashboardSharedScreen("Gym 19", "socio@gymcopilot.com", null, apiClient, currentTab, {})
-        1 -> RealPublicStoreView(onTabSelected = {})
+        0 -> MemberDashboardSharedScreen("Gym 19", "socio@gymcopilot.com", null, apiClient, currentTab, onTabSelected)
+        1 -> RealPublicStoreView(onTabSelected = onTabSelected)
         2 -> FullClassesScheduleSection()
         3 -> FullRoutinesSection()
         4 -> ChatSharedScreen(apiClient = apiClient)
-        else -> MemberDashboardSharedScreen("Gym 19", "socio@gymcopilot.com", null, apiClient, currentTab, {})
+        else -> MemberDashboardSharedScreen("Gym 19", "socio@gymcopilot.com", null, apiClient, currentTab, onTabSelected)
     }
 }
 

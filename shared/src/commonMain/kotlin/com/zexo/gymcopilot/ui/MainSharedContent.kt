@@ -466,7 +466,7 @@ fun MainAppView(
             when (userRole) {
                 "admin" -> RealAdminDashboardView(gymName = gymName, apiClient = apiClient, currentTab = selectedTab, onTabSelected = { selectedTab = it })
                 "profesor" -> ProfessorFullDashboard(apiClient = apiClient, currentTab = selectedTab, onNavigate = {})
-                else -> MemberFullDashboard(apiClient = apiClient, currentTab = selectedTab, onNavigate = {})
+                else -> MemberFullDashboard(apiClient = apiClient, currentTab = selectedTab, onNavigate = {}, onTabSelected = { selectedTab = it })
             }
         }
     }
