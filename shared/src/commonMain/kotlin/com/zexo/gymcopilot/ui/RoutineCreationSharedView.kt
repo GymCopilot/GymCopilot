@@ -13,12 +13,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
+import gymcopilot.shared.generated.resources.*
+import org.jetbrains.compose.resources.painterResource
 
 data class ExerciseEntryShared(
     val id: String = "ex_${kotlin.random.Random.nextLong()}",
@@ -40,7 +41,7 @@ fun RoutineCreationSharedScreen(
     onBack: () -> Unit,
     apiClient: GymKtorApiClient? = null
 ) {
-    val apiClientRef = apiClient
+    val _unusedClient = apiClient
     var routineName by remember { mutableStateOf("") }
     var routineDescription by remember { mutableStateOf("") }
     var selectedObjective by remember { mutableStateOf("Hipertrofia") }
@@ -87,13 +88,7 @@ fun RoutineCreationSharedScreen(
                 fontWeight = FontWeight.Bold
             )
             IconButton(
-                onClick = {
-                    if (routineName.isNotBlank() && apiClientRef != null) {
-                        onBack()
-                    } else {
-                        onBack()
-                    }
-                },
+                onClick = { onBack() },
                 modifier = Modifier
                     .size(40.dp)
                     .background(PrimaryTurquoise.copy(alpha = 0.2f), CircleShape)
@@ -156,66 +151,93 @@ fun RoutineCreationSharedScreen(
                         )
 
                         Text("Grupo Muscular", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        val muscleGroups = listOf("Pecho", "Espalda", "FullBody", "Pierna", "Brazo", "Abdomen")
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            muscleGroups.take(3).forEach { group ->
-                                FilterChip(
-                                    selected = selectedCategory == group,
-                                    onClick = { selectedCategory = group },
-                                    label = { Text(group, fontSize = 11.sp) },
-                                    modifier = Modifier.weight(1f),
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = PrimaryTurquoise,
-                                        selectedLabelColor = Color.Black,
-                                        containerColor = Color(0xFF0F151B),
-                                        labelColor = TextWhite
-                                    )
-                                )
-                            }
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            muscleGroups.drop(3).forEach { group ->
-                                FilterChip(
-                                    selected = selectedCategory == group,
-                                    onClick = { selectedCategory = group },
-                                    label = { Text(group, fontSize = 11.sp) },
-                                    modifier = Modifier.weight(1f),
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = PrimaryTurquoise,
-                                        selectedLabelColor = Color.Black,
-                                        containerColor = Color(0xFF0F151B),
-                                        labelColor = TextWhite
-                                    )
-                                )
+                        val muscleGroups = listOf(
+                            Triple("Pecho", "Pecho", Res.drawable.g_categoria_pecho),
+                            Triple("Espalda", "Espalda", Res.drawable.g_categoria_espalda),
+                            Triple("FullBody", "FullBody", Res.drawable.g_categoria_cuerpocompleto),
+                            Triple("Pierna", "Pierna", Res.drawable.g_categoria_piernas),
+                            Triple("Brazo", "Brazo", Res.drawable.g_categoria_brazos),
+                            Triple("Abdomen", "Abdomen", Res.drawable.g_categoria_abdominales)
+                        )
+                        muscleGroups.chunked(3).forEach { rowItems ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                rowItems.forEach { (group, label, iconRes) ->
+                                    val isSelected = selectedCategory == group
+                                    Card(
+                                        onClick = { selectedCategory = group },
+                                        colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryTurquoise else Color(0xFF0F151B)),
+                                        border = BorderStroke(1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)),
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.weight(1f).height(75.dp)
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.fillMaxSize().padding(4.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center
+                                        ) {
+                                            Image(
+                                                painter = painterResource(iconRes),
+                                                contentDescription = label,
+                                                modifier = Modifier.size(30.dp)
+                                            )
+                                            Spacer(Modifier.height(4.dp))
+                                            Text(
+                                                text = label,
+                                                color = if (isSelected) Color.Black else TextWhite,
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
 
                         Text("Objetivo", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        val objectives = listOf("Hipertrofia", "Fuerza", "Resistencia", "Definición", "Cardio", "Rehabilitación")
+                        val objectives = listOf(
+                            Triple("Hipertrofia", "Hipertrofia", Res.drawable.force),
+                            Triple("Fuerza", "Fuerza", Res.drawable.force),
+                            Triple("Resistencia", "Resistencia", Res.drawable.cardio),
+                            Triple("Definición", "Definición", Res.drawable.definition),
+                            Triple("Cardio", "Cardio", Res.drawable.cardio),
+                            Triple("Rehabilitación", "Rehabilitación", Res.drawable.ayuda)
+                        )
                         objectives.chunked(3).forEach { rowItems ->
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                rowItems.forEach { obj ->
-                                    FilterChip(
-                                        selected = selectedObjective == obj,
+                                rowItems.forEach { (obj, label, iconRes) ->
+                                    val isSelected = selectedObjective == obj
+                                    Card(
                                         onClick = { selectedObjective = obj },
-                                        label = { Text(obj, fontSize = 11.sp) },
-                                        modifier = Modifier.weight(1f),
-                                        colors = FilterChipDefaults.filterChipColors(
-                                            selectedContainerColor = PrimaryTurquoise,
-                                            selectedLabelColor = Color.Black,
-                                            containerColor = Color(0xFF0F151B),
-                                            labelColor = TextWhite
-                                        )
-                                    )
+                                        colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryTurquoise else Color(0xFF0F151B)),
+                                        border = BorderStroke(1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)),
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.weight(1f).height(75.dp)
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.fillMaxSize().padding(4.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center
+                                        ) {
+                                            Image(
+                                                painter = painterResource(iconRes),
+                                                contentDescription = label,
+                                                modifier = Modifier.size(28.dp)
+                                            )
+                                            Spacer(Modifier.height(4.dp))
+                                            Text(
+                                                text = label,
+                                                color = if (isSelected) Color.Black else TextWhite,
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
