@@ -43,8 +43,28 @@ data class LevelItemShared(val name: String, val stars: Int)
 
 val PREDEFINED_EXERCISES_SHARED = mapOf(
     "PECHO" to listOf(
-        "Press banca horizontal", "Press banco inclinado barra", "Press plano mancuerna",
-        "Aperturas mancuerna", "Flexiones clásicas", "Cruce de poleas"
+        "Press banca horizontal",
+        "Press banco inclinado barra",
+        "Press declinado barra",
+        "Press plano mancuerna",
+        "Press inclinado mancuerna",
+        "Aperturas mancuerna",
+        "Press de pecho máquina",
+        "Press inclinado máquina",
+        "Press convergente",
+        "Peck Deck máquina",
+        "Chest Fly Machine",
+        "Cruce de poleas",
+        "Cruce de poleas alto",
+        "Cruce de poleas bajo",
+        "Flexiones clásicas",
+        "Flexiones inclinadas",
+        "Flexiones diamante",
+        "Floor Press",
+        "Pullover",
+        "Pase de pecho con balón",
+        "Wall Balls",
+        "Lanzamiento contra pared"
     ),
     "ESPALDA" to listOf(
         "Remo con barra", "Peso muerto barra", "Jalón frontal polea",
@@ -66,7 +86,26 @@ val PREDEFINED_EXERCISES_SHARED = mapOf(
         "Curl de muñeca barra", "Curl inverso barra", "Farmer Walk"
     ),
     "ABDOMINALES" to listOf(
-        "Crunch en máquina", "Crunch suelo", "Elevación de piernas", "Plancha", "Russian Twist"
+        "Crunch en máquina",
+        "Abdominal asistido máquina",
+        "Crunch suelo",
+        "Abdominal corto en el suelo",
+        "Elevación de piernas",
+        "Plancha",
+        "Hollow Hold",
+        "Toes to Bar",
+        "Crunch en polea",
+        "Woodchopper polea",
+        "Pallof Press polea",
+        "Russian Twist",
+        "Hundred",
+        "Teaser",
+        "Roll Up",
+        "Swimming",
+        "Side Kick",
+        "Single Leg Stretch",
+        "Lanzamiento al piso",
+        "Lanzamiento sobre cabeza"
     ),
     "OBLICUOS" to listOf(
         "Woodchopper polea", "Rotaciones con polea", "Plancha lateral", "Oblicuos mancuerna", "Russian Twist"
@@ -75,7 +114,23 @@ val PREDEFINED_EXERCISES_SHARED = mapOf(
         "Hip Thrust barra", "Sentadilla barra", "Peso muerto rumano barra", "Patada de glúteo polea"
     ),
     "CUÁDRICEPS" to listOf(
-        "Sentadilla barra", "Prensa de piernas", "Hack Squat", "Extensión de cuádriceps máquina"
+        "Sentadilla barra",
+        "Sentadilla frontal barra",
+        "Prensa de piernas",
+        "Hack Squat",
+        "Extensión de cuádriceps máquina",
+        "Belt Squat",
+        "Goblet Squat mancuerna",
+        "Step Up mancuerna",
+        "Pistol Squat",
+        "Saltos al cajón",
+        "Sprint",
+        "Carrera en cuestas",
+        "Wall Balls",
+        "Sentadilla con balón",
+        "Sentadilla con banda",
+        "Lanzamiento contra pared",
+        "Estiramiento de flexores"
     ),
     "ISQUIOTIBIALES" to listOf(
         "Peso muerto rumano barra", "Peso muerto piernas rígidas", "Buenos días barra",
@@ -98,26 +153,91 @@ val PREDEFINED_EXERCISES_SHARED = mapOf(
 fun getExerciseIconShared(exerciseName: String): org.jetbrains.compose.resources.DrawableResource {
     val name = exerciseName.lowercase().trim()
     return when {
-        name.contains("pecho") -> Res.drawable.g_categoria_pecho
-        name.contains("espalda") -> Res.drawable.g_categoria_espalda
-        name.contains("hombros") -> Res.drawable.g_categoria_hombros
-        name.contains("bíceps") || name.contains("biceps") -> Res.drawable.g_categoria_biceps
-        name.contains("tríceps") || name.contains("triceps") -> Res.drawable.g_categoria_triceps
-        name.contains("pierna") || name.contains("sentadilla") || name.contains("prensa") -> Res.drawable.g_categoria_piernas
-        name.contains("abdominal") || name.contains("plancha") || name.contains("crunch") -> Res.drawable.g_categoria_abdominales
-        name.contains("oblicuo") -> Res.drawable.g_categoria_oblicuos
-        name.contains("glúteo") || name.contains("gluteo") || name.contains("hip thrust") -> Res.drawable.g_categoria_gluteos
-        name.contains("isquiotibial") || name.contains("femoral") -> Res.drawable.g_categoria_isquiotibiales
-        name.contains("aductor") -> Res.drawable.g_categoria_aductores
-        name.contains("abductor") -> Res.drawable.g_categoria_abductores
-        name.contains("gemelo") -> Res.drawable.g_categoria_gemelos
-        name.contains("antebrazo") -> Res.drawable.g_categoria_antebrazo
-        name.contains("press banca") || name.contains("horizontal") -> Res.drawable.g_pressbancapechohorizontal
-        name.contains("inclinado") -> Res.drawable.g_pressinclinado
+        // Categorías
+        name == "pecho" -> Res.drawable.g_categoria_pecho
+        name == "espalda" || name == "dorsales" -> Res.drawable.g_categoria_espalda
+        name == "hombros" -> Res.drawable.g_categoria_hombros
+        name == "bíceps" || name == "biceps" -> Res.drawable.g_categoria_biceps
+        name == "tríceps" || name == "triceps" -> Res.drawable.g_categoria_triceps
+        name == "antebrazos" -> Res.drawable.g_categoria_antebrazo
+        name == "abdominales" -> Res.drawable.g_categoria_abdominales
+        name == "oblicuos" -> Res.drawable.g_categoria_oblicuos
+        name == "glúteos" || name == "gluteos" -> Res.drawable.g_categoria_gluteos
+        name == "cuádriceps" || name == "cuadriceps" -> Res.drawable.g_categoria_cuadriceps
+        name == "isquiotibiales" -> Res.drawable.g_categoria_isquiotibiales
+        name == "aductores" -> Res.drawable.g_categoria_aductores
+        name == "abductores" -> Res.drawable.g_categoria_abductores
+        name == "gemelos" -> Res.drawable.g_categoria_gemelos
+        name == "ejercicios combinados" || name == "cuerpo completo" || name == "fullbody" -> Res.drawable.g_categoria_cuerpocompleto
+
+        // PECHO
+        name.contains("chest fly") || name.contains("machine") -> Res.drawable.g_peckdeck
+        name.contains("peck deck") -> Res.drawable.g_peckdeckmaquina
+        name.contains("horizontal") && name.contains("press") -> Res.drawable.g_pressbancapechohorizontal
+        name.contains("press plano mancuerna") -> Res.drawable.g_pressbancohorizontalmancuerna
+        name.contains("press inclinado mancuerna") -> Res.drawable.g_pressinclinado
+        name.contains("press banco inclinado barra") -> Res.drawable.g_pressbancapecho
+        name.contains("press banca plano") || name.contains("press plano barra") -> Res.drawable.g_pressbancapecho
+        name.contains("press inclinado máquina") -> Res.drawable.g_presspechoinclinado
+        name.contains("press inclinado") -> Res.drawable.g_presspechoinclinado
+        name.contains("press declinado") -> Res.drawable.g_pressdeclinadobarra
+        name.contains("press plano") -> Res.drawable.g_pressplano
         name.contains("aperturas") -> Res.drawable.g_aperturas
-        name.contains("remo") -> Res.drawable.g_remo
-        name.contains("jalón") || name.contains("jalon") -> Res.drawable.g_jalonfrontal
-        name.contains("dominada") -> Res.drawable.g_dominada
+        name.contains("press convergente") -> Res.drawable.g_pressconvergente
+        name.contains("press") && name.contains("máquina") && name.contains("pecho") -> Res.drawable.g_presspechomaquina
+        name.contains("cruce ") && name.contains("poleas") && name.contains("bajo") -> Res.drawable.g_presspechoconpolea
+        name.contains("cruce") && name.contains("poleas") && name.contains("alto")-> Res.drawable.g_crucedepoleasalto
+        name.contains("cruce") && name.contains("poleas") -> Res.drawable.g_crucedepoleas
+        name.contains("floor press") -> Res.drawable.g_floorpress
+        name.contains("flexiones") && name.contains("inclinadas") -> Res.drawable.g_flexionesinclinadas
+        name.contains("flexiones") && name.contains("diamante") -> Res.drawable.g_flexionesdiamente
+        name.contains("flexiones") -> Res.drawable.g_flexionesclasicas
+        name.contains("pullover") -> Res.drawable.g_pulloverbanco
+        name.contains("pase") && name.contains("pecho") && name.contains("balón") -> Res.drawable.g_pasedepechobola
+        name.contains("lanzamiento") && name.contains("pared") -> Res.drawable.g_lanzamientocontralapered
+
+        // ABDOMINALES
+        name.contains("crunch") && name.contains("máquina") -> Res.drawable.g_crunchenmaquina
+        name.contains("abdominal corto") && name.contains("suelo") -> Res.drawable.g_hundred
+        name.contains("abdominal") && name.contains("asistido") -> Res.drawable.g_abdominalasistidomaquina
+        name.contains("crunch") && name.contains("suelo") -> Res.drawable.g_crunchsuelo
+        name.contains("elevación de piernas") || name.contains("abdominales bajos") -> Res.drawable.g_abdominalesbajos
+        name.contains("pallof press") -> Res.drawable.g_pallofpress
+        name.contains("woodchopper") -> Res.drawable.g_woodchopper
+        name.contains("russian twist") -> Res.drawable.g_russiantwist
+        name.contains("toes to bar") -> Res.drawable.g_toestobar
+        name.contains("hundred") -> Res.drawable.g_hundredpilates
+        name.contains("teaser") -> Res.drawable.g_teaser
+        name.contains("roll up") -> Res.drawable.g_rolluppilates
+        name.contains("swimming") -> Res.drawable.g_swimming
+        name.contains("crunch") && name.contains("polea") -> Res.drawable.g_crunchdepolea
+        name.contains("hollow hold") -> Res.drawable.g_hollowhold
+        name.contains("plancha") -> Res.drawable.g_planchabrazosextendidos
+        name.contains("single leg stretch") -> Res.drawable.g_singleleggstretch
+        name.contains("lanzamiento") && name.contains("piso") -> Res.drawable.g_lanzamientoalpiso
+        name.contains("overhead throw") || (name.contains("lanzamiento") && name.contains("cabeza")) -> Res.drawable.g_overheadthrow
+        name.contains("side kick") -> Res.drawable.g_sidekick
+
+        // CUÁDRICEPS / PIERNAS
+        name.contains("prensa") -> Res.drawable.g_prensadepiernas
+        name.contains("hack squat") -> Res.drawable.g_hacksquart
+        name.contains("extensión") && name.contains("cuádriceps") -> Res.drawable.g_extensioncuadriceps
+        name.contains("sentadilla frontal") -> Res.drawable.g_sentadillafrontal
+        name.contains("goblet squat") -> Res.drawable.g_goblesquat
+        name.contains("pistol squat") -> Res.drawable.g_pistolsquat
+        name.contains("sentadilla") && name.contains("balón") -> Res.drawable.g_sentadillasconbalon
+        name.contains("sentadilla") && name.contains("banda") -> Res.drawable.g_sentadillasconbanda
+        name.contains("sentadilla") && name.contains("barra") -> Res.drawable.g_sentadillabarra
+        name.contains("sentadilla") -> Res.drawable.g_sentadillas
+        name.contains("belt squat") -> Res.drawable.g_beltsquat
+        name.contains("step up") -> Res.drawable.g_stepup
+        name.contains("sprint") -> Res.drawable.g_sprint
+        name.contains("carrera en cuestas") || name.contains("cuestas") -> Res.drawable.g_sprint
+        name.contains("wall ball") -> Res.drawable.g_wallballs
+        name.contains("salto") && name.contains("cajón") -> Res.drawable.g_boxjump
+        name.contains("estiramiento") && name.contains("flexores") -> Res.drawable.g_estiramientos
+
+        // BÍCEPS
         name.contains("concentrado") -> Res.drawable.g_curlconcentrado
         name.contains("martillo") -> Res.drawable.g_curlmartillomancuerna
         name.contains("sentado mancuerna") -> Res.drawable.g_curlmancuernasentado
@@ -128,6 +248,12 @@ fun getExerciseIconShared(exerciseName: String): org.jetbrains.compose.resources
         name.contains("en polea") -> Res.drawable.g_curldepoleas
         name.contains("unilateral polea") -> Res.drawable.g_curlunilateralpoleas
         name.contains("biceps máquina") || name.contains("bíceps máquina") -> Res.drawable.g_curlbicepsmaquina
+        name.contains("inclinado mancuerna") -> Res.drawable.g_curlmancuernainclinado
+
+        // ESPALDA / HOMBROS / OTROS
+        name.contains("remo") -> Res.drawable.g_remo
+        name.contains("jalón") || name.contains("jalon") -> Res.drawable.g_jalonfrontal
+        name.contains("dominada") -> Res.drawable.g_dominada
         else -> Res.drawable.fitness_center
     }
 }
@@ -580,7 +706,6 @@ fun RoutineExerciseItemCard(
 ) {
     var activeField by remember { mutableStateOf<String?>(null) }
     val categories = PREDEFINED_EXERCISES_SHARED.keys.toList()
-    val exercisesList = PREDEFINED_EXERCISES_SHARED[exercise.category] ?: listOf(exercise.name)
     val visualOptions = remember(exercise.category) {
         listOf(exercise.category) + (PREDEFINED_EXERCISES_SHARED[exercise.category] ?: emptyList())
     }
