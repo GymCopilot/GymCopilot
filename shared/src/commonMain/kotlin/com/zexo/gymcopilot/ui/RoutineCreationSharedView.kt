@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
+import com.zexo.gymcopilot.utils.playTickSound
 import gymcopilot.shared.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
 
@@ -1125,6 +1126,15 @@ fun WheelPickerScrollShared(
         }
     }
 
+    var lastPlayedIndex by remember { mutableStateOf(-1) }
+
+    LaunchedEffect(centerIndex) {
+        if (centerIndex != -1 && centerIndex != lastPlayedIndex) {
+            lastPlayedIndex = centerIndex
+            playTickSound()
+        }
+    }
+
     LaunchedEffect(currentValue, options) {
         val targetIndex = options.indexOf(currentValue).coerceAtLeast(0)
         if (!listState.isScrollInProgress && listState.firstVisibleItemIndex != targetIndex) {
@@ -1189,6 +1199,15 @@ fun WheelPickerScrollSharedImages(
                 val itemCenter = item.offset + item.size / 2
                 kotlin.math.abs(itemCenter - center)
             }?.index ?: -1
+        }
+    }
+
+    var lastPlayedIndex by remember { mutableStateOf(-1) }
+
+    LaunchedEffect(centerIndex) {
+        if (centerIndex != -1 && centerIndex != lastPlayedIndex) {
+            lastPlayedIndex = centerIndex
+            playTickSound()
         }
     }
 
