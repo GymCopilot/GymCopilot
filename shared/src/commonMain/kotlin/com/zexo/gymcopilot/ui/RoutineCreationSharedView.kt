@@ -925,13 +925,13 @@ fun RoutineExerciseItemCard(
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             // Sección superior con dos cajas:
-            // Izquierda: Cuadro con la rueda de iconos (incluyendo el icono de categoría al inicio, seguido de los ejercicios de esa categoría)
-            // Derecha: Cuadro superior con la rueda de categorías/grupos musculares (WheelPickerScrollShared) Y debajo el botón PERSONAL
+            // Izquierda: Cuadro con la rueda de iconos (200.dp, igual que Android)
+            // Derecha: Cuadro superior con la rueda de categorías/grupos musculares (200.dp) Y debajo el botón PERSONAL
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                // Cuadro izquierdo: Visor con rueda de iconos (primero el icono de grupo de categoría, luego los ejercicios)
+                // Cuadro izquierdo: Visor con rueda de iconos (200.dp)
                 Box(
                     modifier = Modifier
-                        .size(130.dp)
+                        .size(200.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(Color(0xFF0F151B))
                         .border(1.dp, PrimaryTurquoise.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
@@ -945,13 +945,13 @@ fun RoutineExerciseItemCard(
                         onValueChange = { selectedItem ->
                             onUpdate(exercise.copy(name = selectedItem))
                         },
-                        containerHeight = 130.dp
+                        containerHeight = 200.dp
                     )
                 }
 
-                // Cuadro derecho con selector de región muscular + botón PERSONAL
+                // Cuadro derecho con selector de región muscular (200.dp) + botón PERSONAL
                 Column(
-                    modifier = Modifier.weight(1f).height(130.dp),
+                    modifier = Modifier.weight(1f).height(200.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Box(
@@ -971,7 +971,7 @@ fun RoutineExerciseItemCard(
                                 onUpdate(exercise.copy(category = newCat, name = defaultEx))
                             },
                             unit = "",
-                            containerHeight = 110.dp
+                            containerHeight = 150.dp
                         )
                     }
 
@@ -981,7 +981,7 @@ fun RoutineExerciseItemCard(
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F151B)),
                         border = BorderStroke(1.dp, PrimaryTurquoise.copy(alpha = 0.3f)),
                         contentPadding = PaddingValues(0.dp),
-                        modifier = Modifier.fillMaxWidth().height(36.dp)
+                        modifier = Modifier.fillMaxWidth().height(42.dp)
                     ) {
                         Icon(Icons.Default.Add, null, tint = PrimaryTurquoise, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
@@ -1174,9 +1174,9 @@ fun WheelPickerScrollSharedImages(
     categoryName: String,
     accentColor: Color,
     onValueChange: (String) -> Unit,
-    containerHeight: androidx.compose.ui.unit.Dp = 130.dp
+    containerHeight: androidx.compose.ui.unit.Dp = 200.dp
 ) {
-    val itemHeight = 130.dp
+    val itemHeight = 200.dp
     val verticalPadding = (containerHeight - itemHeight) / 2
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = options.indexOf(currentValue).coerceAtLeast(0))
     val snapFlingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
@@ -1230,7 +1230,7 @@ fun WheelPickerScrollSharedImages(
                 Image(
                     painter = painterResource(iconRes),
                     contentDescription = item,
-                    modifier = Modifier.size(if (isCentered) 90.dp else 50.dp),
+                    modifier = Modifier.size(if (isCentered) 170.dp else 75.dp),
                     colorFilter = ColorFilter.tint(if (isCentered) accentColor else accentColor.copy(alpha = 0.2f))
                 )
             }
