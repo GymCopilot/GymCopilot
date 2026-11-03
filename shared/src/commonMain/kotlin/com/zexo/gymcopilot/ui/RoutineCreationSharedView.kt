@@ -168,7 +168,7 @@ val PREDEFINED_EXERCISES_SHARED = mapOf(
         "Aductores en máquina", "Aducción de cadera polea", "Copenhagen Plank"
     ),
     "ABDUCTORES" to listOf(
-        "Abductores en máquina", "Abducción de cadera polea", "Monster Walk con banda"
+        "Abductores en máquina", "Abducción de cadera polea", "Monster Walk con banda", "Sentadilla con banda", "Caminata lateral banda"
     ),
     "GEMELOS" to listOf(
         "Elevación de talones barra",
@@ -186,7 +186,35 @@ val PREDEFINED_EXERCISES_SHARED = mapOf(
         "Elevación unilateral mancuerna"
     ),
     "EJERCICIOS COMBINADOS" to listOf(
-        "Clean barra", "Snatch barra", "Thruster barra", "Correr en cinta", "Remo ergómetro"
+        "Clean barra",
+        "Snatch barra",
+        "Thruster barra",
+        "Correr en cinta",
+        "Caminar en cinta",
+        "Trote",
+        "Sprint",
+        "Carrera en cuestas",
+        "Salto al cajón",
+        "Skipping",
+        "Trepa de cuerda",
+        "Wall Balls",
+        "Lanzamiento al piso",
+        "Lanzamiento sobre cabeza",
+        "Lanzamiento contra pared",
+        "Elíptico",
+        "Bicicleta fija",
+        "Remo ergómetro",
+        "Handstand (Pino)",
+        "Liberación miofascial",
+        "Devil Press mancuerna",
+        "Caminata con carga",
+        "Mountain Climbers",
+        "Gateo de oso",
+        "Turkish Get Up Kettlebell",
+        "Swing Kettlebell",
+        "Clean Kettlebell",
+        "Kettlebell Windmill",
+        "Kettlebell Halo"
     )
 )
 
@@ -288,7 +316,7 @@ fun getExerciseIconShared(exerciseName: String): org.jetbrains.compose.resources
         name.contains("overhead throw") || (name.contains("lanzamiento") && name.contains("cabeza")) -> Res.drawable.g_overheadthrow
         name.contains("side kick") -> Res.drawable.g_sidekick
 
-        // CUÁDRICEPS / PIERNAS / GEMELOS
+        // PIERNAS / CUÁDRICEPS / ABDUCTORES / ADUCTORES / GEMELOS
         name.contains("prensa") -> Res.drawable.g_prensadepiernas
         name.contains("hack squat") -> Res.drawable.g_hacksquart
         name.contains("extensión") && name.contains("cuádriceps") -> Res.drawable.g_extensioncuadriceps
@@ -312,6 +340,30 @@ fun getExerciseIconShared(exerciseName: String): org.jetbrains.compose.resources
         name.contains("wall ball") -> Res.drawable.g_wallballs
         name.contains("salto") && name.contains("cajón") -> Res.drawable.g_boxjump
         name.contains("estiramiento") && name.contains("flexores") -> Res.drawable.g_estiramientos
+        name.contains("aducción") && name.contains("cadera") -> Res.drawable.g_aduccionabduccioncadera
+        name.contains("abducción") && name.contains("cadera") -> Res.drawable.g_aduccionabduccioncadera
+        name.contains("aductores en máquina") -> Res.drawable.g_aductoresmaquina
+        name.contains("abductores en máquina") -> Res.drawable.g_abductoresmaquina
+        name.contains("copenhagen plank") -> Res.drawable.g_copenaghenplank
+        name.contains("caminata lateral banda") || name.contains("caminata lateral") -> Res.drawable.g_caminatalateralconbanda
+        name.contains("monster walk") -> Res.drawable.g_monsterwalk
+
+        // COMBINADOS / CARDIO / OTROS
+        name.contains("correr en cinta") || (name.contains("cinta") && name.contains("correr")) -> Res.drawable.g_cintacorrer
+        name.contains("caminar en cinta") || (name.contains("cinta") && name.contains("caminar")) -> Res.drawable.g_cintacaminar
+        name.contains("elíptico") || name.contains("eliptico") -> Res.drawable.g_eliptico
+        name.contains("bicicleta fija") -> Res.drawable.g_bicicletafija
+        name.contains("remo ergómetro") -> Res.drawable.g_remo
+        name.contains("liberación miofascial") -> Res.drawable.g_estiramientos
+        name.contains("devil press") -> Res.drawable.g_devilpressmancuerna
+        name.contains("caminata con carga") -> Res.drawable.g_caminataconcarga
+        name.contains("mountain climbers") -> Res.drawable.g_escaladorsuelo
+        name.contains("gateo de oso") -> Res.drawable.g_gateodeoso
+        name.contains("turkish get up") -> Res.drawable.g_turkishgetup
+        name.contains("swing") -> Res.drawable.g_swing
+        name.contains("clean") -> Res.drawable.g_clean
+        name.contains("snatch") -> Res.drawable.g_sentadillafrontal
+        name.contains("thruster") -> Res.drawable.g_thrusters
 
         // BÍCEPS
         name.contains("concentrado") -> Res.drawable.g_curlconcentrado
@@ -326,7 +378,7 @@ fun getExerciseIconShared(exerciseName: String): org.jetbrains.compose.resources
         name.contains("biceps máquina") || name.contains("bíceps máquina") -> Res.drawable.g_curlbicepsmaquina
         name.contains("inclinado mancuerna") -> Res.drawable.g_curlmancuernainclinado
 
-        // ESPALDA / OTROS
+        // ESPALDA
         name.contains("remo") -> Res.drawable.g_remo
         name.contains("jalón") || name.contains("jalon") -> Res.drawable.g_jalonfrontal
         name.contains("dominada") -> Res.drawable.g_dominada
