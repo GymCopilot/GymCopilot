@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -41,71 +42,24 @@ fun FullRoutinesSection(
     var showCategoryDialog by remember { mutableStateOf(false) }
     var showCreationScreen by remember { mutableStateOf(false) }
 
+    val userRoutines = remember { mutableStateListOf<Routine>() }
+
     if (showCreationScreen) {
         RoutineCreationSharedScreen(
             onBack = { showCreationScreen = false },
+            onSaveRoutine = { newRoutine ->
+                userRoutines.add(newRoutine)
+                showCreationScreen = false
+            },
             apiClient = apiClient
         )
         return
     }
 
-    val mockRoutines = remember {
-        listOf(
-            Routine(
-                id = "rut_1",
-                name = "Rutina Hipertrofia A - Pecho y Tríceps",
-                description = "Enfoque en desarrollo pectoral y fuerza de empuje ($gymName).",
-                objective = "Hipertrofia",
-                level = "Intermedio",
-                duration = "60 min",
-                category = "Hipertrofia",
-                isFavorite = true,
-                exercises = listOf(
-                    Exercise("ex_1", "Press Inclinado con Mancuernas", "4", "10 - 12", "22 kg", "90 seg"),
-                    Exercise("ex_2", "Press Plano con Barra", "4", "8 - 10", "65 kg", "120 seg"),
-                    Exercise("ex_3", "Aperturas en Polea Baja", "3", "12", "15 kg", "60 seg"),
-                    Exercise("ex_4", "Fondos en Paralelas", "3", "10", "Peso Corporal", "90 seg"),
-                    Exercise("ex_5", "Extensiones de Tríceps en Polea", "4", "12", "25 kg", "60 seg")
-                )
-            ),
-            Routine(
-                id = "rut_2",
-                name = "Rutina Pierna Completa - Cuádriceps y Glúteos",
-                description = "Trabajo pesado de tren inferior y estabilidad para $userEmail.",
-                objective = "Fuerza y Volumen",
-                level = "Avanzado",
-                duration = "75 min",
-                category = "Fuerza",
-                isFavorite = false,
-                exercises = listOf(
-                    Exercise("ex_6", "Sentadilla Libre con Barra", "4", "8 - 10", "80 kg", "120 seg"),
-                    Exercise("ex_7", "Prensa 45°", "4", "10 - 12", "140 kg", "90 seg"),
-                    Exercise("ex_8", "Extensiones de Cuádriceps", "3", "15", "50 kg", "60 seg"),
-                    Exercise("ex_9", "Curl Femoral Tumbado", "3", "12", "40 kg", "60 seg")
-                )
-            ),
-            Routine(
-                id = "rut_3",
-                name = "Rutina Funcional & Core",
-                description = "Resistencia cardiovascular y fortalecimiento abdominal con ${if (apiClient != null) "KtorApiClient" else "Offline Mode"}.",
-                objective = "Quema de Grasa",
-                level = "Principiante",
-                duration = "45 min",
-                category = "Cardio",
-                isFavorite = true,
-                exercises = listOf(
-                    Exercise("ex_10", "Plancha Abdominal", "4", "45 seg", "ISO", "45 seg"),
-                    Exercise("ex_11", "Burpees", "3", "12", "Libre", "60 seg"),
-                    Exercise("ex_12", "Escaladores (Mountain Climbers)", "3", "30 reps", "Libre", "45 seg")
-                )
-            )
-        )
-    }
-
     val categories = listOf("Todas", "Hipertrofia", "Fuerza", "Cardio", "Movilidad")
 
-    val filteredRoutines = remember(mockRoutines, selectedCategory, searchQuery, favoritesFilterActive) {
-        var list = mockRoutines
+    val filteredRoutines = remember(userRoutines, selectedCategory, searchQuery, favoritesFilterActive) {
+        var list: List<Routine> = userRoutines
         if (selectedCategory != "Todas") {
             list = list.filter { it.category.equals(selectedCategory, ignoreCase = true) }
         }
@@ -118,9 +72,9 @@ fun FullRoutinesSection(
         list
     }
 
-    val totalCount = mockRoutines.size
-    val completedCount = mockRoutines.count { it.status == "Completada" }
-    val assignedCount = mockRoutines.size
+    val totalCount = userRoutines.size
+    val completedCount = userRoutines.count { it.status == "Completada" }
+    val assignedCount = userRoutines.size
 
     if (selectedRoutine != null) {
         RoutineDetailSharedView(
@@ -268,9 +222,17 @@ fun FullRoutinesSection(
             } else {
                 items(filteredRoutines) { routine ->
                     Box(modifier = Modifier.padding(horizontal = 20.dp)) {
-                        RoutineSharedCard(routine = routine) {
-                            selectedRoutine = routine
-                        }
+                        RoutineSharedCard(
+                            routine = routine,
+                            onClick = { selectedRoutine = routine },
+                            onDelete = { userRoutines.remove(routine) },
+                            onToggleFavorite = {
+                                val idx = userRoutines.indexOf(routine)
+                                if (idx != -1) {
+                                    userRoutines[idx] = routine.copy(isFavorite = !routine.isFavorite)
+                                }
+                            }
+                        )
                     }
                 }
             }
@@ -367,7 +329,12 @@ fun QuickActionSharedItem(
 }
 
 @Composable
-fun RoutineSharedCard(routine: Routine, onClick: () -> Unit) {
+fun RoutineSharedCard(
+    routine: Routine,
+    onClick: () -> Unit,
+    onDelete: () -> Unit,
+    onToggleFavorite: () -> Unit
+) {
     Card(
         colors = CardDefaults.cardColors(containerColor = SurfaceColor),
         shape = RoundedCornerShape(16.dp),
@@ -376,66 +343,70 @@ fun RoutineSharedCard(routine: Routine, onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable { onClick() }
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                modifier = Modifier.weight(1f)
             ) {
-                Surface(
-                    color = PrimaryTurquoise.copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(8.dp)
+                IconButton(
+                    onClick = onClick,
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(PrimaryTurquoise, CircleShape)
                 ) {
-                    Text(
-                        text = routine.category,
-                        color = PrimaryTurquoise,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
+                    Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = Color.Black)
                 }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Icon(Icons.Default.AccessTime, contentDescription = null, tint = TextGray, modifier = Modifier.size(14.dp))
-                    Text(routine.duration, fontSize = 11.sp, color = TextGray)
+                Column {
+                    Text(
+                        text = routine.name,
+                        color = TextWhite,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "${routine.exercises.size} Ejercicios • ${routine.duration}",
+                        color = TextGray,
+                        fontSize = 11.sp
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = routine.name,
-                color = TextWhite,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = routine.description,
-                color = TextGray,
-                fontSize = 12.sp,
-                maxLines = 2
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = "💪 ${routine.exercises.size} Ejercicios",
-                    color = PrimaryTurquoise,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold
+                Icon(
+                    imageVector = if (routine.isFavorite) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                    contentDescription = "Favorita",
+                    tint = if (routine.isFavorite) Color(0xFFFFD700) else TextGray,
+                    modifier = Modifier.size(20.dp).clickable { onToggleFavorite() }
                 )
-                Button(
-                    onClick = onClick,
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise),
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                    modifier = Modifier.height(32.dp)
-                ) {
-                    Text("VER RUTINA", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
+                Icon(
+                    imageVector = Icons.Default.GroupAdd,
+                    contentDescription = "Asignar",
+                    tint = PrimaryTurquoise,
+                    modifier = Modifier.size(20.dp).clickable { /* assign */ }
+                )
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Editar",
+                    tint = PrimaryTurquoise,
+                    modifier = Modifier.size(20.dp).clickable { onClick() }
+                )
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Eliminar",
+                    tint = Color.Red,
+                    modifier = Modifier.size(20.dp).clickable { onDelete() }
+                )
             }
         }
     }
@@ -468,7 +439,7 @@ fun RoutineDetailSharedView(
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = TextWhite)
             }
             Text(
-                text = "Detalle de Rutina",
+                text = routine.name,
                 color = TextWhite,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
@@ -479,59 +450,58 @@ fun RoutineDetailSharedView(
                     .size(40.dp)
                     .background(PrimaryTurquoise.copy(alpha = 0.15f), CircleShape)
             ) {
-                Icon(Icons.Default.Timer, contentDescription = "Timer", tint = PrimaryTurquoise)
+                Icon(Icons.Default.Edit, contentDescription = "Editar", tint = PrimaryTurquoise)
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Timer header card
         Card(
             colors = CardDefaults.cardColors(containerColor = SurfaceColor),
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(modifier = Modifier.padding(18.dp)) {
-                Text(routine.name, color = PrimaryTurquoise, fontSize = 18.sp, fontWeight = FontWeight.Black)
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(routine.description, color = TextWhite, fontSize = 13.sp)
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text("⏱️ ${routine.duration}", color = TextGray, fontSize = 12.sp)
-                    Text("🎯 ${routine.objective}", color = TextGray, fontSize = 12.sp)
-                    Text("📊 ${routine.level}", color = TextGray, fontSize = 12.sp)
+            Column(
+                modifier = Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Icon(Icons.Default.Timer, null, tint = PrimaryTurquoise, modifier = Modifier.size(16.dp))
+                        Text("${routine.duration} Duración Estimada", color = TextGray, fontSize = 11.sp)
+                    }
+                    Text("Total: 00:00", color = TextWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Icon(Icons.Default.FitnessCenter, null, tint = PrimaryTurquoise, modifier = Modifier.size(16.dp))
+                        Text("${routine.exercises.size} Ejercicios", color = TextGray, fontSize = 11.sp)
+                    }
                 }
+
+                Spacer(modifier = Modifier.height(14.dp))
+                Text("TIEMPO PARCIAL", color = TextGray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(6.dp))
+                Text("00:00", color = TextWhite, fontSize = 52.sp, fontWeight = FontWeight.Black)
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = "Ejercicios (${routine.exercises.size})",
-            color = TextWhite,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
         LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            contentPadding = PaddingValues(bottom = 80.dp)
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(routine.exercises) { exercise ->
-                val isDone = completedExercises.contains(exercise.id)
-                ExerciseItemCard(
-                    exercise = exercise,
-                    isCompleted = isDone,
+            items(routine.exercises) { ex ->
+                val isCompleted = completedExercises.contains(ex.id)
+                ExerciseDetailCardShared(
+                    exercise = ex,
+                    isCompleted = isCompleted,
                     onToggle = {
-                        completedExercises = if (isDone) {
-                            completedExercises - exercise.id
-                        } else {
-                            completedExercises + exercise.id
-                        }
+                        completedExercises = if (isCompleted) completedExercises - ex.id else completedExercises + ex.id
                     }
                 )
             }
@@ -540,53 +510,87 @@ fun RoutineDetailSharedView(
 }
 
 @Composable
-fun ExerciseItemCard(
+fun ExerciseDetailCardShared(
     exercise: Exercise,
     isCompleted: Boolean,
     onToggle: () -> Unit
 ) {
     Card(
-        colors = CardDefaults.cardColors(
-            containerColor = SurfaceColor
-        ),
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, if (isCompleted) Color(0xFF00C853).copy(alpha = 0.4f) else PrimaryTurquoise.copy(alpha = 0.2f)),
-        modifier = Modifier
-            .fillMaxWidth()
+        colors = CardDefaults.cardColors(containerColor = SurfaceColor),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, PrimaryTurquoise.copy(alpha = 0.3f)),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Checkbox(
-                    checked = isCompleted,
-                    onCheckedChange = { onToggle() },
-                    colors = CheckboxDefaults.colors(checkedColor = Color(0xFF00C853), uncheckedColor = TextGray)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(65.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFF0F151B))
+                            .border(1.dp, PrimaryTurquoise.copy(alpha = 0.3f), RoundedCornerShape(10.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(getExerciseIconShared(exercise.name)),
+                            contentDescription = exercise.name,
+                            modifier = Modifier.size(45.dp),
+                            colorFilter = ColorFilter.tint(PrimaryTurquoise)
+                        )
+                    }
                     Text(
                         text = exercise.name,
-                        color = if (isCompleted) TextGray else TextWhite,
+                        color = TextWhite,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Series: ${exercise.series} | Reps: ${exercise.reps} | Descanso: ${exercise.rest}",
-                        color = TextGray,
-                        fontSize = 12.sp
+                }
+                IconButton(
+                    onClick = onToggle,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(if (isCompleted) PrimaryTurquoise else Color(0xFF252D36), CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = null,
+                        tint = if (isCompleted) Color.Black else PrimaryTurquoise,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                ParameterColShared("SERIES", exercise.series)
+                ParameterColShared("REPS", exercise.reps)
+                ParameterColShared("PESO", exercise.weight)
+                ParameterColShared("DESCANSO", exercise.rest)
+                ParameterColShared("TIEMPO", exercise.time.ifBlank { "0s" })
+            }
         }
+    }
+}
+
+@Composable
+fun ParameterColShared(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(text = label, color = TextGray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(2.dp))
+        Text(text = value, color = PrimaryTurquoise, fontSize = 13.sp, fontWeight = FontWeight.Black)
     }
 }
 
@@ -594,23 +598,20 @@ fun ExerciseItemCard(
 fun SharedTimerDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Timer de Descanso", color = TextWhite, fontWeight = FontWeight.Bold) },
+        title = { Text("Temporizador", color = TextWhite, fontWeight = FontWeight.Bold) },
         text = {
             Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = "00:90", fontSize = 48.sp, fontWeight = FontWeight.Black, color = PrimaryTurquoise)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = "Descanso entre series activo", color = TextGray, fontSize = 13.sp)
+                Text("00:00", color = PrimaryTurquoise, fontSize = 48.sp, fontWeight = FontWeight.Black)
+                Spacer(Modifier.height(12.dp))
+                Text("Cronómetro de descanso activo", color = TextGray, fontSize = 12.sp, textAlign = TextAlign.Center)
             }
         },
         confirmButton = {
-            Button(
-                onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise)
-            ) {
-                Text("Cerrar", color = Color.Black, fontWeight = FontWeight.Bold)
+            TextButton(onClick = onDismiss) {
+                Text("Cerrar", color = PrimaryTurquoise, fontWeight = FontWeight.Bold)
             }
         },
         containerColor = Color(0xFF001F29),

@@ -22,6 +22,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.zexo.gymcopilot.model.Exercise
+import com.zexo.gymcopilot.model.Routine
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
 import com.zexo.gymcopilot.utils.playTickSound
 import gymcopilot.shared.generated.resources.*
@@ -282,9 +284,9 @@ fun getExerciseIconShared(exerciseName: String): org.jetbrains.compose.resources
         name == "glúteos" || name == "gluteos" -> Res.drawable.g_categoria_gluteos
         name == "cuádriceps" || name == "cuadriceps" -> Res.drawable.g_categoria_cuadriceps
         name == "isquiotibiales" -> Res.drawable.g_categoria_isquiotibiales
-        name == "aductores" -> Res.drawable.g_categoria_aductores
-        name == "abductores" -> Res.drawable.g_categoria_abductores
-        name == "gemelos" -> Res.drawable.g_categoria_gemelos
+        name == "aductores" -> Res.drawable.g_aductoresmaquina
+        name == "abductores" -> Res.drawable.g_abductoresmaquina
+        name == "gemelos" -> Res.drawable.g_gemelosdepie
         name == "ejercicios combinados" || name == "cuerpo completo" || name == "fullbody" -> Res.drawable.g_categoria_cuerpocompleto
 
         // PECHO
@@ -479,9 +481,9 @@ fun getCategoryIconShared(categoryName: String): org.jetbrains.compose.resources
         "GLÚTEOS", "GLUTEOS" -> Res.drawable.g_categoria_gluteos
         "CUÁDRICEPS", "CUADRICEPS" -> Res.drawable.g_categoria_cuadriceps
         "ISQUIOTIBIALES" -> Res.drawable.g_categoria_isquiotibiales
-        "ADUCTORES" -> Res.drawable.g_categoria_aductores
-        "ABDUCTORES" -> Res.drawable.g_categoria_abductores
-        "GEMELOS" -> Res.drawable.g_categoria_gemelos
+        "ADUCTORES" -> Res.drawable.g_aductoresmaquina
+        "ABDUCTORES" -> Res.drawable.g_abductoresmaquina
+        "GEMELOS" -> Res.drawable.g_gemelosdepie
         "EJERCICIOS COMBINADOS" -> Res.drawable.g_categoria_cuerpocompleto
         else -> Res.drawable.g_categoria_cuerpocompleto
     }
@@ -492,6 +494,7 @@ fun getCategoryIconShared(categoryName: String): org.jetbrains.compose.resources
 fun RoutineCreationSharedScreen(
     routineId: String? = null,
     onBack: () -> Unit,
+    onSaveRoutine: (Routine) -> Unit = {},
     apiClient: GymKtorApiClient? = null
 ) {
     val _unusedClient = apiClient
@@ -501,16 +504,13 @@ fun RoutineCreationSharedScreen(
     var selectedLevel by remember { mutableStateOf("Intermedio") }
     val selectedDuration by remember { mutableStateOf("60 min") }
 
-    val selectedDays = remember { mutableStateListOf<String>("LU", "MI", "VI") }
-    var routineType by remember { mutableStateOf("Personal") }
-    var routineStatus by remember { mutableStateOf("Activa") }
-    val selectedProfessorIds = remember { mutableStateListOf<String>() }
-
     val exercises = remember {
         mutableStateListOf(
             ExerciseEntryShared(name = "Curl concentrado", series = "4", reps = "12", weight = "0 kg", rest = "60 seg", category = "BÍCEPS")
         )
     }
+
+    var showErrorDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -541,13 +541,56 @@ fun RoutineCreationSharedScreen(
                 fontWeight = FontWeight.Bold
             )
             IconButton(
-                onClick = { onBack() },
+                onClick = {
+                    if (routineName.isBlank()) {
+                        showErrorDialog = true
+                    } else {
+                        val newRoutine = Routine(
+                            id = "rut_${kotlin.random.Random.nextLong()}",
+                            name = routineName,
+                            description = routineDescription.ifBlank { "Rutina personal de $selectedObjective" },
+                            objective = selectedObjective,
+                            level = selectedLevel,
+                            duration = selectedDuration,
+                            category = selectedObjective,
+                            isFavorite = false,
+                            exercises = exercises.map { ex ->
+                                Exercise(
+                                    id = ex.id,
+                                    name = ex.name,
+                                    series = ex.series,
+                                    reps = ex.reps,
+                                    weight = ex.weight,
+                                    rest = ex.rest,
+                                    time = ex.time,
+                                    notes = ex.notes
+                                )
+                            }
+                        )
+                        onSaveRoutine(newRoutine)
+                    }
+                },
                 modifier = Modifier
                     .size(40.dp)
                     .background(PrimaryTurquoise.copy(alpha = 0.2f), CircleShape)
             ) {
                 Icon(Icons.Default.Check, contentDescription = "Guardar", tint = PrimaryTurquoise)
             }
+        }
+
+        if (showErrorDialog) {
+            AlertDialog(
+                onDismissRequest = { showErrorDialog = false },
+                title = { Text("Atención", color = TextWhite, fontWeight = FontWeight.Bold) },
+                text = { Text("No se puede guardar una rutina si no tiene nombre.", color = TextWhite) },
+                confirmButton = {
+                    TextButton(onClick = { showErrorDialog = false }) {
+                        Text("Aceptar", color = PrimaryTurquoise, fontWeight = FontWeight.Bold)
+                    }
+                },
+                containerColor = Color(0xFF001F29),
+                shape = RoundedCornerShape(20.dp)
+            )
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -717,12 +760,10 @@ fun RoutineCreationSharedScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            daysMap.forEach { (fullKey, shortLetter) ->
-                                val isSelected = selectedDays.contains(fullKey)
+                            daysMap.forEach { (_, shortLetter) ->
+                                val isSelected = false
                                 Card(
-                                    onClick = {
-                                        if (isSelected) selectedDays.remove(fullKey) else selectedDays.add(fullKey)
-                                    },
+                                    onClick = { },
                                     colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryTurquoise else Color(0xFF0F151B)),
                                     border = BorderStroke(1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)),
                                     shape = RoundedCornerShape(10.dp),
@@ -744,9 +785,9 @@ fun RoutineCreationSharedScreen(
                         Text("Tipo de rutina", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             listOf("Personal", "Asignable").forEach { type ->
-                                val isSelected = routineType == type
+                                val isSelected = type == "Personal"
                                 Card(
-                                    onClick = { routineType = type },
+                                    onClick = { },
                                     colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryTurquoise else Color(0xFF0F151B)),
                                     border = BorderStroke(1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)),
                                     shape = RoundedCornerShape(12.dp),
@@ -768,9 +809,9 @@ fun RoutineCreationSharedScreen(
                         Text("Estado", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             listOf("Borrador", "Activa", "Archivada").forEach { st ->
-                                val isSelected = routineStatus == st
+                                val isSelected = st == "Activa"
                                 Card(
-                                    onClick = { routineStatus = st },
+                                    onClick = { },
                                     colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryTurquoise else Color(0xFF0F151B)),
                                     border = BorderStroke(1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)),
                                     shape = RoundedCornerShape(12.dp),
@@ -808,12 +849,10 @@ fun RoutineCreationSharedScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             listOf("Prof. Gabriel Fernández", "Prof. Laura Benítez").forEach { profName ->
-                                val isProfSelected = selectedProfessorIds.contains(profName)
+                                val isProfSelected = false
                                 FilterChip(
                                     selected = isProfSelected,
-                                    onClick = {
-                                        if (isProfSelected) selectedProfessorIds.remove(profName) else selectedProfessorIds.add(profName)
-                                    },
+                                    onClick = { },
                                     label = { Text(profName, fontSize = 11.sp) },
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = PrimaryTurquoise,
@@ -885,7 +924,7 @@ fun RoutineCreationSharedScreen(
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Estado", color = TextGray)
-                            Text(routineStatus, color = PrimaryTurquoise, fontWeight = FontWeight.Bold)
+                            Text("Activa", color = PrimaryTurquoise, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
