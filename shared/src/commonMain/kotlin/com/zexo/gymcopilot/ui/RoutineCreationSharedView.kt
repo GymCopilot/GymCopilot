@@ -54,7 +54,10 @@ val PREDEFINED_EXERCISES_SHARED = mapOf(
         "Press militar barra", "Press militar mancuerna", "Elevaciones laterales mancuerna"
     ),
     "BÍCEPS" to listOf(
-        "Curl barra recta", "Curl alternado mancuerna", "Curl martillo mancuerna"
+        "Curl concentrado", "Curl martillo mancuerna", "Curl sentado mancuerna",
+        "Curl alternado mancuerna", "Curl EZ barra", "Curl barra recta",
+        "Trepa de cuerda", "Curl en polea", "Curl unilateral polea",
+        "Curl biceps máquina", "Curl inclinado mancuerna"
     ),
     "TRÍCEPS" to listOf(
         "Press francés barra", "Extensión de tríceps en polea", "Fondos"
@@ -66,7 +69,7 @@ val PREDEFINED_EXERCISES_SHARED = mapOf(
         "Crunch en máquina", "Crunch suelo", "Elevación de piernas", "Plancha", "Russian Twist"
     ),
     "OBLICUOS" to listOf(
-        "Woodchopper polea", "Rotaciones con polea", "Plancha lateral"
+        "Woodchopper polea", "Rotaciones con polea", "Plancha lateral", "Oblicuos mancuerna", "Russian Twist"
     ),
     "GLÚTEOS" to listOf(
         "Hip Thrust barra", "Sentadilla barra", "Peso muerto rumano barra", "Patada de glúteo polea"
@@ -75,7 +78,8 @@ val PREDEFINED_EXERCISES_SHARED = mapOf(
         "Sentadilla barra", "Prensa de piernas", "Hack Squat", "Extensión de cuádriceps máquina"
     ),
     "ISQUIOTIBIALES" to listOf(
-        "Peso muerto rumano barra", "Curl femoral acostado máquina", "Nordic Curl"
+        "Peso muerto rumano barra", "Peso muerto piernas rígidas", "Buenos días barra",
+        "Curl femoral acostado máquina", "Nordic Curl"
     ),
     "ADUCTORES" to listOf(
         "Aductores en máquina", "Aducción de cadera polea", "Copenhagen Plank"
@@ -90,6 +94,43 @@ val PREDEFINED_EXERCISES_SHARED = mapOf(
         "Clean barra", "Snatch barra", "Thruster barra", "Correr en cinta", "Remo ergómetro"
     )
 )
+
+fun getExerciseIconShared(exerciseName: String): org.jetbrains.compose.resources.DrawableResource {
+    val name = exerciseName.lowercase().trim()
+    return when {
+        name.contains("pecho") -> Res.drawable.g_categoria_pecho
+        name.contains("espalda") -> Res.drawable.g_categoria_espalda
+        name.contains("hombros") -> Res.drawable.g_categoria_hombros
+        name.contains("bíceps") || name.contains("biceps") -> Res.drawable.g_categoria_biceps
+        name.contains("tríceps") || name.contains("triceps") -> Res.drawable.g_categoria_triceps
+        name.contains("pierna") || name.contains("sentadilla") || name.contains("prensa") -> Res.drawable.g_categoria_piernas
+        name.contains("abdominal") || name.contains("plancha") || name.contains("crunch") -> Res.drawable.g_categoria_abdominales
+        name.contains("oblicuo") -> Res.drawable.g_categoria_oblicuos
+        name.contains("glúteo") || name.contains("gluteo") || name.contains("hip thrust") -> Res.drawable.g_categoria_gluteos
+        name.contains("isquiotibial") || name.contains("femoral") -> Res.drawable.g_categoria_isquiotibiales
+        name.contains("aductor") -> Res.drawable.g_categoria_aductores
+        name.contains("abductor") -> Res.drawable.g_categoria_abductores
+        name.contains("gemelo") -> Res.drawable.g_categoria_gemelos
+        name.contains("antebrazo") -> Res.drawable.g_categoria_antebrazo
+        name.contains("press banca") || name.contains("horizontal") -> Res.drawable.g_pressbancapechohorizontal
+        name.contains("inclinado") -> Res.drawable.g_pressinclinado
+        name.contains("aperturas") -> Res.drawable.g_aperturas
+        name.contains("remo") -> Res.drawable.g_remo
+        name.contains("jalón") || name.contains("jalon") -> Res.drawable.g_jalonfrontal
+        name.contains("dominada") -> Res.drawable.g_dominada
+        name.contains("concentrado") -> Res.drawable.g_curlconcentrado
+        name.contains("martillo") -> Res.drawable.g_curlmartillomancuerna
+        name.contains("sentado mancuerna") -> Res.drawable.g_curlmancuernasentado
+        name.contains("alternado") -> Res.drawable.g_curlalternado
+        name.contains("ez barra") -> Res.drawable.g_ezcurlbarra
+        name.contains("barra recta") -> Res.drawable.g_curlbicepsbarrarecta
+        name.contains("trepa de cuerda") -> Res.drawable.g_ropeclimbs
+        name.contains("en polea") -> Res.drawable.g_curldepoleas
+        name.contains("unilateral polea") -> Res.drawable.g_curlunilateralpoleas
+        name.contains("biceps máquina") || name.contains("bíceps máquina") -> Res.drawable.g_curlbicepsmaquina
+        else -> Res.drawable.fitness_center
+    }
+}
 
 fun getCategoryIconShared(categoryName: String): org.jetbrains.compose.resources.DrawableResource {
     return when (categoryName.uppercase().trim()) {
@@ -133,7 +174,7 @@ fun RoutineCreationSharedScreen(
 
     val exercises = remember {
         mutableStateListOf(
-            ExerciseEntryShared(name = "Press banca horizontal", series = "4", reps = "12", weight = "0 kg", rest = "60 seg", category = "PECHO")
+            ExerciseEntryShared(name = "Curl concentrado", series = "4", reps = "12", weight = "0 kg", rest = "60 seg", category = "BÍCEPS")
         )
     }
 
@@ -463,7 +504,7 @@ fun RoutineCreationSharedScreen(
                     RoutineSectionHeader("4. Constructor de ejercicios")
                     IconButton(
                         onClick = {
-                            exercises.add(ExerciseEntryShared(name = "Press banca horizontal", series = "4", reps = "12", weight = "0 kg", rest = "60 seg", category = "PECHO"))
+                            exercises.add(ExerciseEntryShared(name = "Curl concentrado", series = "4", reps = "12", weight = "0 kg", rest = "60 seg", category = "BÍCEPS"))
                         },
                         modifier = Modifier
                             .size(36.dp)
@@ -550,7 +591,7 @@ fun RoutineExerciseItemCard(
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             // Sección superior con Icono de la zona muscular (izq) y Selector de regiones del cuerpo + botón Personal (der)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                // Cuadro izquierdo con el icono de la zona muscular correspondiente a la categoría seleccionada
+                // Cuadro izquierdo con el icono de la zona muscular correspondiente a la categoría seleccionada (al tocar o desplazar este icono, cambia el ejercicio de forma autónoma)
                 Box(
                     modifier = Modifier
                         .size(130.dp)
@@ -559,15 +600,18 @@ fun RoutineExerciseItemCard(
                         .border(1.dp, PrimaryTurquoise.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Image(
-                        painter = painterResource(getCategoryIconShared(exercise.category)),
-                        contentDescription = exercise.category,
-                        modifier = Modifier.size(90.dp),
-                        colorFilter = ColorFilter.tint(PrimaryTurquoise)
+                    WheelPickerScrollSharedImages(
+                        options = exercisesList,
+                        currentValue = exercise.name,
+                        accentColor = PrimaryTurquoise,
+                        onValueChange = { newEx ->
+                            onUpdate(exercise.copy(name = newEx))
+                        },
+                        containerHeight = 130.dp
                     )
                 }
 
-                // Cuadro derecho con selector de región muscular + botón PERSONAL
+                // Cuadro derecho con selector de región muscular (al tocar la palabra o girar la rueda de categoría, cambia el grupo muscular y su icono) + botón PERSONAL
                 Column(
                     modifier = Modifier.weight(1f).height(130.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -608,7 +652,7 @@ fun RoutineExerciseItemCard(
                 }
             }
 
-            // Tarjeta central que indica el nombre del ejercicio (WheelPickerScroll de ejercicios)
+            // Tarjeta central que muestra únicamente el nombre del ejercicio (no es selector, sólo muestra el nombre actual)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -618,14 +662,13 @@ fun RoutineExerciseItemCard(
                     .border(1.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(10.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                WheelPickerScrollShared(
-                    options = exercisesList,
-                    currentValue = exercise.name,
-                    onValueChange = { newEx ->
-                        onUpdate(exercise.copy(name = newEx))
-                    },
-                    unit = "",
-                    containerHeight = 60.dp
+                Text(
+                    text = exercise.name,
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 12.dp)
                 )
             }
 
@@ -787,6 +830,71 @@ fun WheelPickerScrollShared(
 }
 
 @Composable
+fun WheelPickerScrollSharedImages(
+    options: List<String>,
+    currentValue: String,
+    accentColor: Color,
+    onValueChange: (String) -> Unit,
+    containerHeight: androidx.compose.ui.unit.Dp = 130.dp
+) {
+    val itemHeight = 130.dp
+    val verticalPadding = (containerHeight - itemHeight) / 2
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = options.indexOf(currentValue).coerceAtLeast(0))
+    val snapFlingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+
+    val centerIndex by remember {
+        derivedStateOf {
+            val layoutInfo = listState.layoutInfo
+            val center = layoutInfo.viewportStartOffset + (layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset) / 2
+            layoutInfo.visibleItemsInfo.minByOrNull { item ->
+                val itemCenter = item.offset + item.size / 2
+                kotlin.math.abs(itemCenter - center)
+            }?.index ?: -1
+        }
+    }
+
+    LaunchedEffect(currentValue, options) {
+        val targetIndex = options.indexOf(currentValue).coerceAtLeast(0)
+        if (!listState.isScrollInProgress && listState.firstVisibleItemIndex != targetIndex) {
+            listState.scrollToItem(targetIndex.coerceAtLeast(0))
+        }
+    }
+
+    LaunchedEffect(listState.isScrollInProgress) {
+        if (!listState.isScrollInProgress) {
+            if (centerIndex in options.indices) {
+                onValueChange(options[centerIndex])
+            }
+        }
+    }
+
+    LazyColumn(
+        state = listState,
+        flingBehavior = snapFlingBehavior,
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        contentPadding = PaddingValues(vertical = verticalPadding.coerceAtLeast(0.dp))
+    ) {
+        itemsIndexed(options) { index, item ->
+            val isCentered = centerIndex == index
+            Box(
+                modifier = Modifier
+                    .height(itemHeight)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(getExerciseIconShared(item)),
+                    contentDescription = item,
+                    modifier = Modifier.size(if (isCentered) 90.dp else 50.dp),
+                    colorFilter = ColorFilter.tint(if (isCentered) accentColor else accentColor.copy(alpha = 0.2f))
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun ParameterWheelBox(
     label: String,
     value: String,
@@ -812,27 +920,29 @@ fun ParameterWheelBox(
                 .clickable { onActivate() },
             contentAlignment = Alignment.Center
         ) {
-            if (isActive) {
-                WheelPickerScrollShared(
-                    options = options,
-                    currentValue = value,
-                    onValueChange = onValueChange,
-                    unit = unit,
-                    containerHeight = height
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                )
-            } else {
-                Text(
-                    text = "$value$unit",
-                    color = Color.White,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                if (isActive) {
+                    WheelPickerScrollShared(
+                        options = options,
+                        currentValue = value,
+                        onValueChange = onValueChange,
+                        unit = unit,
+                        containerHeight = height
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                    )
+                } else {
+                    Text(
+                        text = "$value$unit",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
     }
