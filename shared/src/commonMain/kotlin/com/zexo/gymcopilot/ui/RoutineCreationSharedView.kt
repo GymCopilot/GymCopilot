@@ -581,6 +581,9 @@ fun RoutineExerciseItemCard(
     var activeField by remember { mutableStateOf<String?>(null) }
     val categories = PREDEFINED_EXERCISES_SHARED.keys.toList()
     val exercisesList = PREDEFINED_EXERCISES_SHARED[exercise.category] ?: listOf(exercise.name)
+    val visualOptions = remember(exercise.category) {
+        listOf(exercise.category) + (PREDEFINED_EXERCISES_SHARED[exercise.category] ?: emptyList())
+    }
 
     Card(
         colors = CardDefaults.cardColors(containerColor = SurfaceColor),
@@ -589,9 +592,11 @@ fun RoutineExerciseItemCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            // Sección superior con Icono de la zona muscular (izq) y Selector de regiones del cuerpo + botón Personal (der)
+            // Sección superior con dos cajas:
+            // Izquierda: Cuadro con la rueda de iconos (incluyendo el icono de categoría al inicio, seguido de los ejercicios de esa categoría)
+            // Derecha: Cuadro superior con la rueda de categorías/grupos musculares (WheelPickerScrollShared) Y debajo el botón PERSONAL
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                // Cuadro izquierdo con el icono de la zona muscular correspondiente a la categoría seleccionada (al tocar o desplazar este icono, cambia el ejercicio de forma autónoma)
+                // Cuadro izquierdo: Visor con rueda de iconos (primero el icono de grupo de categoría, luego los ejercicios)
                 Box(
                     modifier = Modifier
                         .size(130.dp)
@@ -601,17 +606,18 @@ fun RoutineExerciseItemCard(
                     contentAlignment = Alignment.Center
                 ) {
                     WheelPickerScrollSharedImages(
-                        options = exercisesList,
+                        options = visualOptions,
                         currentValue = exercise.name,
+                        categoryName = exercise.category,
                         accentColor = PrimaryTurquoise,
-                        onValueChange = { newEx ->
-                            onUpdate(exercise.copy(name = newEx))
+                        onValueChange = { selectedItem ->
+                            onUpdate(exercise.copy(name = selectedItem))
                         },
                         containerHeight = 130.dp
                     )
                 }
 
-                // Cuadro derecho con selector de región muscular (al tocar la palabra o girar la rueda de categoría, cambia el grupo muscular y su icono) + botón PERSONAL
+                // Cuadro derecho con selector de región muscular + botón PERSONAL
                 Column(
                     modifier = Modifier.weight(1f).height(130.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -629,7 +635,7 @@ fun RoutineExerciseItemCard(
                             options = categories,
                             currentValue = exercise.category,
                             onValueChange = { newCat ->
-                                val defaultEx = PREDEFINED_EXERCISES_SHARED[newCat]?.firstOrNull() ?: newCat
+                                val defaultEx = newCat // Al cambiar la categoría, por defecto se posiciona en el icono de categoría
                                 onUpdate(exercise.copy(category = newCat, name = defaultEx))
                             },
                             unit = "",
@@ -652,7 +658,7 @@ fun RoutineExerciseItemCard(
                 }
             }
 
-            // Tarjeta central que muestra únicamente el nombre del ejercicio (no es selector, sólo muestra el nombre actual)
+            // Tarjeta central que muestra únicamente el nombre del ejercicio (campo estático, no selector)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -833,6 +839,7 @@ fun WheelPickerScrollShared(
 fun WheelPickerScrollSharedImages(
     options: List<String>,
     currentValue: String,
+    categoryName: String,
     accentColor: Color,
     onValueChange: (String) -> Unit,
     containerHeight: androidx.compose.ui.unit.Dp = 130.dp
@@ -877,6 +884,11 @@ fun WheelPickerScrollSharedImages(
     ) {
         itemsIndexed(options) { index, item ->
             val isCentered = centerIndex == index
+            val iconRes = if (index == 0 || item.uppercase().trim() == categoryName.uppercase().trim()) {
+                getCategoryIconShared(categoryName)
+            } else {
+                getExerciseIconShared(item)
+            }
             Box(
                 modifier = Modifier
                     .height(itemHeight)
@@ -884,7 +896,7 @@ fun WheelPickerScrollSharedImages(
                 contentAlignment = Alignment.Center
             ) {
                 Image(
-                    painter = painterResource(getExerciseIconShared(item)),
+                    painter = painterResource(iconRes),
                     contentDescription = item,
                     modifier = Modifier.size(if (isCentered) 90.dp else 50.dp),
                     colorFilter = ColorFilter.tint(if (isCentered) accentColor else accentColor.copy(alpha = 0.2f))
