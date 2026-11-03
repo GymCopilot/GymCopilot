@@ -59,31 +59,56 @@ val PREDEFINED_EXERCISES_SHARED = mapOf(
     "TRÍCEPS" to listOf(
         "Press francés barra", "Extensión de tríceps en polea", "Fondos"
     ),
-    "PIERNA" to listOf(
-        "Sentadilla Libre con Barra", "Prensa 45°", "Extensiones de Cuádriceps", "Curl Femoral Tumbado", "Hip Thrust"
+    "ANTEBRAZOS" to listOf(
+        "Curl de muñeca barra", "Curl inverso barra", "Farmer Walk"
     ),
     "ABDOMINALES" to listOf(
-        "Crunch suelo", "Elevación de piernas", "Plancha", "Russian Twist"
+        "Crunch en máquina", "Crunch suelo", "Elevación de piernas", "Plancha", "Russian Twist"
+    ),
+    "OBLICUOS" to listOf(
+        "Woodchopper polea", "Rotaciones con polea", "Plancha lateral"
+    ),
+    "GLÚTEOS" to listOf(
+        "Hip Thrust barra", "Sentadilla barra", "Peso muerto rumano barra", "Patada de glúteo polea"
+    ),
+    "CUÁDRICEPS" to listOf(
+        "Sentadilla barra", "Prensa de piernas", "Hack Squat", "Extensión de cuádriceps máquina"
+    ),
+    "ISQUIOTIBIALES" to listOf(
+        "Peso muerto rumano barra", "Curl femoral acostado máquina", "Nordic Curl"
+    ),
+    "ADUCTORES" to listOf(
+        "Aductores en máquina", "Aducción de cadera polea", "Copenhagen Plank"
+    ),
+    "ABDUCTORES" to listOf(
+        "Abductores en máquina", "Abducción de cadera polea", "Monster Walk con banda"
+    ),
+    "GEMELOS" to listOf(
+        "Elevación de talones barra", "Gemelos de pie máquina", "Gemelos sentado máquina"
+    ),
+    "EJERCICIOS COMBINADOS" to listOf(
+        "Clean barra", "Snatch barra", "Thruster barra", "Correr en cinta", "Remo ergómetro"
     )
 )
 
-fun getExerciseIconShared(exerciseName: String): org.jetbrains.compose.resources.DrawableResource {
-    val name = exerciseName.lowercase().trim()
-    return when {
-        name.contains("pecho") -> Res.drawable.g_categoria_pecho
-        name.contains("espalda") -> Res.drawable.g_categoria_espalda
-        name.contains("hombros") -> Res.drawable.g_categoria_hombros
-        name.contains("bíceps") || name.contains("biceps") -> Res.drawable.g_categoria_biceps
-        name.contains("tríceps") || name.contains("triceps") -> Res.drawable.g_categoria_triceps
-        name.contains("pierna") || name.contains("sentadilla") || name.contains("prensa") -> Res.drawable.g_categoria_piernas
-        name.contains("abdominal") || name.contains("plancha") || name.contains("crunch") -> Res.drawable.g_categoria_abdominales
-        name.contains("press banca") || name.contains("horizontal") -> Res.drawable.g_pressbancapechohorizontal
-        name.contains("inclinado") -> Res.drawable.g_pressinclinado
-        name.contains("aperturas") -> Res.drawable.g_aperturas
-        name.contains("remo") -> Res.drawable.g_remo
-        name.contains("jalón") || name.contains("jalon") -> Res.drawable.g_jalonfrontal
-        name.contains("dominada") -> Res.drawable.g_dominada
-        else -> Res.drawable.fitness_center
+fun getCategoryIconShared(categoryName: String): org.jetbrains.compose.resources.DrawableResource {
+    return when (categoryName.uppercase().trim()) {
+        "PECHO" -> Res.drawable.g_categoria_pecho
+        "ESPALDA" -> Res.drawable.g_categoria_espalda
+        "HOMBROS" -> Res.drawable.g_categoria_hombros
+        "BÍCEPS", "BICEPS" -> Res.drawable.g_categoria_biceps
+        "TRÍCEPS", "TRICEPS" -> Res.drawable.g_categoria_triceps
+        "ANTEBRAZOS" -> Res.drawable.g_categoria_antebrazo
+        "ABDOMINALES" -> Res.drawable.g_categoria_abdominales
+        "OBLICUOS" -> Res.drawable.g_categoria_oblicuos
+        "GLÚTEOS", "GLUTEOS" -> Res.drawable.g_categoria_gluteos
+        "CUÁDRICEPS", "CUADRICEPS" -> Res.drawable.g_categoria_cuadriceps
+        "ISQUIOTIBIALES" -> Res.drawable.g_categoria_isquiotibiales
+        "ADUCTORES" -> Res.drawable.g_categoria_aductores
+        "ABDUCTORES" -> Res.drawable.g_categoria_abductores
+        "GEMELOS" -> Res.drawable.g_categoria_gemelos
+        "EJERCICIOS COMBINADOS" -> Res.drawable.g_categoria_cuerpocompleto
+        else -> Res.drawable.g_categoria_cuerpocompleto
     }
 }
 
@@ -523,9 +548,9 @@ fun RoutineExerciseItemCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            // Sección superior con Icono de Ejercicio (izq) y Selector de regiones del cuerpo + botón Personal (der)
+            // Sección superior con Icono de la zona muscular (izq) y Selector de regiones del cuerpo + botón Personal (der)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                // Cuadro izquierdo con icono de ejercicio / silueta dinámico que se desplaza con la rueda de ejercicios
+                // Cuadro izquierdo con el icono de la zona muscular correspondiente a la categoría seleccionada
                 Box(
                     modifier = Modifier
                         .size(130.dp)
@@ -534,14 +559,11 @@ fun RoutineExerciseItemCard(
                         .border(1.dp, PrimaryTurquoise.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    WheelPickerScrollSharedImages(
-                        options = exercisesList,
-                        currentValue = exercise.name,
-                        accentColor = PrimaryTurquoise,
-                        onValueChange = { newEx ->
-                            onUpdate(exercise.copy(name = newEx))
-                        },
-                        containerHeight = 130.dp
+                    Image(
+                        painter = painterResource(getCategoryIconShared(exercise.category)),
+                        contentDescription = exercise.category,
+                        modifier = Modifier.size(90.dp),
+                        colorFilter = ColorFilter.tint(PrimaryTurquoise)
                     )
                 }
 
@@ -758,71 +780,6 @@ fun WheelPickerScrollShared(
                     fontSize = if (isCentered) 14.sp else 11.sp,
                     fontWeight = if (isCentered) FontWeight.Black else FontWeight.Normal,
                     textAlign = TextAlign.Center
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun WheelPickerScrollSharedImages(
-    options: List<String>,
-    currentValue: String,
-    accentColor: Color,
-    onValueChange: (String) -> Unit,
-    containerHeight: androidx.compose.ui.unit.Dp = 130.dp
-) {
-    val itemHeight = 130.dp
-    val verticalPadding = (containerHeight - itemHeight) / 2
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = options.indexOf(currentValue).coerceAtLeast(0))
-    val snapFlingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
-
-    val centerIndex by remember {
-        derivedStateOf {
-            val layoutInfo = listState.layoutInfo
-            val center = layoutInfo.viewportStartOffset + (layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset) / 2
-            layoutInfo.visibleItemsInfo.minByOrNull { item ->
-                val itemCenter = item.offset + item.size / 2
-                kotlin.math.abs(itemCenter - center)
-            }?.index ?: -1
-        }
-    }
-
-    LaunchedEffect(currentValue, options) {
-        val targetIndex = options.indexOf(currentValue).coerceAtLeast(0)
-        if (!listState.isScrollInProgress && listState.firstVisibleItemIndex != targetIndex) {
-            listState.scrollToItem(targetIndex)
-        }
-    }
-
-    LaunchedEffect(listState.isScrollInProgress) {
-        if (!listState.isScrollInProgress) {
-            if (centerIndex in options.indices) {
-                onValueChange(options[centerIndex])
-            }
-        }
-    }
-
-    LazyColumn(
-        state = listState,
-        flingBehavior = snapFlingBehavior,
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        contentPadding = PaddingValues(vertical = verticalPadding.coerceAtLeast(0.dp))
-    ) {
-        itemsIndexed(options) { index, item ->
-            val isCentered = centerIndex == index
-            Box(
-                modifier = Modifier
-                    .height(itemHeight)
-                    .fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = painterResource(getExerciseIconShared(item)),
-                    contentDescription = item,
-                    modifier = Modifier.size(if (isCentered) 90.dp else 50.dp),
-                    colorFilter = ColorFilter.tint(if (isCentered) accentColor else accentColor.copy(alpha = 0.2f))
                 )
             }
         }
