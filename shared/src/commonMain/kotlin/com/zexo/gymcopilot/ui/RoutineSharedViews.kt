@@ -80,8 +80,10 @@ fun FullRoutinesSection(
     }
 
     if (showCreationScreen || editingRoutineId != null) {
+        val routineToModify = userRoutines.find { it.id == editingRoutineId }
         RoutineCreationSharedScreen(
             routineId = editingRoutineId,
+            routineToEdit = routineToModify,
             onBack = {
                 showCreationScreen = false
                 editingRoutineId = null
@@ -218,7 +220,10 @@ fun FullRoutinesSection(
                             label = "Nueva Rutina",
                             accentColor = PrimaryTurquoise,
                             modifier = Modifier.weight(1f),
-                            onClick = { showCreationScreen = true }
+                            onClick = {
+                                editingRoutineId = null
+                                showCreationScreen = true
+                            }
                         ) {
                             Icon(painter = painterResource(Res.drawable.assignment_add), contentDescription = null, tint = PrimaryTurquoise, modifier = Modifier.size(28.dp))
                         }
