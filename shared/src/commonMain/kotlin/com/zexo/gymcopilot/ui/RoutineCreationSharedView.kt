@@ -493,21 +493,63 @@ fun getCategoryIconShared(categoryName: String): org.jetbrains.compose.resources
 @Composable
 fun RoutineCreationSharedScreen(
     routineId: String? = null,
+    routineToEdit: Routine? = null,
     onBack: () -> Unit,
     onSaveRoutine: (Routine) -> Unit = {},
     apiClient: GymKtorApiClient? = null
 ) {
     val _unusedClient = apiClient
-    var routineName by remember { mutableStateOf("") }
-    var routineDescription by remember { mutableStateOf("") }
-    var selectedObjective by remember { mutableStateOf("Hipertrofia") }
-    var selectedLevel by remember { mutableStateOf("Intermedio") }
-    val selectedDuration by remember { mutableStateOf("60 min") }
 
-    val exercises = remember {
-        mutableStateListOf(
-            ExerciseEntryShared(name = "Curl concentrado", series = "4", reps = "12", weight = "0 kg", rest = "60 seg", category = "BÍCEPS")
-        )
+    var routineName by remember(routineToEdit) { mutableStateOf(routineToEdit?.name ?: "") }
+    var routineDescription by remember(routineToEdit) { mutableStateOf(routineToEdit?.description ?: "") }
+    var selectedObjective by remember(routineToEdit) { mutableStateOf(routineToEdit?.objective?.ifBlank { "Hipertrofia" } ?: "Hipertrofia") }
+    var selectedLevel by remember(routineToEdit) { mutableStateOf(routineToEdit?.level?.ifBlank { "Intermedio" } ?: "Intermedio") }
+    val selectedDuration by remember(routineToEdit) { mutableStateOf(routineToEdit?.duration?.ifBlank { "60 min" } ?: "60 min") }
+
+    val selectedDays = remember(routineToEdit) {
+        mutableStateListOf<String>().apply {
+            if (routineToEdit != null && routineToEdit.days.isNotEmpty()) {
+                addAll(routineToEdit.days)
+            } else {
+                addAll(listOf("LU", "MI", "VI"))
+            }
+        }
+    }
+    var routineType by remember(routineToEdit) { mutableStateOf(routineToEdit?.type?.ifBlank { "Personal" } ?: "Personal") }
+    var routineStatus by remember(routineToEdit) { mutableStateOf(routineToEdit?.status?.ifBlank { "Activa" } ?: "Activa") }
+
+    val exercises = remember(routineToEdit) {
+        mutableStateListOf<ExerciseEntryShared>().apply {
+            if (routineToEdit != null && routineToEdit.exercises.isNotEmpty()) {
+                addAll(
+                    routineToEdit.exercises.map { ex ->
+                        ExerciseEntryShared(
+                            id = ex.id,
+                            name = ex.name,
+                            series = ex.series,
+                            reps = ex.reps,
+                            weight = ex.weight,
+                            rest = ex.rest,
+                            category = "PECHO",
+                            time = ex.time,
+                            notes = ex.notes,
+                            isLocked = true
+                        )
+                    }
+                )
+            } else {
+                add(
+                    ExerciseEntryShared(
+                        name = "Curl concentrado",
+                        series = "4",
+                        reps = "12",
+                        weight = "0 kg",
+                        rest = "60 seg",
+                        category = "BÍCEPS"
+                    )
+                )
+            }
+        }
     }
 
     var showErrorDialog by remember { mutableStateOf(false) }
@@ -539,7 +581,7 @@ fun RoutineCreationSharedScreen(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = TextWhite)
                 }
                 Text(
-                    text = if (routineId == null) "Constructor de Rutinas" else "Editar Rutina",
+                    text = if (routineId == null && routineToEdit == null) "Constructor de Rutinas" else "Editar Rutina",
                     color = TextWhite,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
@@ -549,15 +591,18 @@ fun RoutineCreationSharedScreen(
                         if (routineName.isBlank()) {
                             showErrorDialog = true
                         } else {
-                            val newRoutine = Routine(
-                                id = "rut_${kotlin.random.Random.nextLong()}",
+                            val savedRoutine = Routine(
+                                id = routineToEdit?.id ?: "rut_${kotlin.random.Random.nextLong()}",
                                 name = routineName,
                                 description = routineDescription.ifBlank { "Rutina personal de $selectedObjective" },
                                 objective = selectedObjective,
                                 level = selectedLevel,
                                 duration = selectedDuration,
+                                days = selectedDays.toList(),
+                                type = routineType,
+                                status = routineStatus,
                                 category = selectedObjective,
-                                isFavorite = false,
+                                isFavorite = routineToEdit?.isFavorite ?: false,
                                 exercises = exercises.map { ex ->
                                     Exercise(
                                         id = ex.id,
@@ -571,7 +616,7 @@ fun RoutineCreationSharedScreen(
                                     )
                                 }
                             )
-                            onSaveRoutine(newRoutine)
+                            onSaveRoutine(savedRoutine)
                         }
                     },
                     modifier = Modifier
@@ -748,7 +793,7 @@ fun RoutineCreationSharedScreen(
                     }
                 }
 
-                // 2. Configuración
+                // 2. Configuración (con selección interactiva funcional)
                 item {
                     RoutineSectionHeader("2. Configuración")
                     Spacer(modifier = Modifier.height(8.dp))
@@ -764,10 +809,12 @@ fun RoutineCreationSharedScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                daysMap.forEach { (_, shortLetter) ->
-                                    val isSelected = false
+                                daysMap.forEach { (fullKey, shortLetter) ->
+                                    val isSelected = selectedDays.contains(fullKey)
                                     Card(
-                                        onClick = { },
+                                        onClick = {
+                                            if (isSelected) selectedDays.remove(fullKey) else selectedDays.add(fullKey)
+                                        },
                                         colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryTurquoise else Color(0xFF0F151B)),
                                         border = BorderStroke(1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)),
                                         shape = RoundedCornerShape(10.dp),
@@ -789,9 +836,9 @@ fun RoutineCreationSharedScreen(
                             Text("Tipo de rutina", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 listOf("Personal", "Asignable").forEach { type ->
-                                    val isSelected = type == "Personal"
+                                    val isSelected = routineType == type
                                     Card(
-                                        onClick = { },
+                                        onClick = { routineType = type },
                                         colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryTurquoise else Color(0xFF0F151B)),
                                         border = BorderStroke(1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)),
                                         shape = RoundedCornerShape(12.dp),
@@ -813,9 +860,9 @@ fun RoutineCreationSharedScreen(
                             Text("Estado", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 listOf("Borrador", "Activa", "Archivada").forEach { st ->
-                                    val isSelected = st == "Activa"
+                                    val isSelected = routineStatus == st
                                     Card(
-                                        onClick = { },
+                                        onClick = { routineStatus = st },
                                         colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryTurquoise else Color(0xFF0F151B)),
                                         border = BorderStroke(1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)),
                                         shape = RoundedCornerShape(12.dp),
@@ -975,11 +1022,7 @@ fun RoutineExerciseItemCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            // Sección superior con dos cajas:
-            // Izquierda: Cuadro con la rueda de iconos (200.dp, igual que Android)
-            // Derecha: Cuadro superior con la rueda de categorías/grupos musculares (200.dp) Y debajo el botón PERSONAL
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                // Cuadro izquierdo: Visor con rueda de iconos (200.dp)
                 Box(
                     modifier = Modifier
                         .size(200.dp)
@@ -1000,7 +1043,6 @@ fun RoutineExerciseItemCard(
                     )
                 }
 
-                // Cuadro derecho con selector de región muscular (200.dp) + botón PERSONAL
                 Column(
                     modifier = Modifier.weight(1f).height(200.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -1018,7 +1060,7 @@ fun RoutineExerciseItemCard(
                             options = categories,
                             currentValue = exercise.category,
                             onValueChange = { newCat ->
-                                val defaultEx = newCat // Al cambiar la categoría, por defecto se posiciona en el icono de categoría
+                                val defaultEx = newCat
                                 onUpdate(exercise.copy(category = newCat, name = defaultEx))
                             },
                             unit = "",
@@ -1027,7 +1069,7 @@ fun RoutineExerciseItemCard(
                     }
 
                     Button(
-                        onClick = { /* Personal action */ },
+                        onClick = { },
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F151B)),
                         border = BorderStroke(1.dp, PrimaryTurquoise.copy(alpha = 0.3f)),
@@ -1041,7 +1083,6 @@ fun RoutineExerciseItemCard(
                 }
             }
 
-            // Tarjeta central que muestra únicamente el nombre del ejercicio (campo estático, no selector)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1061,7 +1102,6 @@ fun RoutineExerciseItemCard(
                 )
             }
 
-            // 5 campos de parámetros con Ruedas WheelPickerScroll: Series, Reps, Peso, Descanso, Tiempo
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Top) {
                 val itemHeight = if (activeField != null) 100.dp else 42.dp
                 ParameterWheelBox("Series", exercise.series, (1..20).map { it.toString() }, activeField == "series", itemHeight, PrimaryTurquoise, { s -> onUpdate(exercise.copy(series = s)) }, { activeField = "series" }, Modifier.weight(1f))
@@ -1071,7 +1111,6 @@ fun RoutineExerciseItemCard(
                 ParameterWheelBox("Tiempo", exercise.time, (0..600 step 5).map { it.toString() }, activeField == "time", itemHeight, PrimaryTurquoise, { t -> onUpdate(exercise.copy(time = t)) }, { activeField = "time" }, Modifier.weight(1f), " s")
             }
 
-            // Fila inferior: Botones de posición (^ y v), Botón "Listo" / "Agregado" (con lápiz al editar) y Botón de basura
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
