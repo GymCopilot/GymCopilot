@@ -669,9 +669,9 @@ fun RoutineDetailSharedView(
                 .fillMaxSize()
                 .padding(vertical = 12.dp)
         ) {
-            // Cabecera fija
+            // Cabecera fija con nombre y lápiz
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -699,52 +699,68 @@ fun RoutineDetailSharedView(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // Timer header card sin color de fondo (transparente) y SIN borde fino
+            // Renglón superior que ocupa TODO el ancho: Duración estimada, Total y Ejercicios
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Icon(Icons.Default.Timer, null, tint = PrimaryTurquoise, modifier = Modifier.size(16.dp))
+                    Text("$estimatedDurationStr Duración Estimada", color = TextGray, fontSize = 11.sp)
+                }
+                Text("Total: ${formatTimer(totalSeconds)}", color = TextWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Icon(Icons.Default.FitnessCenter, null, tint = PrimaryTurquoise, modifier = Modifier.size(16.dp))
+                    Text("${routine.exercises.size} Ejercicios", color = TextGray, fontSize = 11.sp)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Panel de Control del Temporizador: SIN borde fino y totalmente transparente
             Card(
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Box(modifier = Modifier.padding(16.dp)) {
+                Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
                     Column {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            // Izquierda: Número de serie y botón Reset
+                            // Izquierda: Caja con número de serie, palabra SERIE fuera del rectángulo, y botón Reset
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center
                             ) {
-                                Surface(
-                                    color = PrimaryTurquoise.copy(alpha = 0.2f),
-                                    shape = RoundedCornerShape(8.dp),
-                                    border = BorderStroke(1.dp, PrimaryTurquoise)
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(PrimaryTurquoise.copy(alpha = 0.2f))
+                                        .border(1.dp, PrimaryTurquoise, RoundedCornerShape(10.dp)),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Column(
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        Text(
-                                            text = currentSeries.toString(),
-                                            color = PrimaryTurquoise,
-                                            fontSize = 22.sp,
-                                            fontWeight = FontWeight.Black
-                                        )
-                                        Text(
-                                            text = "SERIE",
-                                            color = TextGray,
-                                            fontSize = 8.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
+                                    Text(
+                                        text = currentSeries.toString(),
+                                        color = PrimaryTurquoise,
+                                        fontSize = 24.sp,
+                                        fontWeight = FontWeight.Black
+                                    )
                                 }
-
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = "SERIE",
+                                    color = PrimaryTurquoise,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
                                 Spacer(Modifier.height(8.dp))
-
                                 IconButton(
                                     onClick = {
                                         partialSeconds = 0
@@ -757,54 +773,37 @@ fun RoutineDetailSharedView(
                                         completedExercises = emptySet()
                                     },
                                     modifier = Modifier
-                                        .size(36.dp)
+                                        .size(38.dp)
                                         .background(Color(0xFF252D36), CircleShape)
                                 ) {
-                                    Icon(Icons.Default.Refresh, contentDescription = "Reiniciar", tint = PrimaryTurquoise, modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Default.Refresh, contentDescription = "Reiniciar", tint = PrimaryTurquoise, modifier = Modifier.size(20.dp))
                                 }
                             }
 
-                            // Centro: Tiempo parcial y total (números delgados, FontWeight.ExtraLight, fontSize 82.sp)
+                            // Centro: Tiempo parcial en números MUY delgados (FontWeight.Thin, fontSize 84.sp)
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceAround,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Icon(Icons.Default.Timer, null, tint = PrimaryTurquoise, modifier = Modifier.size(14.dp))
-                                        Text("$estimatedDurationStr Duración", color = TextGray, fontSize = 10.sp)
-                                    }
-                                    Text("Total: ${formatTimer(totalSeconds)}", color = TextWhite, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Icon(Icons.Default.FitnessCenter, null, tint = PrimaryTurquoise, modifier = Modifier.size(14.dp))
-                                        Text("${routine.exercises.size} Ejercicios", color = TextGray, fontSize = 10.sp)
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(4.dp))
                                 Text("TIEMPO PARCIAL", color = TextGray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = if (isCountdownActive) countdownSeconds.toString() else formatTimer(partialSeconds),
                                     color = if (isCountdownActive) Color(0xFFFF5252) else TextWhite,
-                                    fontSize = 82.sp,
-                                    fontWeight = FontWeight.ExtraLight,
+                                    fontSize = 84.sp,
+                                    fontWeight = FontWeight.Thin,
                                     textAlign = TextAlign.Center
                                 )
                             }
 
-                            // Derecha: Barra de progreso vertical en porcentaje (se llena de abajo hacia arriba de inmediato al presionar play)
+                            // Derecha: Barra de progreso vertical en porcentaje (llena de abajo hacia arriba de inmediato al presionar play)
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier.padding(start = 8.dp)
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .width(26.dp)
+                                        .width(28.dp)
                                         .height(90.dp)
                                         .clip(RoundedCornerShape(6.dp))
                                         .background(Color(0xFF0F151B))
@@ -827,7 +826,7 @@ fun RoutineDetailSharedView(
                             }
                         }
 
-                        // Tiempo de descanso debajo del contador con indicador inferior que se llena conforme se cumple
+                        // Tiempo de descanso debajo del contador
                         if (isRestRunning && totalRestSeconds > 0) {
                             Spacer(Modifier.height(12.dp))
                             val restProgress = (totalRestSeconds - restSeconds).toFloat() / totalRestSeconds.toFloat()
@@ -854,7 +853,6 @@ fun RoutineDetailSharedView(
                                             Icon(Icons.Default.Close, null, tint = Color.Red, modifier = Modifier.size(18.dp))
                                         }
                                     }
-                                    // Indicador inferior que se llena conforme se cumple el tiempo de descanso
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth(restProgress.coerceIn(0f, 1f))
@@ -1010,17 +1008,17 @@ fun ExerciseExecutionCardShared(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.Top,
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    // Icono del ejercicio 100% más grande (caja de 115.dp con imagen de 95.dp)
+                    // Icono del ejercicio 100% más grande (caja de 110.dp con imagen de 90.dp)
                     Box(
                         modifier = Modifier
-                            .size(115.dp)
+                            .size(110.dp)
                             .clip(RoundedCornerShape(14.dp))
                             .background(Color(0xFF0F151B))
                             .border(1.dp, PrimaryTurquoise.copy(alpha = 0.3f), RoundedCornerShape(14.dp)),
@@ -1029,97 +1027,81 @@ fun ExerciseExecutionCardShared(
                         Image(
                             painter = painterResource(getExerciseIconShared(exercise.name)),
                             contentDescription = exercise.name,
-                            modifier = Modifier.size(95.dp),
+                            modifier = Modifier.size(90.dp),
                             colorFilter = ColorFilter.tint(PrimaryTurquoise)
                         )
                     }
-                    Column {
+
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(
                             text = exercise.name,
                             color = TextWhite,
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        if (seriesCount > 0) {
-                            Spacer(Modifier.height(2.dp))
-                            Text(
-                                text = "Series realizadas: $seriesCount",
-                                color = PrimaryTurquoise,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+
+                        // Botones de Play, Descanso y Audio JUSTO DEBAJO del nombre del ejercicio
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick = onPlayPause,
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .background(if (isRunning) PrimaryTurquoise else Color(0xFF252D36), CircleShape)
+                            ) {
+                                Icon(
+                                    imageVector = if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    contentDescription = "Play/Pause",
+                                    tint = if (isRunning) Color.Black else TextWhite,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+
+                            IconButton(
+                                onClick = onStartRest,
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .background(if (isResting) PrimaryTurquoise else Color(0xFF252D36), CircleShape)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Timer,
+                                    contentDescription = "Descanso",
+                                    tint = if (isResting) Color.Black else TextWhite,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+
+                            IconButton(
+                                onClick = onToggleMute,
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .background(Color(0xFF252D36), CircleShape)
+                            ) {
+                                Icon(
+                                    imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                                    contentDescription = "Audio",
+                                    tint = TextWhite,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
                         }
                     }
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    IconButton(
-                        onClick = onToggleComplete,
-                        modifier = Modifier
-                            .size(36.dp)
-                            .background(if (isCompleted) PrimaryTurquoise else Color(0xFF252D36), CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = null,
-                            tint = if (isCompleted) Color.Black else PrimaryTurquoise,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Botones Play, Descanso y Audio por ejercicio
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+                // Botón de reinicio en la esquina superior derecha
                 IconButton(
-                    onClick = onPlayPause,
+                    onClick = onToggleComplete,
                     modifier = Modifier
-                        .size(48.dp)
-                        .background(if (isRunning) PrimaryTurquoise else Color(0xFF252D36), CircleShape)
-                ) {
-                    Icon(
-                        imageVector = if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = "Play/Pause",
-                        tint = if (isRunning) Color.Black else TextWhite,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                IconButton(
-                    onClick = onStartRest,
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(if (isResting) PrimaryTurquoise else Color(0xFF252D36), CircleShape)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Timer,
-                        contentDescription = "Descanso",
-                        tint = if (isResting) Color.Black else TextWhite,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                IconButton(
-                    onClick = onToggleMute,
-                    modifier = Modifier
-                        .size(48.dp)
+                        .size(40.dp)
                         .background(Color(0xFF252D36), CircleShape)
                 ) {
                     Icon(
-                        imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
-                        contentDescription = "Audio",
-                        tint = TextWhite,
-                        modifier = Modifier.size(24.dp)
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Reiniciar ejercicio",
+                        tint = PrimaryTurquoise,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
@@ -1210,7 +1192,7 @@ fun ParameterColShared(label: String, value: String) {
 @Composable
 fun SharedTimerDialog(onDismiss: () -> Unit) {
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { onDismiss() },
         title = { Text("Temporizador", color = TextWhite, fontWeight = FontWeight.Bold) },
         text = {
             Column(
