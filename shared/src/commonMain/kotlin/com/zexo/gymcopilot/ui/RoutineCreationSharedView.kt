@@ -512,179 +512,231 @@ fun RoutineCreationSharedScreen(
 
     var showErrorDialog by remember { mutableStateOf(false) }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(GymBackgroundGradient)
-            .padding(vertical = 12.dp)
     ) {
-        // Top Bar
-        Row(
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .fillMaxSize()
+                .padding(vertical = 12.dp)
         ) {
-            IconButton(
-                onClick = onBack,
+            // Top Bar
+            Row(
                 modifier = Modifier
-                    .size(40.dp)
-                    .background(SurfaceColor, CircleShape)
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = TextWhite)
-            }
-            Text(
-                text = if (routineId == null) "Constructor de Rutinas" else "Editar Rutina",
-                color = TextWhite,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-            IconButton(
-                onClick = {
-                    if (routineName.isBlank()) {
-                        showErrorDialog = true
-                    } else {
-                        val newRoutine = Routine(
-                            id = "rut_${kotlin.random.Random.nextLong()}",
-                            name = routineName,
-                            description = routineDescription.ifBlank { "Rutina personal de $selectedObjective" },
-                            objective = selectedObjective,
-                            level = selectedLevel,
-                            duration = selectedDuration,
-                            category = selectedObjective,
-                            isFavorite = false,
-                            exercises = exercises.map { ex ->
-                                Exercise(
-                                    id = ex.id,
-                                    name = ex.name,
-                                    series = ex.series,
-                                    reps = ex.reps,
-                                    weight = ex.weight,
-                                    rest = ex.rest,
-                                    time = ex.time,
-                                    notes = ex.notes
-                                )
-                            }
-                        )
-                        onSaveRoutine(newRoutine)
-                    }
-                },
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(PrimaryTurquoise.copy(alpha = 0.2f), CircleShape)
-            ) {
-                Icon(Icons.Default.Check, contentDescription = "Guardar", tint = PrimaryTurquoise)
-            }
-        }
-
-        if (showErrorDialog) {
-            AlertDialog(
-                onDismissRequest = { showErrorDialog = false },
-                title = { Text("Atención", color = TextWhite, fontWeight = FontWeight.Bold) },
-                text = { Text("No se puede guardar una rutina si no tiene nombre.", color = TextWhite) },
-                confirmButton = {
-                    TextButton(onClick = { showErrorDialog = false }) {
-                        Text("Aceptar", color = PrimaryTurquoise, fontWeight = FontWeight.Bold)
-                    }
-                },
-                containerColor = Color(0xFF001F29),
-                shape = RoundedCornerShape(20.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            // 1. Información General
-            item {
-                RoutineSectionHeader("1. Información General")
-                Spacer(modifier = Modifier.height(8.dp))
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = SurfaceColor),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth()
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(SurfaceColor, CircleShape)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        OutlinedTextField(
-                            value = routineName,
-                            onValueChange = { routineName = it },
-                            placeholder = { Text("Nombre de la rutina *", color = TextGray) },
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = Color(0xFF0F151B),
-                                unfocusedContainerColor = Color(0xFF0F151B),
-                                focusedBorderColor = PrimaryTurquoise,
-                                unfocusedBorderColor = Color.Transparent,
-                                focusedTextColor = TextWhite,
-                                unfocusedTextColor = TextWhite
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = TextWhite)
+                }
+                Text(
+                    text = if (routineId == null) "Constructor de Rutinas" else "Editar Rutina",
+                    color = TextWhite,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                IconButton(
+                    onClick = {
+                        if (routineName.isBlank()) {
+                            showErrorDialog = true
+                        } else {
+                            val newRoutine = Routine(
+                                id = "rut_${kotlin.random.Random.nextLong()}",
+                                name = routineName,
+                                description = routineDescription.ifBlank { "Rutina personal de $selectedObjective" },
+                                objective = selectedObjective,
+                                level = selectedLevel,
+                                duration = selectedDuration,
+                                category = selectedObjective,
+                                isFavorite = false,
+                                exercises = exercises.map { ex ->
+                                    Exercise(
+                                        id = ex.id,
+                                        name = ex.name,
+                                        series = ex.series,
+                                        reps = ex.reps,
+                                        weight = ex.weight,
+                                        rest = ex.rest,
+                                        time = ex.time,
+                                        notes = ex.notes
+                                    )
+                                }
+                            )
+                            onSaveRoutine(newRoutine)
+                        }
+                    },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(PrimaryTurquoise.copy(alpha = 0.2f), CircleShape)
+                ) {
+                    Icon(Icons.Default.Check, contentDescription = "Guardar", tint = PrimaryTurquoise)
+                }
+            }
 
-                        OutlinedTextField(
-                            value = routineDescription,
-                            onValueChange = { routineDescription = it },
-                            placeholder = { Text("Descripción", color = TextGray) },
-                            minLines = 2,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = Color(0xFF0F151B),
-                                unfocusedContainerColor = Color(0xFF0F151B),
-                                focusedBorderColor = PrimaryTurquoise,
-                                unfocusedBorderColor = Color.Transparent,
-                                focusedTextColor = TextWhite,
-                                unfocusedTextColor = TextWhite
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        )
+            if (showErrorDialog) {
+                AlertDialog(
+                    onDismissRequest = { showErrorDialog = false },
+                    title = { Text("Atención", color = TextWhite, fontWeight = FontWeight.Bold) },
+                    text = { Text("No se puede guardar una rutina si no tiene nombre.", color = TextWhite) },
+                    confirmButton = {
+                        TextButton(onClick = { showErrorDialog = false }) {
+                            Text("Aceptar", color = PrimaryTurquoise, fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    containerColor = Color(0xFF001F29),
+                    shape = RoundedCornerShape(20.dp)
+                )
+            }
 
-                        Text("Objetivo", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        val objectives = listOf(
-                            Triple("Hipertrofia", "Hipertrofia", Res.drawable.hypertrophy),
-                            Triple("Fuerza", "Fuerza", Res.drawable.force),
-                            Triple("Resistencia", "Resistencia", Res.drawable.g_sprint),
-                            Triple("Definición", "Definición", Res.drawable.definition),
-                            Triple("Cardio", "Cardio", Res.drawable.cardio),
-                            Triple("Rehabilitación", "Rehabilitación", Res.drawable.rehabilitation)
-                        )
-                        objectives.chunked(3).forEach { rowItems ->
+            Spacer(modifier = Modifier.height(12.dp))
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                // 1. Información General
+                item {
+                    RoutineSectionHeader("1. Información General")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = SurfaceColor),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            OutlinedTextField(
+                                value = routineName,
+                                onValueChange = { routineName = it },
+                                placeholder = { Text("Nombre de la rutina *", color = TextGray) },
+                                singleLine = true,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = Color(0xFF0F151B),
+                                    unfocusedContainerColor = Color(0xFF0F151B),
+                                    focusedBorderColor = PrimaryTurquoise,
+                                    unfocusedBorderColor = Color.Transparent,
+                                    focusedTextColor = TextWhite,
+                                    unfocusedTextColor = TextWhite
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            OutlinedTextField(
+                                value = routineDescription,
+                                onValueChange = { routineDescription = it },
+                                placeholder = { Text("Descripción", color = TextGray) },
+                                minLines = 2,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = Color(0xFF0F151B),
+                                    unfocusedContainerColor = Color(0xFF0F151B),
+                                    focusedBorderColor = PrimaryTurquoise,
+                                    unfocusedBorderColor = Color.Transparent,
+                                    focusedTextColor = TextWhite,
+                                    unfocusedTextColor = TextWhite
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Text("Objetivo", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            val objectives = listOf(
+                                Triple("Hipertrofia", "Hipertrofia", Res.drawable.hypertrophy),
+                                Triple("Fuerza", "Fuerza", Res.drawable.force),
+                                Triple("Resistencia", "Resistencia", Res.drawable.g_sprint),
+                                Triple("Definición", "Definición", Res.drawable.definition),
+                                Triple("Cardio", "Cardio", Res.drawable.cardio),
+                                Triple("Rehabilitación", "Rehabilitación", Res.drawable.rehabilitation)
+                            )
+                            objectives.chunked(3).forEach { rowItems ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    rowItems.forEach { (obj, label, iconRes) ->
+                                        val isSelected = selectedObjective == obj
+                                        Card(
+                                            onClick = { selectedObjective = obj },
+                                            colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryTurquoise else Color(0xFF0F151B)),
+                                            border = BorderStroke(1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)),
+                                            shape = RoundedCornerShape(12.dp),
+                                            modifier = Modifier.weight(1f).height(75.dp)
+                                        ) {
+                                            Column(
+                                                modifier = Modifier.fillMaxSize().padding(4.dp),
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.Center
+                                            ) {
+                                                Image(
+                                                    painter = painterResource(iconRes),
+                                                    contentDescription = label,
+                                                    modifier = Modifier.size(28.dp),
+                                                    colorFilter = ColorFilter.tint(if (isSelected) Color.Black else TextWhite)
+                                                )
+                                                Spacer(Modifier.height(4.dp))
+                                                Text(
+                                                    text = label,
+                                                    color = if (isSelected) Color.Black else TextWhite,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    textAlign = TextAlign.Center
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Text("Nivel", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            val levels = listOf(
+                                LevelItemShared("Principiante", 1),
+                                LevelItemShared("Intermedio", 3),
+                                LevelItemShared("Avanzado", 5)
+                            )
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                rowItems.forEach { (obj, label, iconRes) ->
-                                    val isSelected = selectedObjective == obj
+                                levels.forEach { lvlItem ->
+                                    val isSelected = selectedLevel == lvlItem.name
                                     Card(
-                                        onClick = { selectedObjective = obj },
+                                        onClick = { selectedLevel = lvlItem.name },
                                         colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryTurquoise else Color(0xFF0F151B)),
                                         border = BorderStroke(1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)),
                                         shape = RoundedCornerShape(12.dp),
-                                        modifier = Modifier.weight(1f).height(75.dp)
+                                        modifier = Modifier.weight(1f).height(65.dp)
                                     ) {
                                         Column(
                                             modifier = Modifier.fillMaxSize().padding(4.dp),
                                             horizontalAlignment = Alignment.CenterHorizontally,
                                             verticalArrangement = Arrangement.Center
                                         ) {
-                                            Image(
-                                                painter = painterResource(iconRes),
-                                                contentDescription = label,
-                                                modifier = Modifier.size(28.dp),
-                                                colorFilter = ColorFilter.tint(if (isSelected) Color.Black else TextWhite)
-                                            )
+                                            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                repeat(lvlItem.stars) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Star,
+                                                        contentDescription = null,
+                                                        tint = if (isSelected) Color.Black else PrimaryTurquoise,
+                                                        modifier = Modifier.size(12.dp)
+                                                    )
+                                                }
+                                            }
                                             Spacer(Modifier.height(4.dp))
                                             Text(
-                                                text = label,
+                                                text = lvlItem.name,
                                                 color = if (isSelected) Color.Black else TextWhite,
-                                                fontSize = 11.sp,
+                                                fontSize = 12.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 textAlign = TextAlign.Center
                                             )
@@ -693,242 +745,201 @@ fun RoutineCreationSharedScreen(
                                 }
                             }
                         }
-
-                        Text("Nivel", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        val levels = listOf(
-                            LevelItemShared("Principiante", 1),
-                            LevelItemShared("Intermedio", 3),
-                            LevelItemShared("Avanzado", 5)
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            levels.forEach { lvlItem ->
-                                val isSelected = selectedLevel == lvlItem.name
-                                Card(
-                                    onClick = { selectedLevel = lvlItem.name },
-                                    colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryTurquoise else Color(0xFF0F151B)),
-                                    border = BorderStroke(1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)),
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.weight(1f).height(65.dp)
-                                ) {
-                                    Column(
-                                        modifier = Modifier.fillMaxSize().padding(4.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center
-                                    ) {
-                                        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                                            repeat(lvlItem.stars) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Star,
-                                                    contentDescription = null,
-                                                    tint = if (isSelected) Color.Black else PrimaryTurquoise,
-                                                    modifier = Modifier.size(12.dp)
-                                                )
-                                            }
-                                        }
-                                        Spacer(Modifier.height(4.dp))
-                                        Text(
-                                            text = lvlItem.name,
-                                            color = if (isSelected) Color.Black else TextWhite,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            textAlign = TextAlign.Center
-                                        )
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
-            }
 
-            // 2. Configuración
-            item {
-                RoutineSectionHeader("2. Configuración")
-                Spacer(modifier = Modifier.height(8.dp))
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = SurfaceColor),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Text("Días recomendados", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        val daysMap = listOf("LU" to "L", "MA" to "M", "MI" to "M", "JU" to "J", "VI" to "V", "SÁ" to "S", "DO" to "D")
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            daysMap.forEach { (_, shortLetter) ->
-                                val isSelected = false
-                                Card(
-                                    onClick = { },
-                                    colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryTurquoise else Color(0xFF0F151B)),
-                                    border = BorderStroke(1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)),
-                                    shape = RoundedCornerShape(10.dp),
-                                    modifier = Modifier.weight(1f).height(46.dp)
-                                ) {
-                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                        Text(
-                                            text = shortLetter,
-                                            color = if (isSelected) Color.Black else TextWhite,
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.ExtraBold,
-                                            textAlign = TextAlign.Center
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        Text("Tipo de rutina", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf("Personal", "Asignable").forEach { type ->
-                                val isSelected = type == "Personal"
-                                Card(
-                                    onClick = { },
-                                    colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryTurquoise else Color(0xFF0F151B)),
-                                    border = BorderStroke(1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)),
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.weight(1f).height(50.dp)
-                                ) {
-                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                        Text(
-                                            text = type,
-                                            color = if (isSelected) Color.Black else TextWhite,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            textAlign = TextAlign.Center
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        Text("Estado", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf("Borrador", "Activa", "Archivada").forEach { st ->
-                                val isSelected = st == "Activa"
-                                Card(
-                                    onClick = { },
-                                    colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryTurquoise else Color(0xFF0F151B)),
-                                    border = BorderStroke(1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)),
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.weight(1f).height(50.dp)
-                                ) {
-                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                        Text(
-                                            text = st,
-                                            color = if (isSelected) Color.Black else TextWhite,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            textAlign = TextAlign.Center
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 3. Profesores responsables
-            item {
-                RoutineSectionHeader("3. Profesores responsables")
-                Spacer(modifier = Modifier.height(8.dp))
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = SurfaceColor),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Profesor asignado principal (Tú)", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text("Se asignará automáticamente al creador de la rutina.", color = TextGray, fontSize = 12.sp)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            listOf("Prof. Gabriel Fernández", "Prof. Laura Benítez").forEach { profName ->
-                                val isProfSelected = false
-                                FilterChip(
-                                    selected = isProfSelected,
-                                    onClick = { },
-                                    label = { Text(profName, fontSize = 11.sp) },
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = PrimaryTurquoise,
-                                        selectedLabelColor = Color.Black,
-                                        containerColor = Color(0xFF0F151B),
-                                        labelColor = TextWhite
-                                    )
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 4. Constructor de ejercicios
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    RoutineSectionHeader("4. Constructor de ejercicios")
-                    IconButton(
-                        onClick = {
-                            exercises.add(ExerciseEntryShared(name = "Curl concentrado", series = "4", reps = "12", weight = "0 kg", rest = "60 seg", category = "BÍCEPS"))
-                        },
-                        modifier = Modifier
-                            .size(36.dp)
-                            .background(PrimaryTurquoise, CircleShape)
+                // 2. Configuración
+                item {
+                    RoutineSectionHeader("2. Configuración")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = SurfaceColor),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Añadir Ejercicio", tint = Color.Black)
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Text("Días recomendados", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            val daysMap = listOf("LU" to "L", "MA" to "M", "MI" to "M", "JU" to "J", "VI" to "V", "SÁ" to "S", "DO" to "D")
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                daysMap.forEach { (_, shortLetter) ->
+                                    val isSelected = false
+                                    Card(
+                                        onClick = { },
+                                        colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryTurquoise else Color(0xFF0F151B)),
+                                        border = BorderStroke(1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)),
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier.weight(1f).height(46.dp)
+                                    ) {
+                                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                            Text(
+                                                text = shortLetter,
+                                                color = if (isSelected) Color.Black else TextWhite,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            Text("Tipo de rutina", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf("Personal", "Asignable").forEach { type ->
+                                    val isSelected = type == "Personal"
+                                    Card(
+                                        onClick = { },
+                                        colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryTurquoise else Color(0xFF0F151B)),
+                                        border = BorderStroke(1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)),
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.weight(1f).height(50.dp)
+                                    ) {
+                                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                            Text(
+                                                text = type,
+                                                color = if (isSelected) Color.Black else TextWhite,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            Text("Estado", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf("Borrador", "Activa", "Archivada").forEach { st ->
+                                    val isSelected = st == "Activa"
+                                    Card(
+                                        onClick = { },
+                                        colors = CardDefaults.cardColors(containerColor = if (isSelected) PrimaryTurquoise else Color(0xFF0F151B)),
+                                        border = BorderStroke(1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f)),
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.weight(1f).height(50.dp)
+                                    ) {
+                                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                            Text(
+                                                text = st,
+                                                color = if (isSelected) Color.Black else TextWhite,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 3. Profesores responsables
+                item {
+                    RoutineSectionHeader("3. Profesores responsables")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = SurfaceColor),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Profesor asignado principal (Tú)", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text("Se asignará automáticamente al creador de la rutina.", color = TextGray, fontSize = 12.sp)
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                listOf("Prof. Gabriel Fernández", "Prof. Laura Benítez").forEach { profName ->
+                                    val isProfSelected = false
+                                    FilterChip(
+                                        selected = isProfSelected,
+                                        onClick = { },
+                                        label = { Text(profName, fontSize = 11.sp) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = PrimaryTurquoise,
+                                            selectedLabelColor = Color.Black,
+                                            containerColor = Color(0xFF0F151B),
+                                            labelColor = TextWhite
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 4. Constructor de ejercicios
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RoutineSectionHeader("4. Constructor de ejercicios")
+                    }
+                }
+
+                itemsIndexed(exercises) { index, exercise ->
+                    RoutineExerciseItemCard(
+                        exercise = exercise,
+                        onUpdate = { updated -> exercises[index] = updated },
+                        onDelete = { exercises.removeAt(index) },
+                        onMoveUp = { if (index > 0) { val e = exercises.removeAt(index); exercises.add(index - 1, e) } },
+                        onMoveDown = { if (index < exercises.size - 1) { val e = exercises.removeAt(index); exercises.add(index + 1, e) } }
+                    )
+                }
+
+                // 5. Resumen final
+                item {
+                    RoutineSectionHeader("5. Resumen final")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = SurfaceColor),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Resumen automático", color = PrimaryTurquoise, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Ejercicios", color = TextGray)
+                                Text("${exercises.size}", color = TextWhite, fontWeight = FontWeight.Bold)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Series totales", color = TextGray)
+                                Text("${exercises.sumOf { it.series.toIntOrNull() ?: 4 }}", color = TextWhite, fontWeight = FontWeight.Bold)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Duración estimada", color = TextGray)
+                                Text(selectedDuration, color = TextWhite, fontWeight = FontWeight.Bold)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Estado", color = TextGray)
+                                Text("Activa", color = PrimaryTurquoise, fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
                 }
             }
+        }
 
-            itemsIndexed(exercises) { index, exercise ->
-                RoutineExerciseItemCard(
-                    exercise = exercise,
-                    onUpdate = { updated -> exercises[index] = updated },
-                    onDelete = { exercises.removeAt(index) },
-                    onMoveUp = { if (index > 0) { val e = exercises.removeAt(index); exercises.add(index - 1, e) } },
-                    onMoveDown = { if (index < exercises.size - 1) { val e = exercises.removeAt(index); exercises.add(index + 1, e) } }
-                )
-            }
-
-            // 5. Resumen final
-            item {
-                RoutineSectionHeader("5. Resumen final")
-                Spacer(modifier = Modifier.height(8.dp))
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = SurfaceColor),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Resumen automático", color = PrimaryTurquoise, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                        HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Ejercicios", color = TextGray)
-                            Text("${exercises.size}", color = TextWhite, fontWeight = FontWeight.Bold)
-                        }
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Series totales", color = TextGray)
-                            Text("${exercises.sumOf { it.series.toIntOrNull() ?: 4 }}", color = TextWhite, fontWeight = FontWeight.Bold)
-                        }
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Duración estimada", color = TextGray)
-                            Text(selectedDuration, color = TextWhite, fontWeight = FontWeight.Bold)
-                        }
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Estado", color = TextGray)
-                            Text("Activa", color = PrimaryTurquoise, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
+        // Botón flotante circular + para agregar ejercicios abajo a la derecha
+        FloatingActionButton(
+            onClick = {
+                exercises.add(ExerciseEntryShared(name = "Curl concentrado", series = "4", reps = "12", weight = "0 kg", rest = "60 seg", category = "BÍCEPS"))
+            },
+            containerColor = PrimaryTurquoise,
+            contentColor = Color.Black,
+            shape = CircleShape,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(24.dp)
+                .size(56.dp)
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "Añadir Ejercicio", modifier = Modifier.size(28.dp), tint = Color.Black)
         }
     }
 }
@@ -1318,7 +1329,7 @@ fun ParameterWheelBox(
                 .height(height)
                 .clip(RoundedCornerShape(8.dp))
                 .background(Color(0xFF0F151B))
-                .border(1.dp, if (isActive) accentColor else Color.White.copy(alpha = 0.05f), RoundedCornerShape(8.dp))
+                .border(1.dp, if (isActive) accentColor else Color.White.copy(alpha = 0.05f), RoundedCornerShape(12.dp))
                 .clickable { onActivate() },
             contentAlignment = Alignment.Center
         ) {
@@ -1334,7 +1345,7 @@ fun ParameterWheelBox(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                            .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                     )
                 } else {
                     Text(
