@@ -20,3 +20,14 @@ actual fun playTickSound() {
         """)
     } catch (e: Exception) {}
 }
+
+actual fun playAudioSound(soundName: String) {
+    try {
+        js("""
+            try {
+                var audio = new Audio('composeResources/gymcopilot.shared.generated.resources/files/' + soundName + '.mp3');
+                audio.play().catch(function(e){});
+            } catch(e) {}
+        """)
+    } catch (e: Exception) {}
+}

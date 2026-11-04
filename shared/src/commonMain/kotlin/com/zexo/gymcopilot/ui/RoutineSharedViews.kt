@@ -1,5 +1,7 @@
 package com.zexo.gymcopilot.ui
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,6 +33,7 @@ import com.zexo.gymcopilot.model.Exercise
 import com.zexo.gymcopilot.model.Routine
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
 import com.zexo.gymcopilot.utils.getCurrentTimeMillis
+import com.zexo.gymcopilot.utils.playAudioSound
 import com.zexo.gymcopilot.utils.readLocalStorageFlag
 import com.zexo.gymcopilot.utils.saveLocalStorageFlag
 import gymcopilot.shared.generated.resources.*
@@ -58,7 +61,6 @@ fun FullRoutinesSection(
 
     val userRoutines = remember { mutableStateListOf<Routine>() }
 
-    // Load persisted routines on start
     LaunchedEffect(Unit) {
         try {
             val savedJson = readLocalStorageFlag("gymcopilot_user_routines")
@@ -78,7 +80,6 @@ fun FullRoutinesSection(
     }
 
     if (showCreationScreen || editingRoutineId != null) {
-        val editRoutine = userRoutines.find { it.id == editingRoutineId }
         RoutineCreationSharedScreen(
             routineId = editingRoutineId,
             onBack = {
@@ -609,9 +610,16 @@ fun RoutineDetailSharedView(
     var exerciseSeriesMap by remember { mutableStateOf(mapOf<String, Int>()) }
     var isMuted by remember { mutableStateOf(false) }
 
-    // Cuenta regresiva effect
+    // Cuenta regresiva effect con sonidos cuarto-tres-dos y uno
     LaunchedEffect(isCountdownActive, countdownSeconds) {
         if (isCountdownActive && countdownSeconds > 0) {
+            if (!isMuted) {
+                if (countdownSeconds in 2..5) {
+                    playAudioSound("fourthreetwo")
+                } else if (countdownSeconds == 1) {
+                    playAudioSound("one")
+                }
+            }
             delay(1000)
             countdownSeconds--
             if (countdownSeconds == 0) {
@@ -629,7 +637,10 @@ fun RoutineDetailSharedView(
                 if (isStopwatchRunning) partialSeconds++
                 if (isRestRunning && restSeconds > 0) {
                     restSeconds--
-                    if (restSeconds == 0) isRestRunning = false
+                    if (restSeconds == 0) {
+                        isRestRunning = false
+                        if (!isMuted) playAudioSound("descanso")
+                    }
                 }
                 totalSeconds++
             } else {
@@ -640,6 +651,15 @@ fun RoutineDetailSharedView(
 
     val currentSeries = activeExerciseId?.let { exerciseSeriesMap[it] } ?: 0
     val progress = if (routine.exercises.isEmpty()) 0f else completedExercises.size.toFloat() / routine.exercises.size
+
+    // Duración estimada calculada sumando series, tiempos y descansos
+    val estimatedTotalSeconds = routine.exercises.sumOf { ex ->
+        val series = ex.series.toIntOrNull() ?: 4
+        val timePerSerie = if ((ex.time.toIntOrNull() ?: 0) > 0) ex.time.toInt() else 30
+        val restPerSerie = ex.rest.toIntOrNull() ?: 60
+        (series * timePerSerie) + ((if (series > 1) series - 1 else 0) * restPerSerie)
+    }
+    val estimatedDurationStr = formatTimer(estimatedTotalSeconds)
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -679,10 +699,11 @@ fun RoutineDetailSharedView(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Timer header card con barra de progreso vertical y serie actual
+            // Timer header card sin color de fondo (transparente) y contador más fino y grande (76.sp, FontWeight.Thin)
             Card(
-                colors = CardDefaults.cardColors(containerColor = SurfaceColor),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
                 shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, PrimaryTurquoise.copy(alpha = 0.2f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Box(modifier = Modifier.padding(16.dp)) {
@@ -742,7 +763,7 @@ fun RoutineDetailSharedView(
                                 }
                             }
 
-                            // Centro: Tiempo parcial y total (números 100% más grandes y delgados: 72.sp, FontWeight.Light)
+                            // Centro: Tiempo parcial y total (más finos, FontWeight.Thin, fontSize 76.sp)
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier.weight(1f)
@@ -754,7 +775,7 @@ fun RoutineDetailSharedView(
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                         Icon(Icons.Default.Timer, null, tint = PrimaryTurquoise, modifier = Modifier.size(14.dp))
-                                        Text("${routine.duration} Duración", color = TextGray, fontSize = 10.sp)
+                                        Text("$estimatedDurationStr Duración", color = TextGray, fontSize = 10.sp)
                                     }
                                     Text("Total: ${formatTimer(totalSeconds)}", color = TextWhite, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -769,13 +790,13 @@ fun RoutineDetailSharedView(
                                 Text(
                                     text = if (isCountdownActive) countdownSeconds.toString() else formatTimer(partialSeconds),
                                     color = if (isCountdownActive) Color(0xFFFF5252) else TextWhite,
-                                    fontSize = 72.sp,
-                                    fontWeight = FontWeight.Light,
+                                    fontSize = 76.sp,
+                                    fontWeight = FontWeight.Thin,
                                     textAlign = TextAlign.Center
                                 )
                             }
 
-                            // Derecha: Barra de progreso vertical en porcentaje (se llena ni bien se pulsa play)
+                            // Derecha: Barra de progreso vertical en porcentaje (se llena de abajo hacia arriba por cada ejercicio completado)
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier.padding(start = 8.dp)
@@ -959,13 +980,29 @@ fun ExerciseExecutionCardShared(
         colors = CardDefaults.cardColors(
             containerColor = if (isActive) Color(0xFF4CAF50).copy(alpha = 0.15f) else SurfaceColor
         ),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(
+            topStart = 16.dp,
+            topEnd = 16.dp,
+            bottomEnd = 16.dp,
+            bottomStart = if (isExpanded) 0.dp else 16.dp
+        ),
         border = BorderStroke(
             1.5.dp,
             if (isActive) Color(0xFF4CAF50) else PrimaryTurquoise.copy(alpha = 0.3f)
         ),
         modifier = Modifier
             .fillMaxWidth()
+            .drawBehind {
+                if (isExpanded) {
+                    val path = Path().apply {
+                        moveTo(0f, size.height)
+                        lineTo(16.dp.toPx(), size.height)
+                        lineTo(0f, size.height - 16.dp.toPx())
+                        close()
+                    }
+                    drawPath(path, color = if (isActive) Color(0xFF4CAF50) else PrimaryTurquoise)
+                }
+            }
             .clickable { onSelect() }
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -976,21 +1013,22 @@ fun ExerciseExecutionCardShared(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
                     modifier = Modifier.weight(1f)
                 ) {
+                    // Icono del ejercicio 100% más grande (caja de 90.dp con imagen de 70.dp)
                     Box(
                         modifier = Modifier
-                            .size(65.dp)
-                            .clip(RoundedCornerShape(10.dp))
+                            .size(90.dp)
+                            .clip(RoundedCornerShape(12.dp))
                             .background(Color(0xFF0F151B))
-                            .border(1.dp, PrimaryTurquoise.copy(alpha = 0.3f), RoundedCornerShape(10.dp)),
+                            .border(1.dp, PrimaryTurquoise.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Image(
                             painter = painterResource(getExerciseIconShared(exercise.name)),
                             contentDescription = exercise.name,
-                            modifier = Modifier.size(45.dp),
+                            modifier = Modifier.size(70.dp),
                             colorFilter = ColorFilter.tint(PrimaryTurquoise)
                         )
                     }
@@ -998,7 +1036,7 @@ fun ExerciseExecutionCardShared(
                         Text(
                             text = exercise.name,
                             color = TextWhite,
-                            fontSize = 15.sp,
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
                         if (seriesCount > 0) {
@@ -1014,18 +1052,6 @@ fun ExerciseExecutionCardShared(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    IconButton(
-                        onClick = { isExpanded = !isExpanded },
-                        modifier = Modifier.size(32.dp).background(Color(0xFF252D36), CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                            contentDescription = "Notas",
-                            tint = PrimaryTurquoise,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-
                     IconButton(
                         onClick = onToggleComplete,
                         modifier = Modifier
@@ -1053,14 +1079,14 @@ fun ExerciseExecutionCardShared(
                 IconButton(
                     onClick = onPlayPause,
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(48.dp)
                         .background(if (isRunning) PrimaryTurquoise else Color(0xFF252D36), CircleShape)
                 ) {
                     Icon(
                         imageVector = if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = "Play/Pause",
                         tint = if (isRunning) Color.Black else TextWhite,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
 
@@ -1069,14 +1095,14 @@ fun ExerciseExecutionCardShared(
                 IconButton(
                     onClick = onStartRest,
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(48.dp)
                         .background(if (isResting) PrimaryTurquoise else Color(0xFF252D36), CircleShape)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Timer,
                         contentDescription = "Descanso",
                         tint = if (isResting) Color.Black else TextWhite,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
 
@@ -1085,14 +1111,14 @@ fun ExerciseExecutionCardShared(
                 IconButton(
                     onClick = onToggleMute,
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(48.dp)
                         .background(Color(0xFF252D36), CircleShape)
                 ) {
                     Icon(
                         imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
                         contentDescription = "Audio",
                         tint = TextWhite,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
@@ -1110,27 +1136,62 @@ fun ExerciseExecutionCardShared(
                 ParameterColShared("TIEMPO", exercise.time.ifBlank { "0s" })
             }
 
-            if (isExpanded) {
-                Spacer(modifier = Modifier.height(14.dp))
-                OutlinedTextField(
-                    value = notesText,
-                    onValueChange = {
-                        notesText = it
-                        onNotesChange(it)
-                    },
-                    placeholder = { Text("Anotaciones del ejercicio...", color = TextGray, fontSize = 12.sp) },
-                    minLines = 2,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFF0F151B),
-                        unfocusedContainerColor = Color(0xFF0F151B),
-                        focusedBorderColor = PrimaryTurquoise,
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.1f),
-                        focusedTextColor = TextWhite,
-                        unfocusedTextColor = TextWhite
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+            // Botón en el extremo inferior izquierdo con forma de triángulo para desplegar notas suavemente
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable { isExpanded = !isExpanded }
+                        .drawBehind {
+                            val path = Path().apply {
+                                moveTo(0f, size.height)
+                                lineTo(size.width, size.height)
+                                lineTo(0f, 0f)
+                                close()
+                            }
+                            drawPath(path, color = if (isActive) Color(0xFF4CAF50) else PrimaryTurquoise)
+                        }
                 )
+
+                Text(
+                    text = if (isExpanded) "Ocultar notas" else "Anotaciones",
+                    color = TextGray,
+                    fontSize = 11.sp,
+                    modifier = Modifier.clickable { isExpanded = !isExpanded }
+                )
+            }
+
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandVertically(animationSpec = tween(300)) + fadeIn(animationSpec = tween(300)),
+                exit = shrinkVertically(animationSpec = tween(300)) + fadeOut(animationSpec = tween(300))
+            ) {
+                Column(modifier = Modifier.padding(top = 8.dp)) {
+                    OutlinedTextField(
+                        value = notesText,
+                        onValueChange = {
+                            notesText = it
+                            onNotesChange(it)
+                        },
+                        placeholder = { Text("Anotaciones sobre el ejercicio...", color = TextGray, fontSize = 12.sp) },
+                        minLines = 3,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFF0F151B),
+                            unfocusedContainerColor = Color(0xFF0F151B),
+                            focusedBorderColor = PrimaryTurquoise,
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.1f),
+                            focusedTextColor = TextWhite,
+                            unfocusedTextColor = TextWhite
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         }
     }
