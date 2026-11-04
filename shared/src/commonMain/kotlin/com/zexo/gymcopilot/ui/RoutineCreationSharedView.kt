@@ -26,6 +26,7 @@ import com.zexo.gymcopilot.model.Exercise
 import com.zexo.gymcopilot.model.Routine
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
 import com.zexo.gymcopilot.utils.playTickSound
+import com.zexo.gymcopilot.utils.readLocalMemberProfile
 import gymcopilot.shared.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
 
@@ -506,32 +507,54 @@ fun RoutineCreationSharedScreen(
     var selectedLevel by remember(routineToEdit) { mutableStateOf(routineToEdit?.level?.ifBlank { "Intermedio" } ?: "Intermedio") }
     val selectedDuration by remember(routineToEdit) { mutableStateOf(routineToEdit?.duration?.ifBlank { "60 min" } ?: "60 min") }
 
+    // Al abrir para crear una rutina nueva, los días NO deben estar seleccionados (lista vacía)
     val selectedDays = remember(routineToEdit) {
         mutableStateListOf<String>().apply {
             if (routineToEdit != null && routineToEdit.days.isNotEmpty()) {
                 addAll(routineToEdit.days)
-            } else {
-                addAll(listOf("LU", "MI", "VI"))
             }
         }
     }
     var routineType by remember(routineToEdit) { mutableStateOf(routineToEdit?.type?.ifBlank { "Personal" } ?: "Personal") }
     var routineStatus by remember(routineToEdit) { mutableStateOf(routineToEdit?.status?.ifBlank { "Activa" } ?: "Activa") }
 
+    // Obtener profesor asignado desde la base de datos local (Profesor_Asignado en la planilla / DB)
+    val localMember = remember { readLocalMemberProfile() }
+    val assignedProfName: String = localMember?.assignedTrainer?.ifBlank { "Prof. Gabriel Fernández" } ?: "Prof. Gabriel Fernández"
+
+    val professorsList: List<String> = remember(assignedProfName) {
+        val list = mutableListOf(assignedProfName)
+        if (!list.contains("Prof. Laura Benítez")) list.add("Prof. Laura Benítez")
+        list.distinct()
+    }
+
+    val selectedProfessorIds = remember(routineToEdit, professorsList) {
+        mutableStateListOf<String>().apply {
+            if (routineToEdit != null && routineToEdit.professorIds.isNotEmpty()) {
+                addAll(routineToEdit.professorIds)
+            } else {
+                if (professorsList.isNotEmpty()) add(professorsList.first())
+            }
+        }
+    }
+
     val exercises = remember(routineToEdit) {
         mutableStateListOf<ExerciseEntryShared>().apply {
             if (routineToEdit != null && routineToEdit.exercises.isNotEmpty()) {
                 addAll(
                     routineToEdit.exercises.map { ex ->
+                        val cleanWeight = ex.weight.replace("kg", "").trim()
+                        val cleanRest = ex.rest.replace("seg", "").replace("s", "").trim()
+                        val cleanTime = ex.time.replace("s", "").replace("seg", "").trim()
                         ExerciseEntryShared(
                             id = ex.id,
                             name = ex.name,
                             series = ex.series,
                             reps = ex.reps,
-                            weight = ex.weight,
-                            rest = ex.rest,
+                            weight = if (cleanWeight.isBlank()) "0" else cleanWeight,
+                            rest = if (cleanRest.isBlank()) "60" else cleanRest,
                             category = "PECHO",
-                            time = ex.time,
+                            time = if (cleanTime.isBlank()) "0" else cleanTime,
                             notes = ex.notes,
                             isLocked = true
                         )
@@ -543,8 +566,8 @@ fun RoutineCreationSharedScreen(
                         name = "Curl concentrado",
                         series = "4",
                         reps = "12",
-                        weight = "0 kg",
-                        rest = "60 seg",
+                        weight = "0",
+                        rest = "60",
                         category = "BÍCEPS"
                     )
                 )
@@ -602,15 +625,18 @@ fun RoutineCreationSharedScreen(
                                 type = routineType,
                                 status = routineStatus,
                                 category = selectedObjective,
+                                professorIds = selectedProfessorIds.toList(),
                                 isFavorite = routineToEdit?.isFavorite ?: false,
                                 exercises = exercises.map { ex ->
+                                    val wVal = ex.weight.replace("kg", "").trim()
+                                    val rVal = ex.rest.replace("seg", "").replace("s", "").trim()
                                     Exercise(
                                         id = ex.id,
                                         name = ex.name,
                                         series = ex.series,
                                         reps = ex.reps,
-                                        weight = ex.weight,
-                                        rest = ex.rest,
+                                        weight = if (wVal.isNotBlank() && !wVal.endsWith("kg")) "$wVal kg" else ex.weight,
+                                        rest = if (rVal.isNotBlank() && !rVal.endsWith("seg")) "$rVal seg" else ex.rest,
                                         time = ex.time,
                                         notes = ex.notes
                                     )
@@ -793,7 +819,7 @@ fun RoutineCreationSharedScreen(
                     }
                 }
 
-                // 2. Configuración (con selección interactiva funcional)
+                // 2. Configuración (con días deseleccionados al crear una rutina nueva)
                 item {
                     RoutineSectionHeader("2. Configuración")
                     Spacer(modifier = Modifier.height(8.dp))
@@ -884,7 +910,7 @@ fun RoutineCreationSharedScreen(
                     }
                 }
 
-                // 3. Profesores responsables
+                // 3. Profesores responsables (extraído de la base de datos local / Profesor_Asignado)
                 item {
                     RoutineSectionHeader("3. Profesores responsables")
                     Spacer(modifier = Modifier.height(8.dp))
@@ -894,24 +920,54 @@ fun RoutineCreationSharedScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Profesor asignado principal (Tú)", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text("Se asignará automáticamente al creador de la rutina.", color = TextGray, fontSize = 12.sp)
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                listOf("Prof. Gabriel Fernández", "Prof. Laura Benítez").forEach { profName ->
-                                    val isProfSelected = false
-                                    FilterChip(
-                                        selected = isProfSelected,
-                                        onClick = { },
-                                        label = { Text(profName, fontSize = 11.sp) },
-                                        colors = FilterChipDefaults.filterChipColors(
-                                            selectedContainerColor = PrimaryTurquoise,
-                                            selectedLabelColor = Color.Black,
-                                            containerColor = Color(0xFF0F151B),
-                                            labelColor = TextWhite
+                            Text("Profesor asignado principal", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("Obtenido de la base de datos", color = TextGray, fontSize = 11.sp)
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                professorsList.forEach { profName ->
+                                    val isProfSelected = selectedProfessorIds.contains(profName)
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier
+                                            .clickable {
+                                                if (isProfSelected) selectedProfessorIds.remove(profName)
+                                                else selectedProfessorIds.add(profName)
+                                            }
+                                            .width(85.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(56.dp)
+                                                .clip(CircleShape)
+                                                .background(if (isProfSelected) PrimaryTurquoise.copy(alpha = 0.2f) else Color(0xFF0F151B))
+                                                .border(
+                                                    width = if (isProfSelected) 2.dp else 1.dp,
+                                                    color = if (isProfSelected) PrimaryTurquoise else Color.White.copy(alpha = 0.1f),
+                                                    shape = CircleShape
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Person,
+                                                contentDescription = profName,
+                                                tint = if (isProfSelected) PrimaryTurquoise else TextGray,
+                                                modifier = Modifier.size(28.dp)
+                                            )
+                                        }
+                                        Spacer(Modifier.height(6.dp))
+                                        Text(
+                                            text = profName,
+                                            color = if (isProfSelected) PrimaryTurquoise else TextWhite,
+                                            fontSize = 11.sp,
+                                            fontWeight = if (isProfSelected) FontWeight.Bold else FontWeight.Normal,
+                                            textAlign = TextAlign.Center
                                         )
-                                    )
+                                    }
                                 }
                             }
                         }
@@ -976,7 +1032,7 @@ fun RoutineCreationSharedScreen(
         // Botón flotante circular + para agregar ejercicios abajo a la derecha
         FloatingActionButton(
             onClick = {
-                exercises.add(ExerciseEntryShared(name = "Curl concentrado", series = "4", reps = "12", weight = "0 kg", rest = "60 seg", category = "BÍCEPS"))
+                exercises.add(ExerciseEntryShared(name = "Curl concentrado", series = "4", reps = "12", weight = "0", rest = "60", category = "BÍCEPS"))
             },
             containerColor = PrimaryTurquoise,
             contentColor = Color.Black,
@@ -1181,11 +1237,15 @@ fun RoutineExerciseItemCard(
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Top) {
                 val itemHeight = if (activeField != null) 100.dp else 42.dp
+                val cleanWeight = exercise.weight.replace("kg", "").trim()
+                val cleanRest = exercise.rest.replace("seg", "").replace("s", "").trim()
+                val cleanTime = exercise.time.replace("s", "").replace("seg", "").trim()
+
                 ParameterWheelBox("Series", exercise.series, (1..20).map { it.toString() }, activeField == "series", itemHeight, PrimaryTurquoise, { s -> onUpdate(exercise.copy(series = s)) }, { activeField = "series" }, Modifier.weight(1f))
                 ParameterWheelBox("Reps", exercise.reps, (1..50).map { it.toString() }, activeField == "reps", itemHeight, PrimaryTurquoise, { r -> onUpdate(exercise.copy(reps = r)) }, { activeField = "reps" }, Modifier.weight(1f))
-                ParameterWheelBox("Peso", exercise.weight, (0..300).map { it.toString() }, activeField == "weight", itemHeight, PrimaryTurquoise, { w -> onUpdate(exercise.copy(weight = w)) }, { activeField = "weight" }, Modifier.weight(1.1f), " kg")
-                ParameterWheelBox("Descanso", exercise.rest, (0..300 step 15).map { it.toString() }, activeField == "rest", itemHeight, PrimaryTurquoise, { d -> onUpdate(exercise.copy(rest = d)) }, { activeField = "rest" }, Modifier.weight(1.2f), " seg")
-                ParameterWheelBox("Tiempo", exercise.time, (0..600 step 5).map { it.toString() }, activeField == "time", itemHeight, PrimaryTurquoise, { t -> onUpdate(exercise.copy(time = t)) }, { activeField = "time" }, Modifier.weight(1f), " s")
+                ParameterWheelBox("Peso", cleanWeight, (0..300).map { it.toString() }, activeField == "weight", itemHeight, PrimaryTurquoise, { w -> onUpdate(exercise.copy(weight = w)) }, { activeField = "weight" }, Modifier.weight(1.1f), " kg")
+                ParameterWheelBox("Descanso", cleanRest, (0..300 step 15).map { it.toString() }, activeField == "rest", itemHeight, PrimaryTurquoise, { d -> onUpdate(exercise.copy(rest = d)) }, { activeField = "rest" }, Modifier.weight(1.2f), " seg")
+                ParameterWheelBox("Tiempo", cleanTime, (0..600 step 5).map { it.toString() }, activeField == "time", itemHeight, PrimaryTurquoise, { t -> onUpdate(exercise.copy(time = t)) }, { activeField = "time" }, Modifier.weight(1f), " s")
             }
 
             Row(
@@ -1436,6 +1496,7 @@ fun ParameterWheelBox(
     modifier: Modifier,
     unit: String = ""
 ) {
+    val cleanVal = value.replace("kg", "").replace("seg", "").replace("s", "").trim()
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label, color = TextGray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
@@ -1453,7 +1514,7 @@ fun ParameterWheelBox(
                 if (isActive) {
                     WheelPickerScrollShared(
                         options = options,
-                        currentValue = value,
+                        currentValue = cleanVal,
                         onValueChange = onValueChange,
                         unit = unit,
                         containerHeight = height
@@ -1465,7 +1526,7 @@ fun ParameterWheelBox(
                     )
                 } else {
                     Text(
-                        text = "$value$unit",
+                        text = "$cleanVal$unit",
                         color = Color.White,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,

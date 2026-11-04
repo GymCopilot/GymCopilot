@@ -14,7 +14,8 @@ data class LocalMemberData(
     val spreadsheetId: String = "",
     val membershipStatus: String = "DEUDOR",
     val nextRenewalDate: Long = 0L,
-    val planName: String = "Plan Mensual"
+    val planName: String = "Plan Mensual",
+    val assignedTrainer: String = ""
 )
 
 expect fun saveLocalMemberProfile(data: LocalMemberData)
