@@ -610,7 +610,7 @@ fun RoutineDetailSharedView(
     var exerciseSeriesMap by remember { mutableStateOf(mapOf<String, Int>()) }
     var isMuted by remember { mutableStateOf(false) }
 
-    // Cuenta regresiva effect con sonidos cuarto-tres-dos y uno
+    // Cuenta regresiva effect con sonidos cuarto-tres-dos (5, 4, 3, 2) y uno (1)
     LaunchedEffect(isCountdownActive, countdownSeconds) {
         if (isCountdownActive && countdownSeconds > 0) {
             if (!isMuted) {
@@ -650,7 +650,9 @@ fun RoutineDetailSharedView(
     }
 
     val currentSeries = activeExerciseId?.let { exerciseSeriesMap[it] } ?: 0
-    val progress = if (routine.exercises.isEmpty()) 0f else completedExercises.size.toFloat() / routine.exercises.size
+    val realizedCount = (exerciseSeriesMap.keys + completedExercises).size
+    val progress = if (routine.exercises.isEmpty()) 0f
+                   else (realizedCount.toFloat() / routine.exercises.size.toFloat()).coerceIn(0f, 1f)
 
     // Duración estimada calculada sumando series, tiempos y descansos
     val estimatedTotalSeconds = routine.exercises.sumOf { ex ->
@@ -699,11 +701,10 @@ fun RoutineDetailSharedView(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Timer header card sin color de fondo (transparente) y contador más fino y grande (76.sp, FontWeight.Thin)
+            // Timer header card sin color de fondo (transparente) y SIN borde fino
             Card(
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent),
                 shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, PrimaryTurquoise.copy(alpha = 0.2f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Box(modifier = Modifier.padding(16.dp)) {
@@ -763,7 +764,7 @@ fun RoutineDetailSharedView(
                                 }
                             }
 
-                            // Centro: Tiempo parcial y total (más finos, FontWeight.Thin, fontSize 76.sp)
+                            // Centro: Tiempo parcial y total (números delgados, FontWeight.ExtraLight, fontSize 82.sp)
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier.weight(1f)
@@ -790,21 +791,21 @@ fun RoutineDetailSharedView(
                                 Text(
                                     text = if (isCountdownActive) countdownSeconds.toString() else formatTimer(partialSeconds),
                                     color = if (isCountdownActive) Color(0xFFFF5252) else TextWhite,
-                                    fontSize = 76.sp,
-                                    fontWeight = FontWeight.Thin,
+                                    fontSize = 82.sp,
+                                    fontWeight = FontWeight.ExtraLight,
                                     textAlign = TextAlign.Center
                                 )
                             }
 
-                            // Derecha: Barra de progreso vertical en porcentaje (se llena de abajo hacia arriba por cada ejercicio completado)
+                            // Derecha: Barra de progreso vertical en porcentaje (se llena de abajo hacia arriba de inmediato al presionar play)
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier.padding(start = 8.dp)
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .width(24.dp)
-                                        .height(85.dp)
+                                        .width(26.dp)
+                                        .height(90.dp)
                                         .clip(RoundedCornerShape(6.dp))
                                         .background(Color(0xFF0F151B))
                                 ) {
@@ -1016,19 +1017,19 @@ fun ExerciseExecutionCardShared(
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    // Icono del ejercicio 100% más grande (caja de 90.dp con imagen de 70.dp)
+                    // Icono del ejercicio 100% más grande (caja de 115.dp con imagen de 95.dp)
                     Box(
                         modifier = Modifier
-                            .size(90.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .size(115.dp)
+                            .clip(RoundedCornerShape(14.dp))
                             .background(Color(0xFF0F151B))
-                            .border(1.dp, PrimaryTurquoise.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
+                            .border(1.dp, PrimaryTurquoise.copy(alpha = 0.3f), RoundedCornerShape(14.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Image(
                             painter = painterResource(getExerciseIconShared(exercise.name)),
                             contentDescription = exercise.name,
-                            modifier = Modifier.size(70.dp),
+                            modifier = Modifier.size(95.dp),
                             colorFilter = ColorFilter.tint(PrimaryTurquoise)
                         )
                     }
@@ -1036,7 +1037,7 @@ fun ExerciseExecutionCardShared(
                         Text(
                             text = exercise.name,
                             color = TextWhite,
-                            fontSize = 16.sp,
+                            fontSize = 17.sp,
                             fontWeight = FontWeight.Bold
                         )
                         if (seriesCount > 0) {
