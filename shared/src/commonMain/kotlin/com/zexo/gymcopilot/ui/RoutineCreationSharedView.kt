@@ -1010,9 +1010,35 @@ fun RoutineExerciseItemCard(
     onMoveDown: () -> Unit
 ) {
     var activeField by remember { mutableStateOf<String?>(null) }
+    var isPersonalMode by remember { mutableStateOf(false) }
+    var showInfoDialog by remember { mutableStateOf(false) }
+    var customNameText by remember(exercise.name) { mutableStateOf(exercise.name) }
+
     val categories = PREDEFINED_EXERCISES_SHARED.keys.toList()
     val visualOptions = remember(exercise.category) {
         listOf(exercise.category) + (PREDEFINED_EXERCISES_SHARED[exercise.category] ?: emptyList())
+    }
+
+    if (showInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showInfoDialog = false },
+            title = { Text("Ejercicio Personal", color = TextWhite, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("MODO PERSONAL:", color = TextWhite, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text("1. Elige una categoría e icono.", color = TextWhite, fontSize = 12.sp)
+                    Text("2. Escribe el nombre del nuevo ejercicio.", color = TextWhite, fontSize = 12.sp)
+                    Text("3. Toca 'Listo' para incorporarlo permanentemente a la lista.", color = TextWhite, fontSize = 12.sp)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showInfoDialog = false }) {
+                    Text("ENTENDIDO", color = PrimaryTurquoise, fontWeight = FontWeight.Bold)
+                }
+            },
+            containerColor = Color(0xFF001F29),
+            shape = RoundedCornerShape(20.dp)
+        )
     }
 
     Card(
@@ -1037,7 +1063,9 @@ fun RoutineExerciseItemCard(
                         categoryName = exercise.category,
                         accentColor = PrimaryTurquoise,
                         onValueChange = { selectedItem ->
-                            onUpdate(exercise.copy(name = selectedItem))
+                            if (!isPersonalMode) {
+                                onUpdate(exercise.copy(name = selectedItem))
+                            }
                         },
                         containerHeight = 200.dp
                     )
@@ -1061,7 +1089,11 @@ fun RoutineExerciseItemCard(
                             currentValue = exercise.category,
                             onValueChange = { newCat ->
                                 val defaultEx = newCat
-                                onUpdate(exercise.copy(category = newCat, name = defaultEx))
+                                if (!isPersonalMode) {
+                                    onUpdate(exercise.copy(category = newCat, name = defaultEx))
+                                } else {
+                                    onUpdate(exercise.copy(category = newCat))
+                                }
                             },
                             unit = "",
                             containerHeight = 150.dp
@@ -1069,37 +1101,82 @@ fun RoutineExerciseItemCard(
                     }
 
                     Button(
-                        onClick = { },
+                        onClick = {
+                            if (!isPersonalMode) {
+                                isPersonalMode = true
+                                showInfoDialog = true
+                                if (exercise.name == exercise.category) {
+                                    onUpdate(exercise.copy(name = ""))
+                                    customNameText = ""
+                                }
+                            } else {
+                                isPersonalMode = false
+                            }
+                        },
                         shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F151B)),
-                        border = BorderStroke(1.dp, PrimaryTurquoise.copy(alpha = 0.3f)),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isPersonalMode) PrimaryTurquoise else Color(0xFF0F151B)
+                        ),
+                        border = if (isPersonalMode) null else BorderStroke(1.dp, PrimaryTurquoise.copy(alpha = 0.3f)),
                         contentPadding = PaddingValues(0.dp),
                         modifier = Modifier.fillMaxWidth().height(42.dp)
                     ) {
-                        Icon(Icons.Default.Add, null, tint = PrimaryTurquoise, modifier = Modifier.size(16.dp))
+                        Icon(
+                            imageVector = if (isPersonalMode) Icons.Default.Close else Icons.Default.Add,
+                            contentDescription = null,
+                            tint = if (isPersonalMode) Color.Black else PrimaryTurquoise,
+                            modifier = Modifier.size(16.dp)
+                        )
                         Spacer(Modifier.width(4.dp))
-                        Text("PERSONAL", color = PrimaryTurquoise, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                        Text(
+                            text = "PERSONAL",
+                            color = if (isPersonalMode) Color.Black else PrimaryTurquoise,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black
+                        )
                     }
                 }
             }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFF252D36))
-                    .border(1.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(10.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = exercise.name,
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 12.dp)
+            if (isPersonalMode) {
+                OutlinedTextField(
+                    value = customNameText,
+                    onValueChange = {
+                        customNameText = it
+                        onUpdate(exercise.copy(name = it))
+                    },
+                    placeholder = { Text("Nombre del ejercicio...", color = TextGray, fontSize = 14.sp) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFF252D36),
+                        unfocusedContainerColor = Color(0xFF252D36),
+                        focusedBorderColor = PrimaryTurquoise,
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.1f),
+                        focusedTextColor = TextWhite,
+                        unfocusedTextColor = TextWhite
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth().height(60.dp)
                 )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(60.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFF252D36))
+                        .border(1.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(10.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = exercise.name,
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+                }
             }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Top) {
