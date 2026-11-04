@@ -20,12 +20,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -68,9 +68,8 @@ fun AdaptiveTimerSharedDialog(
     )
 
     val timerAnimatedColor = remember { Animatable(TextWhite) }
-    val isBlinking = isCountdownActive
 
-    // Animación de rotación de la serpiente
+    // Animación de rotación del degradado de la serpiente
     var rotationAngle by remember { mutableFloatStateOf(0f) }
     val isSnakeActive = isCountdownActive || isRunning
 
@@ -156,20 +155,15 @@ fun AdaptiveTimerSharedDialog(
                         val strokeWidth = 3.dp.toPx()
                         val shapeRadius = 24.dp.toPx()
                         val centerOffset = Offset(size.width / 2f, size.height / 2f)
+                        val fraction = (rotationAngle % 360f) / 360f
 
-                        rotate(rotationAngle, pivot = centerOffset) {
-                            drawRoundRect(
-                                brush = Brush.sweepGradient(
-                                    0.0f to accentColor,
-                                    0.3f to accentColor.copy(alpha = 0.5f),
-                                    0.6f to accentColor.copy(alpha = 0.1f),
-                                    1.0f to Color.Transparent,
-                                    center = centerOffset
-                                ),
-                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(shapeRadius, shapeRadius),
-                                style = Stroke(width = strokeWidth)
-                            )
-                        }
+                        val snakeBrush = getRotatingSnakeBrush(fraction, accentColor, centerOffset)
+
+                        drawRoundRect(
+                            brush = snakeBrush,
+                            cornerRadius = CornerRadius(shapeRadius, shapeRadius),
+                            style = Stroke(width = strokeWidth)
+                        )
                     }
                 },
             shape = RoundedCornerShape(24.dp),
@@ -382,6 +376,40 @@ fun AdaptiveTimerSharedDialog(
             }
         }
     }
+}
+
+fun getRotatingSnakeBrush(t: Float, headColor: Color, center: Offset): Brush {
+    val p0 = (0.0f + t) % 1.0f
+    val p1 = (0.12f + t) % 1.0f
+    val p2 = (0.25f + t) % 1.0f
+    val p3 = (0.40f + t) % 1.0f
+    val p4 = (0.80f + t) % 1.0f
+
+    val rawStops = listOf(
+        p0 to headColor,
+        p1 to headColor.copy(alpha = 0.6f),
+        p2 to headColor.copy(alpha = 0.15f),
+        p3 to Color.Transparent,
+        p4 to Color.Transparent
+    )
+
+    val sortedStops = rawStops.sortedBy { it.first }
+    val firstStop = sortedStops.first()
+    val lastStop = sortedStops.last()
+
+    val finalStops = mutableListOf<Pair<Float, Color>>()
+    if (firstStop.first > 0f) {
+        finalStops.add(0f to lastStop.second)
+    }
+    finalStops.addAll(sortedStops)
+    if (lastStop.first < 1f) {
+        finalStops.add(1f to firstStop.second)
+    }
+
+    return Brush.sweepGradient(
+        *finalStops.toTypedArray(),
+        center = center
+    )
 }
 
 fun formatTimerSeconds(seconds: Int): String {
