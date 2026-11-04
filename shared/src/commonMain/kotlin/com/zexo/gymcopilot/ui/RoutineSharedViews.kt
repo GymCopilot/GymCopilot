@@ -610,11 +610,11 @@ fun RoutineDetailSharedView(
     var exerciseSeriesMap by remember { mutableStateOf(mapOf<String, Int>()) }
     var isMuted by remember { mutableStateOf(false) }
 
-    // Cuenta regresiva effect con sonidos cuarto-tres-dos (5, 4, 3, 2) y uno (1)
+    // Cuenta regresiva effect: número 5 SIN sonido (en 2..4 se reproduce fourthreetwo, en 1 se reproduce one)
     LaunchedEffect(isCountdownActive, countdownSeconds) {
         if (isCountdownActive && countdownSeconds > 0) {
             if (!isMuted) {
-                if (countdownSeconds in 2..5) {
+                if (countdownSeconds in 2..4) {
                     playAudioSound("fourthreetwo")
                 } else if (countdownSeconds == 1) {
                     playAudioSound("one")
