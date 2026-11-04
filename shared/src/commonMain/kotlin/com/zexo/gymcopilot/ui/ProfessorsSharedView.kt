@@ -1,16 +1,17 @@
 package com.zexo.gymcopilot.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,12 +19,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.model.*
+import com.zexo.gymcopilot.utils.decodeBase64ToBitmap
+import com.zexo.gymcopilot.utils.getCurrentTimeMillis
 
 val ProfessorColorsSharedPalette = listOf(
     Color(0xFF8A2BE2), // Purple
@@ -70,7 +74,7 @@ fun ManageProfessorsSharedScreen(
                             .clickable { onBack() }
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.Black)
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.Black)
                         }
                     }
                     Spacer(modifier = Modifier.width(16.dp))
@@ -206,6 +210,9 @@ fun ProfessorManagementSharedCard(
     onQrClick: () -> Unit
 ) {
     val profColor = professor.profileColor?.let { Color(it) } ?: PrimaryTurquoise
+    val photoBitmap: ImageBitmap? = remember(professor.photoUri) {
+        if (!professor.photoUri.isNullOrBlank()) decodeBase64ToBitmap(professor.photoUri) else null
+    }
 
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
@@ -220,24 +227,39 @@ fun ProfessorManagementSharedCard(
             ) {
                 Surface(
                     color = profColor.copy(alpha = 0.12f),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = CircleShape,
                     border = BorderStroke(2.dp, profColor),
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(54.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Star, contentDescription = null, tint = profColor, modifier = Modifier.size(24.dp))
+                        if (photoBitmap != null) {
+                            Image(
+                                bitmap = photoBitmap,
+                                contentDescription = professor.fullName,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize().clip(CircleShape)
+                            )
+                        } else {
+                            Icon(Icons.Default.Person, contentDescription = null, tint = profColor, modifier = Modifier.size(28.dp))
+                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.width(16.dp))
 
-                Text(
-                    text = professor.fullName,
-                    color = TextWhite,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp,
-                    modifier = Modifier.weight(1f)
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = professor.fullName,
+                        color = TextWhite,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 17.sp
+                    )
+                    Text(
+                        text = professor.specialty.ifBlank { "Entrenador / Musculación" },
+                        color = PrimaryTurquoise,
+                        fontSize = 12.sp
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -307,7 +329,7 @@ fun AddProfessorSharedScreen(
                                 .clickable { onBack() }
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.Black)
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.Black)
                             }
                         }
                         Spacer(modifier = Modifier.width(16.dp))
@@ -318,11 +340,62 @@ fun AddProfessorSharedScreen(
                             fontSize = 22.sp
                         )
                     }
-
-                    IconButton(onClick = {
-                        if (firstName.isNotBlank() && lastName.isNotBlank()) {
-                            val prof = Professor(
-                                id = professor?.id ?: "prof_${(1000..9999).random()}",
+                }
+            }
+        ) { padding ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp)
+            ) {
+                item {
+                    OutlinedTextField(
+                        value = firstName,
+                        onValueChange = { firstName = it },
+                        label = { Text("Nombre", color = TextGray) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextWhite, unfocusedTextColor = TextWhite, focusedBorderColor = PrimaryTurquoise),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = lastName,
+                        onValueChange = { lastName = it },
+                        label = { Text("Apellido", color = TextGray) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextWhite, unfocusedTextColor = TextWhite, focusedBorderColor = PrimaryTurquoise),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text("Email", color = TextGray) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextWhite, unfocusedTextColor = TextWhite, focusedBorderColor = PrimaryTurquoise),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = specialty,
+                        onValueChange = { specialty = it },
+                        label = { Text("Especialidad", color = TextGray) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextWhite, unfocusedTextColor = TextWhite, focusedBorderColor = PrimaryTurquoise),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                item {
+                    Button(
+                        onClick = {
+                            val newProf = Professor(
+                                id = professor?.id?.ifBlank { "prof_${getCurrentTimeMillis()}" } ?: "prof_${getCurrentTimeMillis()}",
                                 firstName = firstName,
                                 lastName = lastName,
                                 email = email,
@@ -335,121 +408,14 @@ fun AddProfessorSharedScreen(
                                 bankAccount = bankAccount,
                                 profileColor = selectedColor.toArgb()
                             )
-                            onSave(prof)
-                            onBack()
-                        }
-                    }) {
-                        Icon(Icons.Default.Check, contentDescription = "Guardar", tint = PrimaryTurquoise, modifier = Modifier.size(28.dp))
-                    }
-                }
-            }
-        ) { padding ->
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp)
-            ) {
-                // CÍRCULO DE FOTO Y PALETA DE COLORES
-                item {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                            onSave(newProf)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().height(50.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(100.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.05f))
-                                .border(2.dp, selectedColor, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(50.dp), tint = selectedColor)
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        Text("Toca para subir foto", color = selectedColor, fontSize = 12.sp)
+                        Text("GUARDAR PROFESOR", color = Color.Black, fontWeight = FontWeight.Bold)
                     }
-                }
-
-                item {
-                    Text("Color de Perfil", color = PrimaryTurquoise, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Spacer(Modifier.height(8.dp))
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(ProfessorColorsSharedPalette) { color ->
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(color)
-                                    .border(
-                                        width = if (selectedColor == color) 3.dp else 0.dp,
-                                        color = Color.White,
-                                        shape = CircleShape
-                                    )
-                                    .clickable { selectedColor = color }
-                            )
-                        }
-                    }
-                }
-
-                // DATOS PERSONALES
-                item {
-                    Text("Datos Personales", color = PrimaryTurquoise, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Spacer(Modifier.height(8.dp))
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Box(modifier = Modifier.weight(1f)) {
-                            CustomSharedTextField(value = firstName, onValueChange = { firstName = it }, label = "Nombres")
-                        }
-                        Box(modifier = Modifier.weight(1f)) {
-                            CustomSharedTextField(value = lastName, onValueChange = { lastName = it }, label = "Apellido")
-                        }
-                    }
-
-                    Spacer(Modifier.height(12.dp))
-                    CustomSharedTextField(value = email, onValueChange = { email = it }, label = "Email")
-
-                    Spacer(Modifier.height(12.dp))
-                    CustomSharedTextField(value = phone, onValueChange = { phone = it }, label = "Teléfono")
-                }
-
-                // DATOS LABORALES
-                item {
-                    Text("Datos Laborales", color = PrimaryTurquoise, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Spacer(Modifier.height(8.dp))
-
-                    CustomSharedTextField(value = specialty, onValueChange = { specialty = it }, label = "Especialidad")
-                    Spacer(Modifier.height(12.dp))
-                    CustomSharedTextField(value = address, onValueChange = { address = it }, label = "Dirección Residencial")
-                }
-
-                // DOCUMENTACIÓN
-                item {
-                    Text("Documentación", color = PrimaryTurquoise, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Spacer(Modifier.height(8.dp))
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Box(modifier = Modifier.weight(1f)) {
-                            CustomSharedTextField(value = idNumber, onValueChange = { idNumber = it }, label = "DNI")
-                        }
-                        Box(modifier = Modifier.weight(1f)) {
-                            CustomSharedTextField(value = taxId, onValueChange = { taxId = it }, label = "CUIT / CUIL")
-                        }
-                    }
-                }
-
-                // INFORMACIÓN ADICIONAL
-                item {
-                    Text("Información Adicional", color = PrimaryTurquoise, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Spacer(Modifier.height(8.dp))
-
-                    CustomSharedTextField(value = emergencyContact, onValueChange = { emergencyContact = it }, label = "Contacto de Emergencia")
-                    Spacer(Modifier.height(12.dp))
-                    CustomSharedTextField(value = bankAccount, onValueChange = { bankAccount = it }, label = "CBU / Alias Bancario")
                 }
             }
         }

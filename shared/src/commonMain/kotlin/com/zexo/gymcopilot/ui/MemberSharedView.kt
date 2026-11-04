@@ -11,19 +11,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.animation.core.*
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Brush
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -40,9 +36,11 @@ import com.zexo.gymcopilot.utils.generateQrBitmap
 import com.zexo.gymcopilot.utils.launchQrScanner
 import com.zexo.gymcopilot.utils.readLocalMemberProfile
 import com.zexo.gymcopilot.utils.saveLocalMemberProfile
-import androidx.compose.ui.graphics.ImageBitmap
 import gymcopilot.shared.generated.resources.*
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.compose.resources.painterResource
 
 @Composable
@@ -78,6 +76,7 @@ fun MemberDashboardSharedScreen(
     var activeMembershipStatus by remember { mutableStateOf("ACTIVO") }
     var activeNextRenewalDate by remember { mutableLongStateOf(0L) }
     var activePlanName by remember { mutableStateOf("Plan Mensual") }
+    var activeAssignedTrainer by remember { mutableStateOf("Prof. Gabriel Fernández") }
 
     // CARGA PERSISTENTE DESDE LOCALSTORAGE EN WEB / DISPOSITIVO
     LaunchedEffect(Unit) {
@@ -96,6 +95,7 @@ fun MemberDashboardSharedScreen(
             activeMembershipStatus = localData.membershipStatus
             activeNextRenewalDate = localData.nextRenewalDate
             if (localData.planName.isNotBlank()) activePlanName = localData.planName
+            if (localData.assignedTrainer.isNotBlank()) activeAssignedTrainer = localData.assignedTrainer
         }
     }
 
@@ -131,6 +131,12 @@ fun MemberDashboardSharedScreen(
                                         if (row.size > 12) {
                                             val plan = row[12].jsonPrimitive.content
                                             if (plan.isNotBlank()) activePlanName = plan
+                                        }
+                                        if (row.size > 13) {
+                                            val trainerInCol = row[13].jsonPrimitive.content
+                                            if (trainerInCol.isNotBlank() && trainerInCol != "null") {
+                                                activeAssignedTrainer = trainerInCol
+                                            }
                                         }
                                         break
                                     }
@@ -187,83 +193,6 @@ fun MemberDashboardSharedScreen(
         }
     }
 
-    LaunchedEffect(activeGymUrl) {
-        if (activeGymUrl.isNotBlank()) {
-            while (true) {
-                try {
-                    val gymIdVal = activeGymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
-                    val localProfile = readLocalMemberProfile()
-                    val ssId = localProfile?.spreadsheetId.orEmpty()
-                    val paramChar = if (activeGymUrl.contains("?")) "&" else "?"
-                    val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
-                    val url = "$activeGymUrl${paramChar}type=config&gymId=$gymIdVal$ssParam"
-                    val responseText = apiClient.getData(url)
-                    if (responseText.isNotBlank() && responseText.contains("success")) {
-                        val jsonElement = apiClient.jsonInstance.parseToJsonElement(responseText)
-                        val jsonObject = jsonElement as? JsonObject
-                        val dataArray = jsonObject?.get("data") as? JsonArray
-                        if (dataArray != null) {
-                            for (i in 0 until dataArray.size) {
-                                val row = dataArray[i] as? JsonArray
-                                if (row != null && row.size > 0 && row[0].jsonPrimitive.content == "GYM_CONFIG") {
-                                    if (row.size > 1 && row[1].jsonPrimitive.content.isNotBlank()) {
-                                        val gName = row[1].jsonPrimitive.content
-                                        if (gName != "null") activeGymName = gName
-                                    }
-                                    if (row.size > 2) {
-                                        val logoUriVal = row[2].jsonPrimitive.content
-                                        if (logoUriVal.isNotBlank() && logoUriVal != "null") {
-                                            activePhotoUri = logoUriVal
-                                        }
-                                    }
-                                    if (row.size > 11) {
-                                        val borderStr = row[11].jsonPrimitive.content
-                                        showLogoBorder = borderStr.lowercase() != "false"
-                                    }
-                                    if (row.size > 12) {
-                                        val classStr = row[12].jsonPrimitive.content
-                                        classInSession = classStr.lowercase() == "true"
-                                    }
-                                    if (row.size > 14) {
-                                        val openStr = row[14].jsonPrimitive.content
-                                        gymIsOpen = openStr.lowercase() != "false"
-                                    }
-                                    if (row.size > 13) {
-                                        val rawMsg = row[13].jsonPrimitive.content
-                                        val isIsoDate = rawMsg.matches(Regex("""\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.*"""))
-                                        if (!isIsoDate && rawMsg != "null") {
-                                            broadcastMessage = rawMsg
-                                        }
-                                    }
-                                    saveLocalMemberProfile(
-                                        LocalMemberData(
-                                            firstName = activeFirstName,
-                                            lastName = activeLastName,
-                                            email = activeEmail,
-                                            phone = activePhone,
-                                            address = activeAddress,
-                                            weight = activeWeight,
-                                            height = activeHeight,
-                                            photoUri = activePhotoUri,
-                                            gymName = activeGymName,
-                                            gymApiUrl = activeGymUrl,
-                                            spreadsheetId = ssId,
-                                            membershipStatus = activeMembershipStatus,
-                                            nextRenewalDate = activeNextRenewalDate,
-                                            planName = activePlanName
-                                        )
-                                    )
-                                    break
-                                }
-                            }
-                        }
-                    }
-                } catch (e: Throwable) {}
-                kotlinx.coroutines.delay(10000)
-            }
-        }
-    }
-
     val logoBitmap = remember(activePhotoUri, customLogoUri) {
         val uri = activePhotoUri ?: customLogoUri
         if (uri != null) decodeBase64ToBitmap(uri) else null
@@ -295,7 +224,6 @@ fun MemberDashboardSharedScreen(
                 activeHeight = ht
                 activePhotoUri = photo
 
-                // Guardar en almacenamiento local persistente (LocalStorage)
                 saveLocalMemberProfile(
                     LocalMemberData(
                         firstName = fn,
@@ -307,11 +235,11 @@ fun MemberDashboardSharedScreen(
                         height = ht,
                         photoUri = photo,
                         gymName = activeGymName,
-                        gymApiUrl = activeGymUrl
+                        gymApiUrl = activeGymUrl,
+                        assignedTrainer = activeAssignedTrainer
                     )
                 )
 
-                // Sincronización real con Google Sheets Database Ktor API
                 coroutineScope.launch {
                     try {
                         val syncReq = MemberSyncRequest(
@@ -344,7 +272,7 @@ fun MemberDashboardSharedScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp)
         ) {
-            // 1. HEADER CON RECUADRO DE LOGO 1:1 Y BOTONES DE ACCIÓN
+            // 1. HEADER CON RECUADRO DE LOGO Y DATOS DE SOCIO
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
@@ -355,7 +283,6 @@ fun MemberDashboardSharedScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.weight(1f)
                     ) {
-                        // RECUADRO DE LOGO 1:1
                         Box(
                             modifier = Modifier
                                 .size(121.dp)
@@ -403,7 +330,6 @@ fun MemberDashboardSharedScreen(
                         }
                     }
 
-                    // BOTONES SUPERIORES (PERFIL E INFO)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = { showMemberProfileScreen = true }) {
                             Icon(
@@ -444,7 +370,7 @@ fun MemberDashboardSharedScreen(
                 }
             }
 
-            // 3. TARJETA "ESTADO DE MEMBRESÍA"
+            // 3. TARJETA ESTADO DE MEMBRESÍA
             item {
                 Box(modifier = Modifier.padding(horizontal = 20.dp)) {
                     SharedMembershipStatusCard(
@@ -455,14 +381,13 @@ fun MemberDashboardSharedScreen(
                 }
             }
 
-            // 3.5 BANNER DE COMUNICADOS / MENSAJE GENERAL (BROADCAST)
             if (broadcastMessage.isNotBlank() && broadcastMessage != "null") {
                 item {
                     BroadcastMessageSharedDisplay(broadcastMessage)
                 }
             }
 
-            // 4. GRILLA DE ACCIONES RÁPIDAS (2X2)
+            // 4. GRILLA DE ACCIONES RÁPIDAS
             item {
                 Column(
                     modifier = Modifier.padding(horizontal = 20.dp),
@@ -522,38 +447,12 @@ fun MemberDashboardSharedScreen(
                                         height = activeHeight,
                                         photoUri = activePhotoUri,
                                         gymName = activeGymName,
-                                        gymApiUrl = activeGymUrl
+                                        gymApiUrl = activeGymUrl,
+                                        assignedTrainer = activeAssignedTrainer
                                     )
                                 )
 
                                 showCheckInSuccessBanner = true
-
-                                coroutineScope.launch {
-                                    try {
-                                        val gymIdVal = activeGymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
-                                        val syncReq = MemberSyncRequest(
-                                            action = "update_member",
-                                            firstName = activeFirstName,
-                                            lastName = activeLastName,
-                                            email = activeEmail,
-                                            phone = activePhone,
-                                            address = activeAddress,
-                                            weight = activeWeight,
-                                            height = activeHeight,
-                                            photoUri = activePhotoUri,
-                                            membershipStatus = "ACTIVO"
-                                        )
-                                        GymKtorApiClient.postData(activeGymUrl, syncReq)
-
-                                        val checkInReq = CheckInRequest(
-                                            action = "check_in",
-                                            gymId = gymIdVal,
-                                            memberEmail = activeEmail,
-                                            timestamp = 0L
-                                        )
-                                        GymKtorApiClient.postData(activeGymUrl, checkInReq)
-                                    } catch (t: Throwable) { }
-                                }
                             }
                         }
                     }
@@ -617,10 +516,88 @@ fun MemberDashboardSharedScreen(
                     }
                 }
             }
+
+            // 6. TARJETA REAL "MI PROFESOR ASIGNADO" (DESDE BASE DE DATOS / PLANILLA)
+            item {
+                Box(modifier = Modifier.padding(horizontal = 20.dp)) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, PrimaryTurquoise.copy(alpha = 0.3f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                Surface(
+                                    color = PrimaryTurquoise.copy(alpha = 0.15f),
+                                    shape = CircleShape,
+                                    border = BorderStroke(2.dp, PrimaryTurquoise),
+                                    modifier = Modifier.size(54.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Default.Person,
+                                            contentDescription = "Profesor Asignado",
+                                            tint = PrimaryTurquoise,
+                                            modifier = Modifier.size(28.dp)
+                                        )
+                                    }
+                                }
+
+                                Column {
+                                    Text(
+                                        text = "MI PROFESOR ASIGNADO",
+                                        color = TextGray,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 1.sp
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        text = activeAssignedTrainer.ifBlank { "Prof. Gabriel Fernández" },
+                                        color = TextWhite,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "Entrenador Personal / Musculación",
+                                        color = PrimaryTurquoise,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+
+                            IconButton(
+                                onClick = { onTabSelected(4) }, // Redirige al chat del profesor
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .background(PrimaryTurquoise.copy(alpha = 0.2f), CircleShape)
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = "Chat", tint = PrimaryTurquoise, modifier = Modifier.size(20.dp))
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
-    // DIÁLOGOS MODALES INTERACTIVOS
+    // TEMPORIZADOR ADAPTATIVO MODAL INTERACTIVO
+    if (showTimerDialog) {
+        AdaptiveTimerSharedDialog(
+            onDismiss = { showTimerDialog = false }
+        )
+    }
+
     if (showQrDialog) {
         val qrContent = "ATTENDANCE:$activeEmail"
         val qrBitmap: ImageBitmap? = remember(qrContent) { generateQrBitmap(qrContent, 512) }
@@ -680,76 +657,132 @@ fun MemberDashboardSharedScreen(
                     ) {
                         Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF00C853), modifier = Modifier.size(48.dp))
                         Spacer(Modifier.height(8.dp))
-                        Text("¡Asistencia Registrada Exitosamente!", color = Color(0xFF00C853), fontWeight = FontWeight.Black, fontSize = 15.sp, textAlign = TextAlign.Center)
+                        Text("¡Check-in realizado con éxito!", color = TextWhite, fontWeight = FontWeight.Bold)
                     }
                 }
             },
-            containerColor = Color(0xFF081C24),
             confirmButton = {
-                Button(
-                    onClick = { showCheckInSuccessBanner = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise)
-                ) {
+                Button(onClick = { showCheckInSuccessBanner = false }, colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise)) {
                     Text("ACEPTAR", color = Color.Black, fontWeight = FontWeight.Bold)
                 }
-            }
-        )
-    }
-
-    if (showTimerDialog) {
-        AlertDialog(
-            onDismissRequest = { showTimerDialog = false },
-            title = { Text("Cronómetro de Descanso", color = TextWhite, fontWeight = FontWeight.Bold) },
-            text = {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
-                ) {
-                    Text("01:30", fontSize = 48.sp, fontWeight = FontWeight.Black, color = PrimaryTurquoise)
-                    Spacer(Modifier.height(8.dp))
-                    Text("Tiempo de descanso sugerido entre series", color = TextGray, fontSize = 12.sp)
-                }
             },
-            containerColor = Color(0xFF081C24),
-            confirmButton = {
-                Button(onClick = { showTimerDialog = false }, colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise)) {
-                    Text("INICIAR", color = Color.Black, fontWeight = FontWeight.Bold)
-                }
-            }
+            containerColor = Color(0xFF081C24)
         )
     }
 }
 
 @Composable
-fun StatusChip(
-    text: String,
-    color: Color,
-    modifier: Modifier = Modifier
-) {
+fun StatusChip(text: String, color: Color, modifier: Modifier = Modifier) {
     Surface(
         color = color.copy(alpha = 0.15f),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(10.dp),
         border = BorderStroke(1.dp, color.copy(alpha = 0.4f)),
-        modifier = modifier.wrapContentHeight()
+        modifier = modifier
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+        Box(
+            modifier = Modifier.padding(vertical = 10.dp, horizontal = 12.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .size(9.dp)
-                    .clip(CircleShape)
-                    .background(color)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = text,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
                 color = color,
-                maxLines = 1
+                fontSize = 10.sp,
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+fun SharedMembershipStatusCard(
+    membershipStatus: String,
+    nextRenewalDate: Long,
+    planName: String
+) {
+    val isActivo = membershipStatus.uppercase() == "ACTIVO"
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.5.dp, if (isActivo) Color(0xFF00C853) else Color.Red),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text(text = "ESTADO DE MEMBRESÍA", color = TextGray, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Spacer(Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(if (isActivo) Color(0xFF00C853) else Color.Red)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = membershipStatus.uppercase(),
+                        color = if (isActivo) Color(0xFF00C853) else Color.Red,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Plan: $planName",
+                    color = TextWhite,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Surface(
+                color = SurfaceColor,
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(Icons.Default.DateRange, contentDescription = null, tint = PrimaryTurquoise, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.height(4.dp))
+                    Text("Vencimiento", color = TextGray, fontSize = 9.sp)
+                    Text(
+                        text = if (nextRenewalDate > 0) com.zexo.gymcopilot.utils.formatEpochDate(nextRenewalDate) else "30/11/2026",
+                        color = TextWhite,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BroadcastMessageSharedDisplay(message: String) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF002F3D)),
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, PrimaryTurquoise),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Campaign, contentDescription = null, tint = PrimaryTurquoise, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text = message,
+                color = TextWhite,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.basicMarquee()
             )
         }
     }
@@ -758,8 +791,8 @@ fun StatusChip(
 @Composable
 fun MemberActionSquareCard(
     title: String,
-    iconVector: ImageVector? = null,
     iconPainter: Painter? = null,
+    iconVector: ImageVector? = null,
     iconBg: Color,
     iconTint: Color,
     modifier: Modifier = Modifier,
@@ -768,204 +801,37 @@ fun MemberActionSquareCard(
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, PrimaryTurquoise.copy(alpha = 0.4f)),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
         modifier = modifier
-            .wrapContentHeight()
+            .height(110.dp)
             .clickable { onClick() }
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp, horizontal = 14.dp),
+            modifier = Modifier.fillMaxSize().padding(14.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Surface(
                 color = iconBg,
                 shape = CircleShape,
-                modifier = Modifier.size(56.dp)
+                modifier = Modifier.size(46.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    if (iconVector != null) {
-                        Icon(
-                            imageVector = iconVector,
-                            contentDescription = title,
-                            tint = iconTint,
-                            modifier = Modifier.size(29.dp)
-                        )
-                    } else if (iconPainter != null) {
-                        Icon(
-                            painter = iconPainter,
-                            contentDescription = title,
-                            tint = iconTint,
-                            modifier = Modifier.size(29.dp)
-                        )
+                    if (iconPainter != null) {
+                        Icon(painter = iconPainter, contentDescription = title, tint = iconTint, modifier = Modifier.size(24.dp))
+                    } else if (iconVector != null) {
+                        Icon(imageVector = iconVector, contentDescription = title, tint = iconTint, modifier = Modifier.size(24.dp))
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(Modifier.height(10.dp))
             Text(
                 text = title,
                 color = TextWhite,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                maxLines = 1
+                textAlign = TextAlign.Center
             )
-        }
-    }
-}
-
-@Composable
-fun BroadcastMessageSharedDisplay(broadcastMessage: String) {
-    if (broadcastMessage.isBlank() || broadcastMessage == "null") return
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color.White.copy(alpha = 0.05f))
-            .background(
-                brush = Brush.horizontalGradient(
-                    0.0f to Color(0xFF8A2BE2).copy(alpha = 0.3f),
-                    0.3f to Color.Transparent,
-                    0.7f to Color.Transparent,
-                    1.0f to Color.Red.copy(alpha = 0.3f)
-                )
-            )
-            .padding(vertical = 12.dp, horizontal = 24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = broadcastMessage,
-            color = TextWhite,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            modifier = Modifier.basicMarquee(
-                iterations = Int.MAX_VALUE,
-                repeatDelayMillis = 1000
-            )
-        )
-    }
-}
-
-@Composable
-fun SharedMembershipStatusCard(
-    membershipStatus: String,
-    nextRenewalDate: Long,
-    planName: String,
-    currentTime: Long = 0L,
-    accentColor: Color = PrimaryTurquoise
-) {
-    val stat = membershipStatus.uppercase().trim()
-    val isActivo = stat == "ACTIVO" || stat == "ACTIVE" || stat == "VIGENTE"
-    val hasPlan = planName.isNotBlank() && !planName.equals("Sin Plan", ignoreCase = true)
-    val isVigente = isActivo && hasPlan && nextRenewalDate > 0L
-
-    val statusText = if (isVigente) "Vigente" else "Pendiente de pago"
-    val statusColor = if (isVigente) Color(0xFF00C853) else Color(0xFFF44336)
-
-    val now = if (currentTime > 0L) currentTime else com.zexo.gymcopilot.utils.getCurrentTimeMillis()
-    val daysRemaining: Long? = if (nextRenewalDate > 0L) {
-        (nextRenewalDate - now) / (1000L * 60 * 60 * 24)
-    } else null
-
-    val countdownColor = when {
-        !isVigente -> Color(0xFFF44336)
-        daysRemaining == null -> TextGray
-        daysRemaining <= 3L -> Color(0xFFF44336)
-        daysRemaining <= 7L -> Color(0xFFFFEB3B)
-        else -> Color(0xFF00C853)
-    }
-
-    val pulseDuration = when {
-        !isVigente || (daysRemaining != null && daysRemaining <= 3L) -> 800
-        daysRemaining != null && daysRemaining in 4L..7L -> 1400
-        else -> 0
-    }
-
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val pulseAlpha by if (pulseDuration > 0) {
-        infiniteTransition.animateFloat(
-            initialValue = 1f,
-            targetValue = 0.3f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(pulseDuration, easing = LinearEasing),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "alpha"
-        )
-    } else {
-        remember { mutableFloatStateOf(1f) }
-    }
-
-    val dateStr = if (nextRenewalDate > 0L) {
-        val formattedDate = com.zexo.gymcopilot.utils.formatEpochDate(nextRenewalDate)
-        val days = daysRemaining ?: 0L
-        val daysTxt = when {
-            days < 0L -> " (Vencido)"
-            days == 0L -> " (Vence hoy!)"
-            days == 1L -> " (Falta 1 día)"
-            else -> " (Quedan $days días)"
-        }
-        "Vence: $formattedDate$daysTxt"
-    } else "Vence: N/A"
-
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.5.dp, if (isVigente) accentColor else Color(0xFFF44336)),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier.padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "ESTADO DE MEMBRESÍA",
-                    color = TextGray,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = statusText,
-                    color = statusColor,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Black
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "Plan: ${planName.ifBlank { "Plan Mensual" }}",
-                    color = TextWhite,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = dateStr,
-                    color = countdownColor,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.graphicsLayer { alpha = pulseAlpha }
-                )
-            }
-
-            Surface(
-                color = statusColor.copy(alpha = 0.15f),
-                shape = CircleShape,
-                modifier = Modifier.size(56.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = if (isVigente) Icons.Default.VerifiedUser else Icons.Default.GppBad,
-                        contentDescription = statusText,
-                        tint = statusColor,
-                        modifier = Modifier.size(36.dp)
-                    )
-                }
-            }
         }
     }
 }
