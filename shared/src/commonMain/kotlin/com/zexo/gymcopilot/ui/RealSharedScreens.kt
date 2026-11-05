@@ -376,20 +376,44 @@ fun RealPublicStoreView(onTabSelected: (Int) -> Unit) {
     var selectedCategoryColor by remember { mutableStateOf(Color(0xFFFF5252)) }
     val cartItems = remember { mutableStateListOf<Product>() }
 
+    val sampleProducts = remember {
+        listOf(
+            Product(id = "1", name = "Whey Protein Isolate 1kg", price = 45000.0, categoryId = "NUTRITION", description = "Proteína isolada de alta pureza", bannerType = "Destacado"),
+            Product(id = "2", name = "Creatina Monohidratada 300g", price = 38000.0, categoryId = "NUTRITION", description = "Creatina micronizada pura", bannerType = "Oferta"),
+            Product(id = "3", name = "Shaker Térmico GymCopilot", price = 12500.0, categoryId = "EQUIPAMIENTO", description = "Vaso mezclador anti-fugas"),
+            Product(id = "4", name = "Remera OverSize GymCopilot", price = 22000.0, categoryId = "CLOTHING", description = "100% Algodón peinado"),
+            Product(id = "5", name = "Pase Libre Mensual", price = 35000.0, categoryId = "WELLNESS", description = "Acceso completo a todas las instalaciones", bannerType = "Popular")
+        )
+    }
+
+    val filteredProducts = remember(selectedCategoryName, sampleProducts) {
+        sampleProducts.filter { p ->
+            when (selectedCategoryName) {
+                "NUTRICIÓN Y SUPLEMENTOS" -> p.categoryId == "NUTRITION"
+                "INDUMENTARIA DEPORTIVA" -> p.categoryId == "CLOTHING"
+                "SERVICIOS DE BIENESTAR" -> p.categoryId == "WELLNESS"
+                else -> p.categoryId == "EQUIPAMIENTO" || p.categoryId.isEmpty()
+            }
+        }
+    }
+
     when (currentScreen) {
         "CART" -> {
             ShoppingCartSharedScreen(
                 cartItems = cartItems,
                 onBack = { currentScreen = "CATALOG" },
                 onRemoveItem = { cartItems.remove(it) },
-                onCheckoutWhatsApp = { }
+                onCheckoutWhatsApp = {
+                    cartItems.clear()
+                    currentScreen = "CATALOG"
+                }
             )
         }
         "CATEGORY" -> {
             StoreCategoryProductsSharedScreen(
                 categoryName = selectedCategoryName,
                 categoryColor = selectedCategoryColor,
-                products = emptyList(),
+                products = filteredProducts,
                 cartItems = cartItems,
                 onBack = { currentScreen = "CATALOG" },
                 onCartClick = { currentScreen = "CART" },
@@ -423,7 +447,7 @@ fun RealPublicStoreView(onTabSelected: (Int) -> Unit) {
                 },
                 onCartClick = { currentScreen = "CART" },
                 cartItemCount = cartItems.size,
-                products = emptyList()
+                products = sampleProducts
             )
         }
     }
