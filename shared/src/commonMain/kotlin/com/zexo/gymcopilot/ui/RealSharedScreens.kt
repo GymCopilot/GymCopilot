@@ -469,21 +469,34 @@ fun RealPublicStoreView(apiClient: GymKtorApiClient = GymKtorApiClient, onTabSel
                 gymName = "GYM 47",
                 onBack = { onTabSelected(0) },
                 onCategoryClick = { catId ->
-                    when (catId) {
-                        "NUTRITION" -> {
-                            selectedCategoryName = "NUTRICIÓN Y SUPLEMENTOS"
-                            selectedCategoryColor = Color(0xFFFFD700)
-                        }
-                        "CLOTHING" -> {
+                    val id = catId.uppercase().trim()
+                    when {
+                        id == "CLOTHING" || id.contains("INDUMENTARIA") -> {
                             selectedCategoryName = "INDUMENTARIA DEPORTIVA"
                             selectedCategoryColor = Color(0xFF7C4DFF)
                         }
-                        "WELLNESS" -> {
+                        id == "NUTRITION" || id.contains("SUPLEMENT") || id.contains("NUTRICI") -> {
+                            selectedCategoryName = "NUTRICIÓN Y SUPLEMENTOS"
+                            selectedCategoryColor = Color(0xFFFFD700)
+                        }
+                        id == "WELLNESS" || id.contains("BIENESTAR") || id.contains("SERVICI") -> {
                             selectedCategoryName = "SERVICIOS DE BIENESTAR"
                             selectedCategoryColor = Color(0xFF69F0AE)
                         }
+                        id == "DIGITAL" || id.contains("MEMBRES") -> {
+                            selectedCategoryName = "MEMBRESÍAS"
+                            selectedCategoryColor = Color(0xFF2196F3)
+                        }
+                        id == "TECH" || id.contains("TECNOLOGI") -> {
+                            selectedCategoryName = "TECNOLOGÍA"
+                            selectedCategoryColor = Color(0xFF40E0D0)
+                        }
+                        id == "HEALTHY_FOOD" || id.contains("FOOD") || id.contains("ALIMENTA") -> {
+                            selectedCategoryName = "ALIMENTACIÓN SALUDABLE"
+                            selectedCategoryColor = Color(0xFFFF8A65)
+                        }
                         else -> {
-                            selectedCategoryName = "EQUIPAMIENTO Y ACCESORIOS"
+                            selectedCategoryName = if (id.length > 2) id else "EQUIPAMIENTO Y ACCESORIOS"
                             selectedCategoryColor = Color(0xFFFF5252)
                         }
                     }

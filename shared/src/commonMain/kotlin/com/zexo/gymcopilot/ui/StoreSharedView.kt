@@ -29,7 +29,23 @@ import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.model.Product
 import com.zexo.gymcopilot.utils.decodeBase64ToBitmap
 import gymcopilot.shared.generated.resources.*
+import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
+
+fun getCategoryDrawableRes(catId: String, catName: String): DrawableResource {
+    val id = catId.uppercase().trim()
+    val name = catName.uppercase().trim()
+    return when {
+        id == "CLOTHING" || id.contains("INDUMENTARIA") || name.contains("INDUMENTARIA") || name.contains("ROPA") -> Res.drawable.clothing
+        id == "NUTRITION" || id.contains("SUPLEMENT") || name.contains("NUTRICI") || name.contains("SUPLEMENT") -> Res.drawable.suplements
+        id == "WELLNESS" || id.contains("BIENESTAR") || name.contains("BIENESTAR") || name.contains("SERVICIOS") -> Res.drawable.servicies
+        id == "DIGITAL" || id.contains("MEMBRESIA") || name.contains("MEMBRES") -> Res.drawable.membership
+        id == "TECH" || id.contains("TECNOLOGIA") || name.contains("TECNOLOGI") -> Res.drawable.technology
+        id == "HEALTHY_FOOD" || id.contains("FOOD") || name.contains("ALIMENTA") || name.contains("COMIDA") -> Res.drawable.food
+        id == "EQUIPMENT" || id.contains("EQUIP") || name.contains("EQUIP") || name.contains("ACCESORIO") -> Res.drawable.equipment_accesory
+        else -> Res.drawable.equipment_accesory
+    }
+}
 
 fun isProductInCategory(productCategoryId: String, selectedCategory: String): Boolean {
     val pCat = productCategoryId.trim().uppercase()
@@ -47,8 +63,17 @@ fun isProductInCategory(productCategoryId: String, selectedCategory: String): Bo
         sel.contains("CLOTH") || sel.contains("INDUMENTARIA") || sel.contains("ROPA") -> {
             pCat.contains("CLOTH") || pCat.contains("INDUMENTARIA") || pCat.contains("ROPA") || pCat == "3"
         }
-        sel.contains("WELLNESS") || sel.contains("BIENESTAR") || sel.contains("SALUD") -> {
-            pCat.contains("WELLNESS") || pCat.contains("BIENESTAR") || pCat.contains("SALUD") || pCat == "4"
+        sel.contains("WELLNESS") || sel.contains("BIENESTAR") || sel.contains("SALUD") || sel.contains("SERVICI") -> {
+            pCat.contains("WELLNESS") || pCat.contains("BIENESTAR") || pCat.contains("SALUD") || pCat.contains("SERVICI") || pCat == "4"
+        }
+        sel.contains("DIGITAL") || sel.contains("MEMBRES") -> {
+            pCat.contains("DIGITAL") || pCat.contains("MEMBRES") || pCat == "5"
+        }
+        sel.contains("TECH") || sel.contains("TECNOLOGI") -> {
+            pCat.contains("TECH") || pCat.contains("TECNOLOGI") || pCat == "6"
+        }
+        sel.contains("FOOD") || sel.contains("ALIMENTA") || sel.contains("COMIDA") -> {
+            pCat.contains("FOOD") || pCat.contains("ALIMENTA") || pCat.contains("COMIDA") || pCat == "7"
         }
         else -> pCat.contains(sel) || sel.contains(pCat) || pCat.isEmpty()
     }
@@ -67,25 +92,44 @@ fun StoreCatalogSharedScreen(
     var isSearchVisible by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
 
+    val defaultCategoryList = listOf(
+        Triple("EQUIPMENT", "EQUIPAMIENTO Y ACCESORIOS", Color(0xFFFF5252)),
+        Triple("CLOTHING", "INDUMENTARIA DEPORTIVA", Color(0xFF7C4DFF)),
+        Triple("NUTRITION", "NUTRICIÓN Y SUPLEMENTOS", Color(0xFFFFD700)),
+        Triple("WELLNESS", "SERVICIOS DE BIENESTAR", Color(0xFF69F0AE)),
+        Triple("DIGITAL", "MEMBRESÍAS", Color(0xFF2196F3)),
+        Triple("TECH", "TECNOLOGÍA", Color(0xFF40E0D0)),
+        Triple("HEALTHY_FOOD", "ALIMENTACIÓN SALUDABLE", Color(0xFFFF8A65))
+    )
+
     val categories = remember(products) {
         val catIds = products.map { it.categoryId }.filter { it.isNotBlank() }.distinct()
         if (catIds.isEmpty()) {
-            listOf(
-                Triple("EQUIPMENT", "EQUIPAMIENTO Y ACCESORIOS", Color(0xFFFF5252)),
-                Triple("NUTRITION", "NUTRICIÓN Y SUPLEMENTOS", Color(0xFFFFD700)),
-                Triple("CLOTHING", "INDUMENTARIA DEPORTIVA", Color(0xFF7C4DFF)),
-                Triple("WELLNESS", "SERVICIOS DE BIENESTAR", Color(0xFF69F0AE))
-            )
+            defaultCategoryList
         } else {
-            catIds.mapIndexed { index, id ->
-                val color = when (index % 4) {
-                    0 -> Color(0xFFFF5252)
-                    1 -> Color(0xFFFFD700)
-                    2 -> Color(0xFF7C4DFF)
-                    else -> Color(0xFF69F0AE)
+            val mapped = catIds.map { id ->
+                val name = when {
+                    id.contains("CLOTH", true) || id.contains("INDUMENTARIA", true) -> "INDUMENTARIA DEPORTIVA"
+                    id.contains("NUTRIT", true) || id.contains("SUPLEMENT", true) -> "NUTRICIÓN Y SUPLEMENTOS"
+                    id.contains("WELLNESS", true) || id.contains("BIENESTAR", true) -> "SERVICIOS DE BIENESTAR"
+                    id.contains("DIGITAL", true) || id.contains("MEMBRES", true) -> "MEMBRESÍAS"
+                    id.contains("TECH", true) || id.contains("TECNOLOGI", true) -> "TECNOLOGÍA"
+                    id.contains("FOOD", true) || id.contains("ALIMENTA", true) -> "ALIMENTACIÓN SALUDABLE"
+                    id.contains("EQUIP", true) || id.contains("ACCESORIO", true) -> "EQUIPAMIENTO Y ACCESORIOS"
+                    else -> id.uppercase()
                 }
-                Triple(id, id.uppercase(), color)
+                val color = when {
+                    name.contains("CLOTH") || name.contains("INDUMENTARIA") -> Color(0xFF7C4DFF)
+                    name.contains("NUTRIT") || name.contains("SUPLEMENT") -> Color(0xFFFFD700)
+                    name.contains("WELLNESS") || name.contains("BIENESTAR") -> Color(0xFF69F0AE)
+                    name.contains("DIGITAL") || name.contains("MEMBRES") -> Color(0xFF2196F3)
+                    name.contains("TECH") || name.contains("TECNOLOGI") -> Color(0xFF40E0D0)
+                    name.contains("FOOD") || name.contains("ALIMENTA") -> Color(0xFFFF8A65)
+                    else -> Color(0xFFFF5252)
+                }
+                Triple(id, name, color)
             }
+            (defaultCategoryList + mapped).distinctBy { it.second }
         }
     }
 
@@ -197,18 +241,11 @@ fun StoreCatalogSharedScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 items(filteredCategories) { (catId, catName, catColor) ->
-                    val catIcon = when {
-                        catId.contains("NUTRIT", true) || catId.contains("NUTRICI", true) || catName.contains("NUTRIT", true) || catName.contains("SUPLEMENT", true) -> Icons.Default.Restaurant
-                        catId.contains("CLOTH", true) || catId.contains("INDUMENTARIA", true) || catName.contains("CLOTH", true) || catName.contains("INDUMENTARIA", true) -> Icons.Default.Checkroom
-                        catId.contains("WELLNESS", true) || catId.contains("BIENESTAR", true) || catName.contains("WELLNESS", true) || catName.contains("BIENESTAR", true) -> Icons.Default.Spa
-                        catId.contains("EQUIP", true) || catName.contains("EQUIP", true) || catName.contains("ACCESORIO", true) -> Icons.Default.FitnessCenter
-                        else -> Icons.Default.Storefront
-                    }
                     Card(
                         colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier
-                            .height(180.dp)
+                            .height(190.dp)
                             .clickable { onCategoryClick(catId) }
                     ) {
                         Column(modifier = Modifier.fillMaxSize()) {
@@ -219,11 +256,11 @@ fun StoreCatalogSharedScreen(
                                     .background(catColor),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    catIcon,
+                                Image(
+                                    painter = painterResource(getCategoryDrawableRes(catId, catName)),
                                     contentDescription = catName,
-                                    tint = Color.Black,
-                                    modifier = Modifier.size(56.dp)
+                                    modifier = Modifier.size(110.dp),
+                                    contentScale = ContentScale.Fit
                                 )
                             }
                             Box(
