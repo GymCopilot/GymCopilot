@@ -293,7 +293,7 @@ fun StoreCategoryProductsSharedScreen(
                 }
             }
 
-            // Category Tabs Bar below Header (Only categories present in products / enabled)
+            // Category Tabs Bar below Header (TabRow filling full width, no white frames/borders)
             val categoriesTabList = remember(products) {
                 val catIds = products.map { it.categoryId }.filter { it.isNotBlank() }.distinct()
                 if (catIds.isEmpty()) {
@@ -317,11 +317,12 @@ fun StoreCategoryProductsSharedScreen(
                 }
             }
 
-            ScrollableTabRow(
+            TabRow(
                 selectedTabIndex = categoriesTabList.indexOfFirst { it.first.equals(categoryName, true) }.coerceAtLeast(0),
-                containerColor = Color(0xFF1E1E1E),
+                containerColor = Color.Transparent,
                 contentColor = Color.White,
-                edgePadding = 0.dp,
+                indicator = {},
+                divider = {},
                 modifier = Modifier.fillMaxWidth()
             ) {
                 categoriesTabList.forEach { (catTitle, catColor) ->
@@ -334,14 +335,16 @@ fun StoreCategoryProductsSharedScreen(
                         text = {
                             Text(
                                 text = catTitle,
-                                fontSize = 11.sp,
+                                fontSize = 9.sp,
                                 fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
-                                color = textColor
+                                color = textColor,
+                                maxLines = 1,
+                                textAlign = TextAlign.Center
                             )
                         },
                         modifier = Modifier
                             .background(catColor)
-                            .then(if (isSelected) Modifier.border(2.dp, Color.White) else Modifier)
+                            .height(40.dp)
                     )
                 }
             }
@@ -366,7 +369,7 @@ fun StoreCategoryProductsSharedScreen(
                     Card(
                         colors = CardDefaults.cardColors(containerColor = Color(0xFFF9F9F9)),
                         shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f)),
+                        border = BorderStroke(1.dp, Color.Black),
                         modifier = Modifier.fillMaxWidth().height(260.dp)
                     ) {
                         Column(
@@ -429,18 +432,23 @@ fun StoreCategoryProductsSharedScreen(
                                     )
 
                                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        val contactColor = when (product.contactMethod?.lowercase()) {
-                                            "telegram" -> Color(0xFF0088cc)
-                                            "viber" -> Color(0xFF7360f2)
-                                            "wechat" -> Color(0xFF7bb32e)
-                                            "line" -> Color(0xFF00c300)
-                                            else -> Color(0xFF4CAF50) // WhatsApp
+                                        val contactPainter = when (product.contactMethod?.lowercase()) {
+                                            "telegram" -> painterResource(Res.drawable.telegram)
+                                            "viber" -> painterResource(Res.drawable.viber)
+                                            "wechat" -> painterResource(Res.drawable.wechat)
+                                            "line" -> painterResource(Res.drawable.line)
+                                            else -> painterResource(Res.drawable.whatsapp)
                                         }
                                         IconButton(
                                             onClick = { /* Contact action */ },
-                                            modifier = Modifier.size(32.dp).background(contactColor.copy(alpha = 0.15f), CircleShape)
+                                            modifier = Modifier.size(32.dp).background(Color.White, CircleShape)
                                         ) {
-                                            Icon(Icons.Default.Chat, null, tint = contactColor, modifier = Modifier.size(16.dp))
+                                            Image(
+                                                painter = contactPainter,
+                                                contentDescription = product.contactMethod ?: "whatsapp",
+                                                modifier = Modifier.size(24.dp).clip(CircleShape),
+                                                contentScale = ContentScale.Crop
+                                            )
                                         }
 
                                         IconButton(
