@@ -293,13 +293,29 @@ fun StoreCategoryProductsSharedScreen(
                 }
             }
 
-            // Category Tabs Bar below Header
-            val categoriesTabList = listOf(
-                "EQUIPAMIENTO Y ACCESORIOS" to Color(0xFFFF5252),
-                "INDUMENTARIA DEPORTIVA" to Color(0xFF7C4DFF),
-                "NUTRICIÓN Y SUPLEMENTOS" to Color(0xFFFFD700),
-                "EXTRA" to Color(0xFF9575CD)
-            )
+            // Category Tabs Bar below Header (Only categories present in products / enabled)
+            val categoriesTabList = remember(products) {
+                val catIds = products.map { it.categoryId }.filter { it.isNotBlank() }.distinct()
+                if (catIds.isEmpty()) {
+                    listOf(
+                        "EQUIPAMIENTO Y ACCESORIOS" to Color(0xFFFF5252),
+                        "INDUMENTARIA DEPORTIVA" to Color(0xFF7C4DFF),
+                        "NUTRICIÓN Y SUPLEMENTOS" to Color(0xFFFFD700),
+                        "EXTRA" to Color(0xFF9575CD)
+                    )
+                } else {
+                    catIds.map { id ->
+                        val color = when (id.uppercase()) {
+                            "NUTRITION", "NUTRICION", "NUTRICIÓN Y SUPLEMENTOS" -> Color(0xFFFFD700)
+                            "CLOTHING", "INDUMENTARIA", "INDUMENTARIA DEPORTIVA" -> Color(0xFF7C4DFF)
+                            "WELLNESS", "BIENESTAR" -> Color(0xFF69F0AE)
+                            "EXTRA" -> Color(0xFF9575CD)
+                            else -> Color(0xFFFF5252)
+                        }
+                        id to color
+                    }
+                }
+            }
 
             ScrollableTabRow(
                 selectedTabIndex = categoriesTabList.indexOfFirst { it.first.equals(categoryName, true) }.coerceAtLeast(0),
@@ -310,6 +326,8 @@ fun StoreCategoryProductsSharedScreen(
             ) {
                 categoriesTabList.forEach { (catTitle, catColor) ->
                     val isSelected = categoryName.equals(catTitle, true)
+                    val lum = catColor.red * 0.299f + catColor.green * 0.587f + catColor.blue * 0.114f
+                    val textColor = if (lum > 0.5f) Color.Black else Color.White
                     Tab(
                         selected = isSelected,
                         onClick = { onCategorySelected(catTitle, catColor) },
@@ -317,17 +335,24 @@ fun StoreCategoryProductsSharedScreen(
                             Text(
                                 text = catTitle,
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isSelected) Color.Black else Color.White
+                                fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
+                                color = textColor
                             )
                         },
-                        modifier = Modifier.background(if (isSelected) catColor else Color(0xFF1E1E1E))
+                        modifier = Modifier
+                            .background(catColor)
+                            .then(if (isSelected) Modifier.border(2.dp, Color.White) else Modifier)
                     )
                 }
             }
 
-            // Products Grid
-            val displayProducts = products
+            // Products Grid filtered by selected category
+            val displayProducts = remember(products, categoryName) {
+                products.filter { p ->
+                    if (categoryName.isBlank()) true
+                    else p.categoryId.equals(categoryName, true) || p.categoryId.contains(categoryName, true) || (categoryName == "EQUIPAMIENTO Y ACCESORIOS" && (p.categoryId.isEmpty() || p.categoryId == "EQUIPAMIENTO"))
+                }
+            }
 
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
