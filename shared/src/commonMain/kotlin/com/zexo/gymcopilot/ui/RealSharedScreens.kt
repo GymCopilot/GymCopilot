@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.model.*
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
+import com.zexo.gymcopilot.utils.readLocalMemberProfile
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -381,10 +382,21 @@ fun RealPublicStoreView(onTabSelected: (Int) -> Unit, apiClient: GymKtorApiClien
     var selectedCategoryId by remember { mutableStateOf("") }
     val cartItems = remember { mutableStateListOf<Product>() }
     var productsList by remember { mutableStateOf<List<Product>>(emptyList()) }
+    var gymNameText by remember { mutableStateOf("Gym 47") }
 
     LaunchedEffect(Unit) {
+        val localProfile = readLocalMemberProfile()
+        val gymApiUrl = localProfile?.gymApiUrl?.takeIf { it.isNotBlank() } ?: "https://script.google.com/macros/s/AKfycbzXYYMu43-ATeyxQmwdF3CuRYXi7KbpChyTQEBFIsWh7SCHv2XugxsWen61oBeDdzw/exec"
+        val gymNameVal = localProfile?.gymName?.takeIf { it.isNotBlank() } ?: "Gym 47"
+        gymNameText = gymNameVal
+        val gymIdVal = gymNameVal.lowercase().replace(Regex("[^a-z0-9]"), "_")
+        val ssIdVal = localProfile?.spreadsheetId.orEmpty()
+        val paramChar = if (gymApiUrl.contains("?")) "&" else "?"
+        val ssParam = if (ssIdVal.isNotBlank()) "&spreadsheetId=$ssIdVal" else ""
+        val emailVal = localProfile?.email.orEmpty()
+        val url = "$gymApiUrl${paramChar}type=store&gymId=$gymIdVal&email=$emailVal$ssParam"
+
         try {
-            val url = "https://script.google.com/macros/s/AKfycbzXYYMu43-ATeyxQmwdF3CuRYXi7KbpChyTQEBFIsWh7SCHv2XugxsWen61oBeDdzw/exec?type=store"
             val responseText = apiClient.getData(url)
             if (responseText.isNotBlank() && responseText.contains("success")) {
                 val jsonElement = apiClient.jsonInstance.parseToJsonElement(responseText)
