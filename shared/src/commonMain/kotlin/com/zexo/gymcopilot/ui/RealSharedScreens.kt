@@ -27,6 +27,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.model.*
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.JsonNull
 import gymcopilot.shared.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
 
@@ -289,7 +293,7 @@ fun RealAdminDashboardView(
                 }
             }
         }
-        1 -> RealPublicStoreView(onTabSelected = onTabSelected)
+        1 -> RealPublicStoreView(onTabSelected = onTabSelected, apiClient = apiClient)
         2 -> MembersSharedScreen(
             onBack = { onTabSelected(0) },
             members = membersList,
@@ -370,11 +374,70 @@ fun RealGridButton(
 // ============================================================================
 
 @Composable
-fun RealPublicStoreView(onTabSelected: (Int) -> Unit) {
+fun RealPublicStoreView(onTabSelected: (Int) -> Unit, apiClient: GymKtorApiClient) {
     var currentScreen by remember { mutableStateOf("CATALOG") }
     var selectedCategoryName by remember { mutableStateOf("EQUIPAMIENTO Y ACCESORIOS") }
     var selectedCategoryColor by remember { mutableStateOf(Color(0xFFFF5252)) }
+    var selectedCategoryId by remember { mutableStateOf("") }
     val cartItems = remember { mutableStateListOf<Product>() }
+    var productsList by remember { mutableStateOf<List<Product>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        try {
+            val url = "https://script.google.com/macros/s/AKfycbzXYYMu43-ATeyxQmwdF3CuRYXi7KbpChyTQEBFIsWh7SCHv2XugxsWen61oBeDdzw/exec?type=store"
+            val responseText = apiClient.getData(url)
+            if (responseText.isNotBlank() && responseText.contains("success")) {
+                val jsonElement = apiClient.jsonInstance.parseToJsonElement(responseText)
+                val jsonObject = jsonElement as? JsonObject
+                val dataArray = jsonObject?.get("data") as? JsonArray ?: (jsonElement as? JsonArray)
+                if (dataArray != null) {
+                    val loadedProducts = mutableListOf<Product>()
+                    for (i in 1 until dataArray.size) {
+                        val row = dataArray.get(i) as? JsonArray
+                        if (row != null && row.size >= 3) {
+                            val id = row.get(0).jsonPrimitive.content
+                            val name = row.get(1).jsonPrimitive.content
+                            val price = row.get(2).jsonPrimitive.content.toDoubleOrNull() ?: 0.0
+                            val catId = if (row.size > 3 && row.get(3) !is JsonNull) row.get(3).jsonPrimitive.content else ""
+                            val imageEl = if (row.size > 4) row.get(4) else null
+                            val imageUri = if (imageEl != null && imageEl !is JsonNull) imageEl.jsonPrimitive.content else null
+                            val descEl = if (row.size > 5) row.get(5) else null
+                            val desc = if (descEl != null && descEl !is JsonNull) descEl.jsonPrimitive.content else ""
+                            val methodEl = if (row.size > 6) row.get(6) else null
+                            val contactMethod = if (methodEl != null && methodEl !is JsonNull) methodEl.jsonPrimitive.content else null
+                            val phoneEl = if (row.size > 7) row.get(7) else null
+                            val contactPhone = if (phoneEl != null && phoneEl !is JsonNull) phoneEl.jsonPrimitive.content else null
+                            val typeEl = if (row.size > 8) row.get(8) else null
+                            val bannerType = if (typeEl != null && typeEl !is JsonNull) typeEl.jsonPrimitive.content else null
+                            val textEl = if (row.size > 9) row.get(9) else null
+                            val bannerText = if (textEl != null && textEl !is JsonNull) textEl.jsonPrimitive.content else null
+
+                            loadedProducts.add(Product(
+                                id = id,
+                                name = name,
+                                price = price,
+                                categoryId = catId,
+                                imageUri = if (!imageUri.isNullOrBlank() && imageUri != "null") imageUri else null,
+                                description = desc,
+                                contactMethod = contactMethod,
+                                contactPhone = contactPhone,
+                                bannerType = bannerType,
+                                bannerText = bannerText
+                            ))
+                        }
+                    }
+                    if (loadedProducts.isNotEmpty()) {
+                        productsList = loadedProducts
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+    }
+
+    val categoryProducts = remember(productsList, selectedCategoryId) {
+        if (selectedCategoryId.isBlank()) productsList
+        else productsList.filter { it.categoryId.equals(selectedCategoryId, ignoreCase = true) }
+    }
 
     when (currentScreen) {
         "CART" -> {
@@ -389,7 +452,7 @@ fun RealPublicStoreView(onTabSelected: (Int) -> Unit) {
             StoreCategoryProductsSharedScreen(
                 categoryName = selectedCategoryName,
                 categoryColor = selectedCategoryColor,
-                products = emptyList(),
+                products = categoryProducts,
                 cartItems = cartItems,
                 onBack = { currentScreen = "CATALOG" },
                 onCartClick = { currentScreen = "CART" },
@@ -401,29 +464,14 @@ fun RealPublicStoreView(onTabSelected: (Int) -> Unit) {
                 gymName = "GYM 47",
                 onBack = { onTabSelected(0) },
                 onCategoryClick = { catId ->
-                    when (catId) {
-                        "NUTRITION" -> {
-                            selectedCategoryName = "NUTRICIÓN Y SUPLEMENTOS"
-                            selectedCategoryColor = Color(0xFFFFD700)
-                        }
-                        "CLOTHING" -> {
-                            selectedCategoryName = "INDUMENTARIA DEPORTIVA"
-                            selectedCategoryColor = Color(0xFF7C4DFF)
-                        }
-                        "WELLNESS" -> {
-                            selectedCategoryName = "SERVICIOS DE BIENESTAR"
-                            selectedCategoryColor = Color(0xFF69F0AE)
-                        }
-                        else -> {
-                            selectedCategoryName = "EQUIPAMIENTO Y ACCESORIOS"
-                            selectedCategoryColor = Color(0xFFFF5252)
-                        }
-                    }
+                    selectedCategoryId = catId
+                    selectedCategoryName = catId
+                    selectedCategoryColor = Color(0xFFFF5252)
                     currentScreen = "CATEGORY"
                 },
                 onCartClick = { currentScreen = "CART" },
                 cartItemCount = cartItems.size,
-                products = emptyList()
+                products = productsList
             )
         }
     }
