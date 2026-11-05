@@ -371,83 +371,60 @@ fun RealGridButton(
 
 @Composable
 fun RealPublicStoreView(onTabSelected: (Int) -> Unit) {
-    var selectedCategoryTab by remember { mutableStateOf(2) } // 2: Nutrición
+    var currentScreen by remember { mutableStateOf("CATALOG") }
+    var selectedCategoryName by remember { mutableStateOf("EQUIPAMIENTO Y ACCESORIOS") }
+    var selectedCategoryColor by remember { mutableStateOf(Color(0xFFFF5252)) }
+    val cartItems = remember { mutableStateListOf<Product>() }
 
-    val sampleProducts = remember {
-        listOf(
-            StoreProductItem("1", "PROTEÍNA WHEY", "WHEY, la proteína más utilizada por los deportistas de vanguard...", "$55000.00", "Oferta relámpago", Color(0xFFFF6D00), "🥛"),
-            StoreProductItem("2", "Proteína 1kg", "Ahorra con este producto por cantidad", "$180000.00", "Stock limitado", Color(0xFFFFD600), "🏋️"),
-            StoreProductItem("3", "BARRA PROTEÍCA", "Barra rica en proteínas y baja en azúcares", "$3000.00", "2x1", Color(0xFFFFD600), "🍫"),
-            StoreProductItem("4", "ENERGY GEL ENA", "Poderoso gel para suplemento energético", "$25000.00", "Unidades contadas", Color.Red, "⚡")
-        )
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = 8.dp, bottom = 80.dp)
-    ) {
-        // BARRA DE CABECERA
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(text = "NUTRICIÓN Y SUPLEMENTOS", fontWeight = FontWeight.Black, fontSize = 18.sp, color = Color.Black)
-            Row {
-                Icon(Icons.Default.Search, null, tint = Color.Black, modifier = Modifier.size(24.dp).padding(end = 8.dp))
-                Icon(Icons.Default.ShoppingCart, null, tint = Color.Black, modifier = Modifier.size(24.dp))
-            }
+    when (currentScreen) {
+        "CART" -> {
+            ShoppingCartSharedScreen(
+                cartItems = cartItems,
+                onBack = { currentScreen = "CATALOG" },
+                onRemoveItem = { cartItems.remove(it) },
+                onCheckoutWhatsApp = { }
+            )
         }
-
-        // PESTAÑAS DE CATEGORÍAS EN COLORES
-        Row(
-            modifier = Modifier.fillMaxWidth().height(46.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .background(if (selectedCategoryTab == 0) Color(0xFFFF5252) else Color(0xFFFF8A80))
-                    .clickable { selectedCategoryTab = 0 },
-                contentAlignment = Alignment.Center
-            ) {
-                Text("EQUIPAMIENTO Y ACCESORIOS", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White, textAlign = TextAlign.Center)
-            }
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .background(if (selectedCategoryTab == 1) Color(0xFF7C4DFF) else Color(0xFFB388FF))
-                    .clickable { selectedCategoryTab = 1 },
-                contentAlignment = Alignment.Center
-            ) {
-                Text("INDUMENTARIA DEPORTIVA", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White, textAlign = TextAlign.Center)
-            }
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .background(if (selectedCategoryTab == 2) Color(0xFFFFD600) else Color(0xFFFFE57F))
-                    .clickable { selectedCategoryTab = 2 },
-                contentAlignment = Alignment.Center
-            ) {
-                Text("NUTRICIÓN Y SUPLEMENTOS", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Black, textAlign = TextAlign.Center)
-            }
+        "CATEGORY" -> {
+            StoreCategoryProductsSharedScreen(
+                categoryName = selectedCategoryName,
+                categoryColor = selectedCategoryColor,
+                products = emptyList(),
+                cartItems = cartItems,
+                onBack = { currentScreen = "CATALOG" },
+                onCartClick = { currentScreen = "CART" },
+                onAddToCart = { prod -> cartItems.add(prod) }
+            )
         }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // GRILLA DE PRODUCTOS DE 2 COLUMNAS
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            items(sampleProducts) { prod ->
-                RealProductGridCard(prod)
-            }
+        else -> {
+            StoreCatalogSharedScreen(
+                gymName = "GYM 47",
+                onBack = { onTabSelected(0) },
+                onCategoryClick = { catId ->
+                    when (catId) {
+                        "NUTRITION" -> {
+                            selectedCategoryName = "NUTRICIÓN Y SUPLEMENTOS"
+                            selectedCategoryColor = Color(0xFFFFD700)
+                        }
+                        "CLOTHING" -> {
+                            selectedCategoryName = "INDUMENTARIA DEPORTIVA"
+                            selectedCategoryColor = Color(0xFF7C4DFF)
+                        }
+                        "WELLNESS" -> {
+                            selectedCategoryName = "SERVICIOS DE BIENESTAR"
+                            selectedCategoryColor = Color(0xFF69F0AE)
+                        }
+                        else -> {
+                            selectedCategoryName = "EQUIPAMIENTO Y ACCESORIOS"
+                            selectedCategoryColor = Color(0xFFFF5252)
+                        }
+                    }
+                    currentScreen = "CATEGORY"
+                },
+                onCartClick = { currentScreen = "CART" },
+                cartItemCount = cartItems.size,
+                products = emptyList()
+            )
         }
     }
 }
