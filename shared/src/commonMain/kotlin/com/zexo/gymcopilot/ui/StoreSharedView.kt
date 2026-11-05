@@ -79,6 +79,20 @@ fun isProductInCategory(productCategoryId: String, selectedCategory: String): Bo
     }
 }
 
+fun getCategoryDisplayData(id: String): Triple<String, String, Color> {
+    val uppercaseId = id.uppercase().trim()
+    return when {
+        uppercaseId == "CLOTHING" || uppercaseId.contains("INDUMENTARIA") -> Triple(id, "INDUMENTARIA DEPORTIVA", Color(0xFF7C4DFF))
+        uppercaseId == "NUTRITION" || uppercaseId.contains("SUPLEMENT") || uppercaseId.contains("NUTRICI") -> Triple(id, "NUTRICIÓN Y SUPLEMENTOS", Color(0xFFFFD700))
+        uppercaseId == "WELLNESS" || uppercaseId.contains("BIENESTAR") || uppercaseId.contains("SERVICI") -> Triple(id, "SERVICIOS DE BIENESTAR", Color(0xFF69F0AE))
+        uppercaseId == "DIGITAL" || uppercaseId.contains("MEMBRES") -> Triple(id, "MEMBRESÍAS", Color(0xFF2196F3))
+        uppercaseId == "TECH" || uppercaseId.contains("TECNOLOGI") -> Triple(id, "TECNOLOGÍA", Color(0xFF40E0D0))
+        uppercaseId == "HEALTHY_FOOD" || uppercaseId.contains("FOOD") || uppercaseId.contains("ALIMENTA") -> Triple(id, "ALIMENTACIÓN SALUDABLE", Color(0xFFFF8A65))
+        uppercaseId == "EQUIPMENT" || uppercaseId.contains("EQUIP") || uppercaseId.contains("ACCESORIO") -> Triple(id, "EQUIPAMIENTO Y ACCESORIOS", Color(0xFFFF5252))
+        else -> Triple(id, id.uppercase(), Color(0xFF9575CD))
+    }
+}
+
 @Composable
 fun StoreCatalogSharedScreen(
     gymName: String = "Gym 47",
@@ -86,51 +100,23 @@ fun StoreCatalogSharedScreen(
     onCategoryClick: (String) -> Unit,
     onCartClick: () -> Unit,
     cartItemCount: Int = 0,
-    products: List<Product> = emptyList()
+    products: List<Product> = emptyList(),
+    activeCategoryIds: Set<String> = emptySet()
 ) {
     val _unusedProducts = products
     var isSearchVisible by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
 
-    val defaultCategoryList = listOf(
-        Triple("EQUIPMENT", "EQUIPAMIENTO Y ACCESORIOS", Color(0xFFFF5252)),
-        Triple("CLOTHING", "INDUMENTARIA DEPORTIVA", Color(0xFF7C4DFF)),
-        Triple("NUTRITION", "NUTRICIÓN Y SUPLEMENTOS", Color(0xFFFFD700)),
-        Triple("WELLNESS", "SERVICIOS DE BIENESTAR", Color(0xFF69F0AE)),
-        Triple("DIGITAL", "MEMBRESÍAS", Color(0xFF2196F3)),
-        Triple("TECH", "TECNOLOGÍA", Color(0xFF40E0D0)),
-        Triple("HEALTHY_FOOD", "ALIMENTACIÓN SALUDABLE", Color(0xFFFF8A65))
-    )
-
-    val categories = remember(products) {
-        val catIds = products.map { it.categoryId }.filter { it.isNotBlank() }.distinct()
-        if (catIds.isEmpty()) {
-            defaultCategoryList
-        } else {
-            val mapped = catIds.map { id ->
-                val name = when {
-                    id.contains("CLOTH", true) || id.contains("INDUMENTARIA", true) -> "INDUMENTARIA DEPORTIVA"
-                    id.contains("NUTRIT", true) || id.contains("SUPLEMENT", true) -> "NUTRICIÓN Y SUPLEMENTOS"
-                    id.contains("WELLNESS", true) || id.contains("BIENESTAR", true) -> "SERVICIOS DE BIENESTAR"
-                    id.contains("DIGITAL", true) || id.contains("MEMBRES", true) -> "MEMBRESÍAS"
-                    id.contains("TECH", true) || id.contains("TECNOLOGI", true) -> "TECNOLOGÍA"
-                    id.contains("FOOD", true) || id.contains("ALIMENTA", true) -> "ALIMENTACIÓN SALUDABLE"
-                    id.contains("EQUIP", true) || id.contains("ACCESORIO", true) -> "EQUIPAMIENTO Y ACCESORIOS"
-                    else -> id.uppercase()
-                }
-                val color = when {
-                    name.contains("CLOTH") || name.contains("INDUMENTARIA") -> Color(0xFF7C4DFF)
-                    name.contains("NUTRIT") || name.contains("SUPLEMENT") -> Color(0xFFFFD700)
-                    name.contains("WELLNESS") || name.contains("BIENESTAR") -> Color(0xFF69F0AE)
-                    name.contains("DIGITAL") || name.contains("MEMBRES") -> Color(0xFF2196F3)
-                    name.contains("TECH") || name.contains("TECNOLOGI") -> Color(0xFF40E0D0)
-                    name.contains("FOOD") || name.contains("ALIMENTA") -> Color(0xFFFF8A65)
-                    else -> Color(0xFFFF5252)
-                }
-                Triple(id, name, color)
+    val categories = remember(products, activeCategoryIds) {
+        val selectedIds = when {
+            activeCategoryIds.isNotEmpty() -> activeCategoryIds.toList()
+            else -> {
+                val productCatIds = products.map { it.categoryId }.filter { it.isNotBlank() }.distinct()
+                if (productCatIds.isNotEmpty()) productCatIds
+                else listOf("EQUIPMENT", "CLOTHING", "NUTRITION", "WELLNESS")
             }
-            (defaultCategoryList + mapped).distinctBy { it.second }
         }
+        selectedIds.map { id -> getCategoryDisplayData(id) }.distinctBy { it.second }
     }
 
     val filteredCategories = remember(searchQuery, categories) {

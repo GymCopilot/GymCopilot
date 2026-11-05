@@ -465,8 +465,11 @@ fun RealPublicStoreView(apiClient: GymKtorApiClient = GymKtorApiClient, onTabSel
             )
         }
         else -> {
+            val activeCategories = remember(productsList) {
+                productsList.map { it.categoryId }.filter { it.isNotBlank() }.toSet()
+            }
             StoreCatalogSharedScreen(
-                gymName = "GYM 47",
+                gymName = "GYM 50",
                 onBack = { onTabSelected(0) },
                 onCategoryClick = { catId ->
                     val id = catId.uppercase().trim()
@@ -504,7 +507,8 @@ fun RealPublicStoreView(apiClient: GymKtorApiClient = GymKtorApiClient, onTabSel
                 },
                 onCartClick = { currentScreen = "CART" },
                 cartItemCount = cartItems.size,
-                products = productsList
+                products = productsList,
+                activeCategoryIds = activeCategories
             )
         }
     }
