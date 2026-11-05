@@ -468,7 +468,11 @@ fun RealPublicStoreView(apiClient: GymKtorApiClient = GymKtorApiClient, onTabSel
                 cartItems = cartItems,
                 onBack = { currentScreen = "CATALOG" },
                 onCartClick = { currentScreen = "CART" },
-                onAddToCart = { prod -> cartItems.add(prod) }
+                onAddToCart = { prod -> cartItems.add(prod) },
+                onCategorySelected = { name, color ->
+                    selectedCategoryName = name
+                    selectedCategoryColor = color
+                }
             )
         }
         else -> {

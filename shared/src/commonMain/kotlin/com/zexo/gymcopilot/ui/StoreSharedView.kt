@@ -227,7 +227,8 @@ fun StoreCategoryProductsSharedScreen(
     cartItems: List<Product> = emptyList(),
     onBack: () -> Unit,
     onCartClick: () -> Unit,
-    onAddToCart: (Product) -> Unit
+    onAddToCart: (Product) -> Unit,
+    onCategorySelected: (String, Color) -> Unit = { _, _ -> }
 ) {
     Box(
         modifier = Modifier
@@ -289,12 +290,38 @@ fun StoreCategoryProductsSharedScreen(
                             }
                         }
                     }
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = categoryName.uppercase(),
-                        color = Color.White.copy(alpha = 0.9f),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
+                }
+            }
+
+            // Category Tabs Bar below Header
+            val categoriesTabList = listOf(
+                "EQUIPAMIENTO Y ACCESORIOS" to Color(0xFFFF5252),
+                "INDUMENTARIA DEPORTIVA" to Color(0xFF7C4DFF),
+                "NUTRICIÓN Y SUPLEMENTOS" to Color(0xFFFFD700),
+                "EXTRA" to Color(0xFF9575CD)
+            )
+
+            ScrollableTabRow(
+                selectedTabIndex = categoriesTabList.indexOfFirst { it.first.equals(categoryName, true) }.coerceAtLeast(0),
+                containerColor = Color(0xFF1E1E1E),
+                contentColor = Color.White,
+                edgePadding = 0.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                categoriesTabList.forEach { (catTitle, catColor) ->
+                    val isSelected = categoryName.equals(catTitle, true)
+                    Tab(
+                        selected = isSelected,
+                        onClick = { onCategorySelected(catTitle, catColor) },
+                        text = {
+                            Text(
+                                text = catTitle,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSelected) Color.Black else Color.White
+                            )
+                        },
+                        modifier = Modifier.background(if (isSelected) catColor else Color(0xFF1E1E1E))
                     )
                 }
             }
@@ -377,18 +404,25 @@ fun StoreCategoryProductsSharedScreen(
                                     )
 
                                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        val contactColor = when (product.contactMethod?.lowercase()) {
+                                            "telegram" -> Color(0xFF0088cc)
+                                            "viber" -> Color(0xFF7360f2)
+                                            "wechat" -> Color(0xFF7bb32e)
+                                            "line" -> Color(0xFF00c300)
+                                            else -> Color(0xFF4CAF50) // WhatsApp
+                                        }
                                         IconButton(
-                                            onClick = { /* WhatsApp direct */ },
-                                            modifier = Modifier.size(32.dp).background(Color(0xFFE8F5E9), CircleShape)
+                                            onClick = { /* Contact action */ },
+                                            modifier = Modifier.size(32.dp).background(contactColor.copy(alpha = 0.15f), CircleShape)
                                         ) {
-                                            Icon(Icons.Default.Chat, null, tint = Color(0xFF4CAF50), modifier = Modifier.size(16.dp))
+                                            Icon(Icons.Default.Chat, null, tint = contactColor, modifier = Modifier.size(16.dp))
                                         }
 
                                         IconButton(
                                             onClick = { onAddToCart(product) },
-                                            modifier = Modifier.size(32.dp).background(Color(0xFFFFEBEE), CircleShape)
+                                            modifier = Modifier.size(32.dp).background(categoryColor.copy(alpha = 0.15f), CircleShape)
                                         ) {
-                                            Icon(Icons.Default.AddShoppingCart, null, tint = Color(0xFFF44336), modifier = Modifier.size(16.dp))
+                                            Icon(Icons.Default.AddShoppingCart, null, tint = categoryColor, modifier = Modifier.size(16.dp))
                                         }
                                     }
                                 }
