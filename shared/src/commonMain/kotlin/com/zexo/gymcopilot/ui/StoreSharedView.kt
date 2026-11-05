@@ -349,25 +349,11 @@ fun StoreCategoryProductsSharedScreen(
             // Category Tabs Bar below Header (TabRow filling full width, no white frames/borders)
             val categoriesTabList = remember(products) {
                 val catIds = products.map { it.categoryId }.filter { it.isNotBlank() }.distinct()
-                if (catIds.isEmpty()) {
-                    listOf(
-                        "EQUIPAMIENTO Y ACCESORIOS" to Color(0xFFFF5252),
-                        "INDUMENTARIA DEPORTIVA" to Color(0xFF7C4DFF),
-                        "NUTRICIÓN Y SUPLEMENTOS" to Color(0xFFFFD700),
-                        "EXTRA" to Color(0xFF9575CD)
-                    )
-                } else {
-                    catIds.map { id ->
-                        val color = when (id.uppercase()) {
-                            "NUTRITION", "NUTRICION", "NUTRICIÓN Y SUPLEMENTOS" -> Color(0xFFFFD700)
-                            "CLOTHING", "INDUMENTARIA", "INDUMENTARIA DEPORTIVA" -> Color(0xFF7C4DFF)
-                            "WELLNESS", "BIENESTAR" -> Color(0xFF69F0AE)
-                            "EXTRA" -> Color(0xFF9575CD)
-                            else -> Color(0xFFFF5252)
-                        }
-                        id to color
-                    }
-                }
+                val selectedIds = if (catIds.isNotEmpty()) catIds else listOf("EQUIPMENT", "CLOTHING", "NUTRITION", "WELLNESS")
+                selectedIds.map { id ->
+                    val displayData = getCategoryDisplayData(id)
+                    displayData.second to displayData.third
+                }.distinctBy { it.first }
             }
 
             TabRow(
