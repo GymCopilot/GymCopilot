@@ -44,12 +44,27 @@ fun StoreCatalogSharedScreen(
     var isSearchVisible by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
 
-    val categories = listOf(
-        Triple("EQUIPMENT", "EQUIPAMIENTO Y ACCESORIOS", Color(0xFFFF5252)),
-        Triple("NUTRITION", "NUTRICIÓN Y SUPLEMENTOS", Color(0xFFFFD700)),
-        Triple("CLOTHING", "INDUMENTARIA DEPORTIVA", Color(0xFF7C4DFF)),
-        Triple("WELLNESS", "SERVICIOS DE BIENESTAR", Color(0xFF69F0AE))
-    )
+    val categories = remember(products) {
+        val catIds = products.map { it.categoryId }.filter { it.isNotBlank() }.distinct()
+        if (catIds.isEmpty()) {
+            listOf(
+                Triple("EQUIPMENT", "EQUIPAMIENTO Y ACCESORIOS", Color(0xFFFF5252)),
+                Triple("NUTRITION", "NUTRICIÓN Y SUPLEMENTOS", Color(0xFFFFD700)),
+                Triple("CLOTHING", "INDUMENTARIA DEPORTIVA", Color(0xFF7C4DFF)),
+                Triple("WELLNESS", "SERVICIOS DE BIENESTAR", Color(0xFF69F0AE))
+            )
+        } else {
+            catIds.mapIndexed { index, id ->
+                val color = when (index % 4) {
+                    0 -> Color(0xFFFF5252)
+                    1 -> Color(0xFFFFD700)
+                    2 -> Color(0xFF7C4DFF)
+                    else -> Color(0xFF69F0AE)
+                }
+                Triple(id, id.uppercase(), color)
+            }
+        }
+    }
 
     val filteredCategories = remember(searchQuery, categories) {
         if (searchQuery.isBlank()) categories
@@ -285,16 +300,7 @@ fun StoreCategoryProductsSharedScreen(
             }
 
             // Products Grid
-            val displayProducts = if (products.isNotEmpty()) products else listOf(
-                Product(
-                    id = "p1",
-                    name = "Proteina",
-                    price = 12000.0,
-                    categoryId = "EQUIPMENT",
-                    bannerType = "2x1",
-                    description = "Proteína de alta calidad"
-                )
-            )
+            val displayProducts = products
 
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
