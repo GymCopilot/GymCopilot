@@ -437,17 +437,6 @@ fun RealPublicStoreView(apiClient: GymKtorApiClient = GymKtorApiClient, onTabSel
         } catch (_: Throwable) {}
     }
 
-    val filteredProducts = remember(selectedCategoryName, productsList) {
-        productsList.filter { p ->
-            when (selectedCategoryName) {
-                "NUTRICIÓN Y SUPLEMENTOS" -> p.categoryId.contains("NUTRITION", true) || p.categoryId.contains("SUPLEMENTO", true)
-                "INDUMENTARIA DEPORTIVA" -> p.categoryId.contains("CLOTHING", true) || p.categoryId.contains("INDUMENTARIA", true)
-                "SERVICIOS DE BIENESTAR" -> p.categoryId.contains("WELLNESS", true) || p.categoryId.contains("BIENESTAR", true)
-                else -> true
-            }
-        }
-    }
-
     when (currentScreen) {
         "CART" -> {
             ShoppingCartSharedScreen(
@@ -464,7 +453,7 @@ fun RealPublicStoreView(apiClient: GymKtorApiClient = GymKtorApiClient, onTabSel
             StoreCategoryProductsSharedScreen(
                 categoryName = selectedCategoryName,
                 categoryColor = selectedCategoryColor,
-                products = filteredProducts,
+                products = productsList,
                 cartItems = cartItems,
                 onBack = { currentScreen = "CATALOG" },
                 onCartClick = { currentScreen = "CART" },

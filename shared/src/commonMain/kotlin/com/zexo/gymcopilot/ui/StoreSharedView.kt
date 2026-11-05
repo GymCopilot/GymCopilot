@@ -31,6 +31,29 @@ import com.zexo.gymcopilot.utils.decodeBase64ToBitmap
 import gymcopilot.shared.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
 
+fun isProductInCategory(productCategoryId: String, selectedCategory: String): Boolean {
+    val pCat = productCategoryId.trim().uppercase()
+    val sel = selectedCategory.trim().uppercase()
+
+    if (sel.isBlank() || sel == "ALL" || sel == "TODOS") return true
+
+    return when {
+        sel.contains("EQUIP") || sel.contains("ACCESORIO") -> {
+            pCat.contains("EQUIP") || pCat.contains("ACCESORIO") || pCat == "1" || pCat.isEmpty()
+        }
+        sel.contains("NUTRIT") || sel.contains("SUPLEMENT") || sel.contains("NUTRICI") -> {
+            pCat.contains("NUTRIT") || pCat.contains("SUPLEMENT") || pCat.contains("NUTRICI") || pCat == "2"
+        }
+        sel.contains("CLOTH") || sel.contains("INDUMENTARIA") || sel.contains("ROPA") -> {
+            pCat.contains("CLOTH") || pCat.contains("INDUMENTARIA") || pCat.contains("ROPA") || pCat == "3"
+        }
+        sel.contains("WELLNESS") || sel.contains("BIENESTAR") || sel.contains("SALUD") -> {
+            pCat.contains("WELLNESS") || pCat.contains("BIENESTAR") || pCat.contains("SALUD") || pCat == "4"
+        }
+        else -> pCat.contains(sel) || sel.contains(pCat) || pCat.isEmpty()
+    }
+}
+
 @Composable
 fun StoreCatalogSharedScreen(
     gymName: String = "Gym 47",
@@ -174,6 +197,13 @@ fun StoreCatalogSharedScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 items(filteredCategories) { (catId, catName, catColor) ->
+                    val catIcon = when {
+                        catId.contains("NUTRIT", true) || catId.contains("NUTRICI", true) || catName.contains("NUTRIT", true) || catName.contains("SUPLEMENT", true) -> Icons.Default.Restaurant
+                        catId.contains("CLOTH", true) || catId.contains("INDUMENTARIA", true) || catName.contains("CLOTH", true) || catName.contains("INDUMENTARIA", true) -> Icons.Default.Checkroom
+                        catId.contains("WELLNESS", true) || catId.contains("BIENESTAR", true) || catName.contains("WELLNESS", true) || catName.contains("BIENESTAR", true) -> Icons.Default.Spa
+                        catId.contains("EQUIP", true) || catName.contains("EQUIP", true) || catName.contains("ACCESORIO", true) -> Icons.Default.FitnessCenter
+                        else -> Icons.Default.Storefront
+                    }
                     Card(
                         colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
                         shape = RoundedCornerShape(16.dp),
@@ -190,7 +220,7 @@ fun StoreCatalogSharedScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    Icons.Default.FitnessCenter,
+                                    catIcon,
                                     contentDescription = catName,
                                     tint = Color.Black,
                                     modifier = Modifier.size(56.dp)
@@ -352,8 +382,7 @@ fun StoreCategoryProductsSharedScreen(
             // Products Grid filtered by selected category
             val displayProducts = remember(products, categoryName) {
                 products.filter { p ->
-                    if (categoryName.isBlank()) true
-                    else p.categoryId.equals(categoryName, true) || p.categoryId.contains(categoryName, true) || (categoryName == "EQUIPAMIENTO Y ACCESORIOS" && (p.categoryId.isEmpty() || p.categoryId == "EQUIPAMIENTO"))
+                    isProductInCategory(p.categoryId, categoryName)
                 }
             }
 

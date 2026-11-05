@@ -220,7 +220,7 @@ fun CategoryProductsScreen(
     var productToDelete by remember { mutableStateOf<Product?>(null) }
     val allProducts by dataStoreManager.getProducts().collectAsState(initial = emptyList())
     val products = remember(allProducts, categoryId, searchQuery) {
-        allProducts.filter { it.categoryId == categoryId && it.name.contains(searchQuery, ignoreCase = true) }
+        allProducts.filter { (it.categoryId.equals(categoryId, ignoreCase = true) || com.zexo.gymcopilot.ui.isProductInCategory(it.categoryId, categoryId)) && it.name.contains(searchQuery, ignoreCase = true) }
     }
 
     val attendanceRepository = remember(gymApiUrl) {
