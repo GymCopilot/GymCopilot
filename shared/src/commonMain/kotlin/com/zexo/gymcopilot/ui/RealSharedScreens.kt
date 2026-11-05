@@ -27,6 +27,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.model.*
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import gymcopilot.shared.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
 
@@ -370,29 +373,77 @@ fun RealGridButton(
 // ============================================================================
 
 @Composable
-fun RealPublicStoreView(onTabSelected: (Int) -> Unit) {
+fun RealPublicStoreView(apiClient: GymKtorApiClient = GymKtorApiClient, onTabSelected: (Int) -> Unit) {
     var currentScreen by remember { mutableStateOf("CATALOG") }
     var selectedCategoryName by remember { mutableStateOf("EQUIPAMIENTO Y ACCESORIOS") }
     var selectedCategoryColor by remember { mutableStateOf(Color(0xFFFF5252)) }
     val cartItems = remember { mutableStateListOf<Product>() }
-
-    val sampleProducts = remember {
-        listOf(
-            Product(id = "1", name = "Whey Protein Isolate 1kg", price = 45000.0, categoryId = "NUTRITION", description = "Proteína isolada de alta pureza", bannerType = "Destacado"),
-            Product(id = "2", name = "Creatina Monohidratada 300g", price = 38000.0, categoryId = "NUTRITION", description = "Creatina micronizada pura", bannerType = "Oferta"),
-            Product(id = "3", name = "Shaker Térmico GymCopilot", price = 12500.0, categoryId = "EQUIPAMIENTO", description = "Vaso mezclador anti-fugas"),
-            Product(id = "4", name = "Remera OverSize GymCopilot", price = 22000.0, categoryId = "CLOTHING", description = "100% Algodón peinado"),
-            Product(id = "5", name = "Pase Libre Mensual", price = 35000.0, categoryId = "WELLNESS", description = "Acceso completo a todas las instalaciones", bannerType = "Popular")
+    var productsList by remember {
+        mutableStateOf(
+            listOf(
+                Product(id = "1", name = "Proteinaaaaaaaaa", price = 12000.0, categoryId = "EQUIPAMIENTO", description = "Proteína en polvo", bannerType = "2x1"),
+                Product(id = "2", name = "otra proteinaeina", price = 7888.0, categoryId = "NUTRITION", description = "Whey protein 100% ENA", bannerType = "Tiempo limitado")
+            )
         )
     }
 
-    val filteredProducts = remember(selectedCategoryName, sampleProducts) {
-        sampleProducts.filter { p ->
+    LaunchedEffect(Unit) {
+        try {
+            val localProfile = com.zexo.gymcopilot.utils.readLocalMemberProfile()
+            val gymUrl = localProfile?.gymApiUrl.orEmpty().ifBlank { "https://script.google.com/macros/s/AKfycbzXYYMu43-ATeyxQmwdF3CuRYXi7KbpChyTQEBFIsWh7SCHv2XugxsWen61oBeDdzw/exec" }
+            val gymName = localProfile?.gymName.orEmpty().ifBlank { "Gym 47" }
+            val gymIdVal = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val ssId = localProfile?.spreadsheetId.orEmpty()
+            val paramChar = if (gymUrl.contains("?")) "&" else "?"
+            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+            val storeUrl = "$gymUrl${paramChar}type=store&gymId=$gymIdVal$ssParam"
+
+            val responseText = apiClient.getData(storeUrl)
+            if (responseText.isNotBlank() && responseText.contains("success")) {
+                val jsonElement = apiClient.jsonInstance.parseToJsonElement(responseText)
+                val jsonObject = jsonElement as? JsonObject
+                val dataArray = jsonObject?.get("data") as? JsonArray
+                if (dataArray != null && dataArray.size > 1) {
+                    val remoteProducts = mutableListOf<Product>()
+                    for (i in 1 until dataArray.size) {
+                        val row = dataArray[i] as? JsonArray
+                        if (row != null && row.size >= 3) {
+                            val id = row[0].jsonPrimitive.content
+                            val name = row[1].jsonPrimitive.content
+                            val price = row[2].jsonPrimitive.content.toDoubleOrNull() ?: 0.0
+                            val catId = if (row.size > 3) row[3].jsonPrimitive.content else ""
+                            val imageUri = if (row.size > 4 && row[4].jsonPrimitive.content != "null") row[4].jsonPrimitive.content else null
+                            val desc = if (row.size > 5 && row[5].jsonPrimitive.content != "null") row[5].jsonPrimitive.content else ""
+                            val bannerType = if (row.size > 8 && row[8].jsonPrimitive.content != "null") row[8].jsonPrimitive.content else null
+
+                            remoteProducts.add(
+                                Product(
+                                    id = id,
+                                    name = name,
+                                    price = price,
+                                    categoryId = catId,
+                                    imageUri = imageUri,
+                                    description = desc,
+                                    bannerType = bannerType
+                                )
+                            )
+                        }
+                    }
+                    if (remoteProducts.isNotEmpty()) {
+                        productsList = remoteProducts
+                    }
+                }
+            }
+        } catch (_: Throwable) {}
+    }
+
+    val filteredProducts = remember(selectedCategoryName, productsList) {
+        productsList.filter { p ->
             when (selectedCategoryName) {
-                "NUTRICIÓN Y SUPLEMENTOS" -> p.categoryId == "NUTRITION"
-                "INDUMENTARIA DEPORTIVA" -> p.categoryId == "CLOTHING"
-                "SERVICIOS DE BIENESTAR" -> p.categoryId == "WELLNESS"
-                else -> p.categoryId == "EQUIPAMIENTO" || p.categoryId.isEmpty()
+                "NUTRICIÓN Y SUPLEMENTOS" -> p.categoryId.contains("NUTRITION", true) || p.categoryId.contains("SUPLEMENTO", true)
+                "INDUMENTARIA DEPORTIVA" -> p.categoryId.contains("CLOTHING", true) || p.categoryId.contains("INDUMENTARIA", true)
+                "SERVICIOS DE BIENESTAR" -> p.categoryId.contains("WELLNESS", true) || p.categoryId.contains("BIENESTAR", true)
+                else -> true
             }
         }
     }
@@ -447,7 +498,7 @@ fun RealPublicStoreView(onTabSelected: (Int) -> Unit) {
                 },
                 onCartClick = { currentScreen = "CART" },
                 cartItemCount = cartItems.size,
-                products = sampleProducts
+                products = productsList
             )
         }
     }
