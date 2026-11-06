@@ -232,6 +232,58 @@ fun MemberDashboardSharedScreen(
         if (uri != null) decodeBase64ToBitmap(uri) else null
     }
 
+    var assignedProfPhotoUri by remember { mutableStateOf<String?>(null) }
+    var assignedProfColorInt by remember { mutableStateOf<Int?>(null) }
+    var assignedProfSpecialty by remember { mutableStateOf("") }
+
+    LaunchedEffect(activeGymUrl, activeAssignedTrainer) {
+        if (activeGymUrl.isNotBlank() && activeAssignedTrainer.isNotBlank() && !activeAssignedTrainer.equals("Sin asignar", true) && !activeAssignedTrainer.equals("N/A", true)) {
+            try {
+                val gymIdVal = activeGymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+                val localProfile = readLocalMemberProfile()
+                val ssId = localProfile?.spreadsheetId.orEmpty()
+                val paramChar = if (activeGymUrl.contains("?")) "&" else "?"
+                val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+                val url = "$activeGymUrl${paramChar}type=professors&gymId=$gymIdVal$ssParam"
+                val responseText = apiClient.getData(url)
+                if (responseText.isNotBlank() && responseText.contains("success")) {
+                    val jsonElement = apiClient.jsonInstance.parseToJsonElement(responseText)
+                    val jsonObject = jsonElement as? JsonObject
+                    val dataArray = jsonObject?.get("data") as? JsonArray
+                    if (dataArray != null) {
+                        val searchTrainer = activeAssignedTrainer.lowercase().trim()
+                        for (i in 1 until dataArray.size) {
+                            val row = dataArray[i] as? JsonArray
+                            if (row != null && row.size > 2) {
+                                val fn = row[1].jsonPrimitive.content.trim()
+                                val ln = row[2].jsonPrimitive.content.trim()
+                                val fullName = "$fn $ln".trim().lowercase()
+                                val email = if (row.size > 3) row[3].jsonPrimitive.content.trim().lowercase() else ""
+                                
+                                if (searchTrainer.contains(fn.lowercase()) || searchTrainer.contains(ln.lowercase()) || fullName.contains(searchTrainer) || searchTrainer.contains(fullName) || (email.isNotBlank() && searchTrainer.contains(email))) {
+                                    if (row.size > 4) {
+                                        val spec = row[4].jsonPrimitive.content
+                                        if (spec.isNotBlank() && spec != "null") assignedProfSpecialty = spec
+                                    }
+                                    if (row.size > 5) {
+                                        val colorStr = row[5].jsonPrimitive.content
+                                        val colorVal = colorStr.toIntOrNull()
+                                        if (colorVal != null && colorVal != 0) assignedProfColorInt = colorVal
+                                    }
+                                    if (row.size > 6) {
+                                        val photo = row[6].jsonPrimitive.content
+                                        if (photo.isNotBlank() && photo != "null") assignedProfPhotoUri = photo
+                                    }
+                                    break
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (_: Throwable) {}
+        }
+    }
+
     if (showHelpScreen) {
         HelpSharedScreen(onBack = { showHelpScreen = false })
         return
@@ -486,6 +538,25 @@ fun MemberDashboardSharedScreen(
                                     )
                                 )
 
+                                coroutineScope.launch {
+                                    try {
+                                        val gymIdVal = activeGymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+                                        val localProfile = readLocalMemberProfile()
+                                        val ssId = localProfile?.spreadsheetId.orEmpty()
+                                        val paramChar = if (activeGymUrl.contains("?")) "&" else "?"
+                                        val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+                                        val checkInUrl = "$activeGymUrl${paramChar}action=check_in&gymId=$gymIdVal&email=${activeEmail}&memberEmail=${activeEmail}$ssParam"
+                                        val checkInReq = CheckInRequest(
+                                            action = "check_in",
+                                            gymId = gymIdVal,
+                                            memberEmail = activeEmail,
+                                            timestamp = getCurrentTimeMillis(),
+                                            spreadsheetId = ssId
+                                        )
+                                        apiClient.postData(checkInUrl, checkInReq)
+                                    } catch (_: Throwable) {}
+                                }
+
                                 showCheckInSuccessBanner = true
                             }
                         }
@@ -552,71 +623,87 @@ fun MemberDashboardSharedScreen(
             }
 
             // 6. TARJETA REAL "MI PROFESOR ASIGNADO" (DESDE BASE DE DATOS / PLANILLA)
-            item {
-                Box(modifier = Modifier.padding(horizontal = 20.dp)) {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
-                        shape = RoundedCornerShape(16.dp),
-                        border = BorderStroke(1.dp, PrimaryTurquoise.copy(alpha = 0.3f)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+            if (activeAssignedTrainer.isNotBlank() && !activeAssignedTrainer.equals("Sin asignar", true) && !activeAssignedTrainer.equals("N/A", true) && activeAssignedTrainer != "null") {
+                item {
+                    val profColor = if (assignedProfColorInt != null && assignedProfColorInt != 0) Color(assignedProfColorInt!!) else PrimaryTurquoise
+                    val profPhotoBitmap = remember(assignedProfPhotoUri) {
+                        if (!assignedProfPhotoUri.isNullOrBlank()) decodeBase64ToBitmap(assignedProfPhotoUri!!) else null
+                    }
+                    Box(modifier = Modifier.padding(horizontal = 20.dp)) {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.5.dp, profColor.copy(alpha = 0.6f)),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Surface(
-                                    color = PrimaryTurquoise.copy(alpha = 0.15f),
-                                    shape = CircleShape,
-                                    border = BorderStroke(2.dp, PrimaryTurquoise),
-                                    modifier = Modifier.size(54.dp)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                                 ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            Icons.Default.Person,
-                                            contentDescription = "Profesor Asignado",
-                                            tint = PrimaryTurquoise,
-                                            modifier = Modifier.size(28.dp)
+                                    Surface(
+                                        color = profColor.copy(alpha = 0.15f),
+                                        shape = CircleShape,
+                                        border = BorderStroke(2.dp, profColor),
+                                        modifier = Modifier.size(54.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            if (profPhotoBitmap != null) {
+                                                Image(
+                                                    bitmap = profPhotoBitmap,
+                                                    contentDescription = "Foto Profesor",
+                                                    contentScale = ContentScale.Crop,
+                                                    modifier = Modifier.fillMaxSize()
+                                                )
+                                            } else {
+                                                Icon(
+                                                    Icons.Default.Person,
+                                                    contentDescription = "Profesor Asignado",
+                                                    tint = profColor,
+                                                    modifier = Modifier.size(28.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Column {
+                                        Text(
+                                            text = "MI PROFESOR ASIGNADO",
+                                            color = TextGray,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            letterSpacing = 1.sp
+                                        )
+                                        Spacer(Modifier.height(2.dp))
+                                        Text(
+                                            text = activeAssignedTrainer,
+                                            color = TextWhite,
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = if (assignedProfSpecialty.isNotBlank()) assignedProfSpecialty else "Entrenador Personal",
+                                            color = profColor,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
                                         )
                                     }
                                 }
 
-                                Column {
-                                    Text(
-                                        text = "MI PROFESOR ASIGNADO",
-                                        color = TextGray,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        letterSpacing = 1.sp
-                                    )
-                                    Spacer(Modifier.height(2.dp))
-                                    Text(
-                                        text = activeAssignedTrainer.ifBlank { "Prof. Gabriel Fernández" },
-                                        color = TextWhite,
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = "Entrenador Personal / Musculación",
-                                        color = PrimaryTurquoise,
-                                        fontSize = 11.sp
-                                    )
+                                IconButton(
+                                    onClick = { onTabSelected(4) }, // Redirige al chat del profesor
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .background(profColor.copy(alpha = 0.2f), CircleShape)
+                                ) {
+                                    Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = "Chat", tint = profColor, modifier = Modifier.size(20.dp))
                                 }
-                            }
-
-                            IconButton(
-                                onClick = { onTabSelected(4) }, // Redirige al chat del profesor
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .background(PrimaryTurquoise.copy(alpha = 0.2f), CircleShape)
-                            ) {
-                                Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = "Chat", tint = PrimaryTurquoise, modifier = Modifier.size(20.dp))
                             }
                         }
                     }
@@ -746,7 +833,7 @@ fun SharedMembershipStatusCard(
         initialValue = 1f,
         targetValue = 0.25f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 500, easing = LinearEasing),
+            animation = tween(durationMillis = 1500, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         )
     )
