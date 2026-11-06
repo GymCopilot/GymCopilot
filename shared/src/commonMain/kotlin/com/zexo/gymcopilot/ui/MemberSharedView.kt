@@ -79,7 +79,7 @@ fun MemberDashboardSharedScreen(
     var activeMembershipStatus by remember { mutableStateOf("ACTIVO") }
     var activeNextRenewalDate by remember { mutableLongStateOf(0L) }
     var activePlanName by remember { mutableStateOf("Plan Mensual") }
-    var activeAssignedTrainer by remember { mutableStateOf("Prof. Gabriel Fernández") }
+    var activeAssignedTrainer by remember { mutableStateOf("") }
 
     // CARGA PERSISTENTE DESDE LOCALSTORAGE EN WEB / DISPOSITIVO
     LaunchedEffect(Unit) {
@@ -98,7 +98,7 @@ fun MemberDashboardSharedScreen(
             activeMembershipStatus = localData.membershipStatus
             activeNextRenewalDate = localData.nextRenewalDate
             if (localData.planName.isNotBlank()) activePlanName = localData.planName
-            if (localData.assignedTrainer.isNotBlank()) activeAssignedTrainer = localData.assignedTrainer
+            activeAssignedTrainer = localData.assignedTrainer
         }
     }
 
@@ -137,9 +137,9 @@ fun MemberDashboardSharedScreen(
                                         }
                                         if (row.size > 13) {
                                             val trainerInCol = row[13].jsonPrimitive.content
-                                            if (trainerInCol.isNotBlank() && trainerInCol != "null") {
-                                                activeAssignedTrainer = trainerInCol
-                                            }
+                                            activeAssignedTrainer = if (trainerInCol.isNotBlank() && trainerInCol != "null") trainerInCol else ""
+                                        } else {
+                                            activeAssignedTrainer = ""
                                         }
                                         break
                                     }
@@ -899,7 +899,13 @@ fun SharedMembershipStatusCard(
                         imageVector = Icons.Default.Shield,
                         contentDescription = "Shield Badge",
                         tint = statusColor,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(42.dp)
+                    )
+                    Icon(
+                        imageVector = if (isActivo) Icons.Default.Check else Icons.Default.Close,
+                        contentDescription = if (isActivo) "Check" else "Cross",
+                        tint = Color.Black,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
