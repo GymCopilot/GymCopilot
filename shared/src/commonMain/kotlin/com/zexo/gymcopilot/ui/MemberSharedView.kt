@@ -1,5 +1,6 @@
 package com.zexo.gymcopilot.ui
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -32,6 +33,8 @@ import com.zexo.gymcopilot.shared.network.GymKtorApiClient
 import com.zexo.gymcopilot.shared.network.MemberSyncRequest
 import com.zexo.gymcopilot.utils.LocalMemberData
 import com.zexo.gymcopilot.utils.decodeBase64ToBitmap
+import com.zexo.gymcopilot.utils.formatEpochDate
+import com.zexo.gymcopilot.utils.getCurrentTimeMillis
 import com.zexo.gymcopilot.utils.generateQrBitmap
 import com.zexo.gymcopilot.utils.launchQrScanner
 import com.zexo.gymcopilot.utils.readLocalMemberProfile
@@ -172,11 +175,23 @@ fun MemberDashboardSharedScreen(
                             for (i in 0 until dataArray.size) {
                                 val row = dataArray[i] as? JsonArray
                                 if (row != null && row.size > 0 && row[0].jsonPrimitive.content == "GYM_CONFIG") {
+                                    if (row.size > 12) {
+                                        val rawClass = row[12].jsonPrimitive.content
+                                        if (rawClass != "null") {
+                                            classInSession = rawClass == "true" || rawClass == "1"
+                                        }
+                                    }
                                     if (row.size > 13) {
                                         val rawMsg = row[13].jsonPrimitive.content
                                         val isIsoDate = rawMsg.matches(Regex("""\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.*"""))
                                         if (!isIsoDate && rawMsg != "null") {
                                             msgFound = rawMsg
+                                        }
+                                    }
+                                    if (row.size > 14) {
+                                        val rawOpen = row[14].jsonPrimitive.content
+                                        if (rawOpen != "null") {
+                                            gymIsOpen = rawOpen == "true" || rawOpen == "1"
                                         }
                                     }
                                     break
@@ -700,62 +715,85 @@ fun SharedMembershipStatusCard(
     nextRenewalDate: Long,
     planName: String
 ) {
-    val isActivo = membershipStatus.uppercase() == "ACTIVO"
+    val isActivo = membershipStatus.uppercase() == "ACTIVO" || membershipStatus.uppercase() == "ACTIVE"
+    val statusText = if (isActivo) "Activo" else "Pendiente de pago"
+    val statusColor = if (isActivo) Color(0xFF00C853) else Color(0xFFFF3D00)
+
+    val now = getCurrentTimeMillis()
+    val daysLeft = if (nextRenewalDate > 0) ((nextRenewalDate - now) / (24 * 60 * 60 * 1000L)).toInt() else -1
+    
+    val infiniteTransition = rememberInfiniteTransition()
+    val blinkAlpha by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.25f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 500, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+
+    val (venceColor, venceAlpha) = when {
+        daysLeft in 0..3 || daysLeft < 0 -> Color(0xFFFF3D00) to blinkAlpha
+        daysLeft in 4..5 -> Color(0xFFFFD54F) to blinkAlpha
+        else -> Color(0xFF00C853) to 1f
+    }
+
+    val formattedRenewal = if (nextRenewalDate > 0) formatEpochDate(nextRenewalDate) else "N/A"
+
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.5.dp, if (isActivo) Color(0xFF00C853) else Color.Red),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.5.dp, statusColor),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(20.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column {
-                Text(text = "ESTADO DE MEMBRESÍA", color = TextGray, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                Spacer(Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(if (isActivo) Color(0xFF00C853) else Color.Red)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = membershipStatus.uppercase(),
-                        color = if (isActivo) Color(0xFF00C853) else Color.Red,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Black
-                    )
-                }
-                Spacer(Modifier.height(4.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "ESTADO DE MEMBRESÍA",
+                    color = TextGray,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = statusText,
+                    color = statusColor,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Black
+                )
+                Spacer(Modifier.height(6.dp))
                 Text(
                     text = "Plan: $planName",
                     color = TextWhite,
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = "Vence: $formattedRenewal",
+                    color = venceColor.copy(alpha = venceAlpha),
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
 
             Surface(
-                color = SurfaceColor,
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+                color = if (isActivo) Color(0xFF0B2914) else Color(0xFF380808),
+                shape = CircleShape,
+                border = BorderStroke(1.5.dp, statusColor),
+                modifier = Modifier.size(64.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(10.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(Icons.Default.DateRange, contentDescription = null, tint = PrimaryTurquoise, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.height(4.dp))
-                    Text("Vencimiento", color = TextGray, fontSize = 9.sp)
-                    Text(
-                        text = if (nextRenewalDate > 0) com.zexo.gymcopilot.utils.formatEpochDate(nextRenewalDate) else "30/11/2026",
-                        color = TextWhite,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Shield,
+                        contentDescription = "Shield Badge",
+                        tint = statusColor,
+                        modifier = Modifier.size(36.dp)
                     )
                 }
             }
@@ -800,35 +838,35 @@ fun MemberActionSquareCard(
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(2.dp, PrimaryTurquoise),
         modifier = modifier
-            .height(110.dp)
+            .height(125.dp)
             .clickable { onClick() }
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(14.dp),
+            modifier = Modifier.fillMaxSize().padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Surface(
                 color = iconBg,
                 shape = CircleShape,
-                modifier = Modifier.size(46.dp)
+                modifier = Modifier.size(58.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     if (iconPainter != null) {
-                        Icon(painter = iconPainter, contentDescription = title, tint = iconTint, modifier = Modifier.size(24.dp))
+                        Icon(painter = iconPainter, contentDescription = title, tint = iconTint, modifier = Modifier.size(32.dp))
                     } else if (iconVector != null) {
-                        Icon(imageVector = iconVector, contentDescription = title, tint = iconTint, modifier = Modifier.size(24.dp))
+                        Icon(imageVector = iconVector, contentDescription = title, tint = iconTint, modifier = Modifier.size(32.dp))
                     }
                 }
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(8.dp))
             Text(
                 text = title,
                 color = TextWhite,
-                fontSize = 13.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
