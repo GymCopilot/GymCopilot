@@ -154,6 +154,7 @@ fun MemberDashboardSharedScreen(
     }
 
     var broadcastMessage by remember { mutableStateOf("") }
+    var serverGymLogoUri by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(activeGymUrl) {
         if (activeGymUrl.isNotBlank()) {
@@ -175,6 +176,24 @@ fun MemberDashboardSharedScreen(
                             for (i in 0 until dataArray.size) {
                                 val row = dataArray[i] as? JsonArray
                                 if (row != null && row.size > 0 && row[0].jsonPrimitive.content == "GYM_CONFIG") {
+                                    if (row.size > 1) {
+                                        val rawGymName = row[1].jsonPrimitive.content
+                                        if (rawGymName.isNotBlank() && rawGymName != "null") {
+                                            activeGymName = rawGymName
+                                        }
+                                    }
+                                    if (row.size > 2) {
+                                        val rawLogo = row[2].jsonPrimitive.content
+                                        if (rawLogo.isNotBlank() && rawLogo != "null") {
+                                            serverGymLogoUri = rawLogo
+                                        }
+                                    }
+                                    if (row.size > 11) {
+                                        val rawBorder = row[11].jsonPrimitive.content
+                                        if (rawBorder != "null") {
+                                            showLogoBorder = rawBorder == "true" || rawBorder == "1"
+                                        }
+                                    }
                                     if (row.size > 12) {
                                         val rawClass = row[12].jsonPrimitive.content
                                         if (rawClass != "null") {
@@ -208,8 +227,8 @@ fun MemberDashboardSharedScreen(
         }
     }
 
-    val logoBitmap = remember(activePhotoUri, customLogoUri) {
-        val uri = activePhotoUri ?: customLogoUri
+    val gymLogoBitmap = remember(serverGymLogoUri, customLogoUri) {
+        val uri = serverGymLogoUri ?: customLogoUri
         if (uri != null) decodeBase64ToBitmap(uri) else null
     }
 
@@ -310,19 +329,19 @@ fun MemberDashboardSharedScreen(
                                 .clickable { showMemberProfileScreen = true },
                             contentAlignment = Alignment.Center
                         ) {
-                            if (logoBitmap != null) {
+                            if (gymLogoBitmap != null) {
                                 Image(
-                                    bitmap = logoBitmap,
+                                    bitmap = gymLogoBitmap,
                                     contentDescription = "Gym Logo",
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()
                                 )
                             } else {
                                 Icon(
-                                    painter = painterResource(Res.drawable.add_photo),
+                                    painter = painterResource(Res.drawable.gymcopilot),
                                     contentDescription = "Logo",
                                     tint = PrimaryTurquoise,
-                                    modifier = Modifier.size(48.dp)
+                                    modifier = Modifier.size(54.dp)
                                 )
                             }
                         }
