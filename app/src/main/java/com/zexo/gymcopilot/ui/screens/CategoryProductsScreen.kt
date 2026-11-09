@@ -473,16 +473,15 @@ fun ProductCard(
                     Text(text = product.description, fontSize = 11.sp, color = Color.DarkGray, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 14.sp, modifier = Modifier.padding(top = 2.dp))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(text = "$currencySymbol${String.format("%.2f", product.price)}", fontSize = 16.sp, fontWeight = FontWeight.Black, color = Color.Black)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(modifier = Modifier.size(34.dp).clip(CircleShape).clickable { onContactClick() }, color = Color(0xFFE6E6E6)) {
-                            Box(contentAlignment = Alignment.Center) { Image(painter = painterResource(id = contactIcon), contentDescription = "Contact", modifier = Modifier.size(20.dp)) }
-                        }
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Surface(modifier = Modifier.size(34.dp).clip(CircleShape).clickable { onAddToCart() }, color = accentColor) {
-                            Box(contentAlignment = Alignment.Center) { Icon(imageVector = Icons.Default.AddShoppingCart, contentDescription = null, tint = if (accentColor.luminance() > 0.5f) Color.Black else Color.White, modifier = Modifier.size(20.dp)) }
-                        }
+                Text(text = "$currencySymbol${String.format("%.2f", product.price)}", fontSize = 16.sp, fontWeight = FontWeight.Black, color = Color.Black, modifier = Modifier.fillMaxWidth())
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
+                    Surface(modifier = Modifier.size(34.dp).clip(CircleShape).clickable { onContactClick() }, color = Color(0xFFE6E6E6)) {
+                        Box(contentAlignment = Alignment.Center) { Image(painter = painterResource(id = contactIcon), contentDescription = "Contact", modifier = Modifier.size(20.dp)) }
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Surface(modifier = Modifier.size(34.dp).clip(CircleShape).clickable { onAddToCart() }, color = accentColor) {
+                        Box(contentAlignment = Alignment.Center) { Icon(imageVector = Icons.Default.AddShoppingCart, contentDescription = null, tint = if (accentColor.luminance() > 0.5f) Color.Black else Color.White, modifier = Modifier.size(20.dp)) }
                     }
                 }
             }

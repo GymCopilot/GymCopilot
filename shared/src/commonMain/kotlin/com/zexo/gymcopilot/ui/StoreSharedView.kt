@@ -457,18 +457,19 @@ fun StoreCategoryProductsSharedScreen(
                                     maxLines = 1
                                 )
                                 Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = "$${product.price}",
+                                    color = Color.Black,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Black,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(Modifier.height(6.dp))
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    horizontalArrangement = Arrangement.End,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = "$${product.price}",
-                                        color = Color.Black,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Black
-                                    )
-
                                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                         val contactPainter = when (product.contactMethod?.lowercase()) {
                                             "telegram" -> painterResource(Res.drawable.telegram)
