@@ -1,8 +1,9 @@
 package com.zexo.gymcopilot.ui
 
-import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,9 +20,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import com.zexo.gymcopilot.model.*
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
+import com.zexo.gymcopilot.utils.getCurrentTimeMillis
+import com.zexo.gymcopilot.utils.readLocalMemberProfile
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 // ============================================================================
 // COMPONENTES REUTILIZABLES COMPARTIDOS
@@ -444,19 +455,246 @@ fun FullProfessorsSection() {
 
 @Composable
 fun FullClassesScheduleSection() {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
+    var viewMode by remember { mutableStateOf(2) } // 0: Día, 1: Semana, 2: Mes
+    var selectedDateMillis by remember { mutableStateOf(getCurrentTimeMillis()) }
+    var schedulesMap by remember { mutableStateOf<Map<String, List<ScheduleEntry>>>(emptyMap()) }
+    var assignedTrainer by remember { mutableStateOf("") }
+    var gymName by remember { mutableStateOf("Gym 47") }
+
+    LaunchedEffect(Unit) {
+        try {
+            val localProfile = readLocalMemberProfile()
+            val gymUrl = localProfile?.gymApiUrl.orEmpty().ifBlank { "https://script.google.com/macros/s/AKfycbzXYYMu43-ATeyxQmwdF3CuRYXi7KbpChyTQEBFIsWh7SCHv2XugxsWen61oBeDdzw/exec" }
+            gymName = localProfile?.gymName.orEmpty().ifBlank { "Gym 47" }
+            val gymIdVal = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val ssId = localProfile?.spreadsheetId.orEmpty()
+            if (localProfile?.assignedTrainer != null) {
+                assignedTrainer = localProfile.assignedTrainer
+            }
+
+            val paramChar = if (gymUrl.contains("?")) "&" else "?"
+            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+            val url = "$gymUrl${paramChar}type=schedules&gymId=$gymIdVal$ssParam"
+            val responseText = GymKtorApiClient.getData(url)
+            if (responseText.isNotBlank() && responseText.contains("success")) {
+                val jsonElement = GymKtorApiClient.jsonInstance.parseToJsonElement(responseText)
+                val jsonObject = jsonElement as? JsonObject
+                val dataArray = jsonObject?.get("data") as? JsonArray
+                if (dataArray != null) {
+                    val result = mutableMapOf<String, MutableList<ScheduleEntry>>()
+                    for (i in 1 until dataArray.size) {
+                        val row = dataArray[i] as? JsonArray
+                        if (row != null && row.size >= 5) {
+                            val profId = row[0].jsonPrimitive.content.trim().lowercase()
+                            val dayOrDate = row[1].jsonPrimitive.content.trim()
+                            val start = row[2].jsonPrimitive.content.trim()
+                            val end = row[3].jsonPrimitive.content.trim()
+                            val name = row[4].jsonPrimitive.content.trim()
+                            
+                            val entry = ScheduleEntry(
+                                startTime = start,
+                                endTime = end,
+                                eventName = name,
+                                dayOfWeek = dayOrDate.toIntOrNull(),
+                                date = if (dayOrDate.contains("-") || dayOrDate.contains("/")) dayOrDate else null
+                            )
+                            result.getOrPut(profId) { mutableListOf() }.add(entry)
+                        }
+                    }
+                    schedulesMap = result
+                }
+            }
+        } catch (_: Throwable) {}
+    }
+
+    val dayMs = 24L * 60 * 60 * 1000L
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
     ) {
-        item {
-            Text(text = "Horarios y Reserva de Clases", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextWhite)
-            Spacer(modifier = Modifier.height(12.dp))
+        Text(text = "Horarios de Clases", fontSize = 22.sp, fontWeight = FontWeight.Black, color = TextWhite)
+        Spacer(Modifier.height(12.dp))
+
+        if (assignedTrainer.isNotBlank() && assignedTrainer != "Sin asignar") {
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                colors = CardDefaults.cardColors(containerColor = PrimaryTurquoise.copy(alpha = 0.15f)),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, PrimaryTurquoise.copy(alpha = 0.4f))
+            ) {
+                Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Person, null, tint = PrimaryTurquoise)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Mi Profesor: $assignedTrainer", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+            }
         }
-        item {
-            ClassScheduleCard("Crossfit Intensivo", "Prof. Roberto", "08:00 - 09:00 AM", "15/15 Cupos Lleno")
-            ClassScheduleCard("Yoga & Mobility", "Prof. Laura", "10:00 - 11:00 AM", "8/12 Cupos Disponibles")
-            ClassScheduleCard("Spinning Power 5G", "Prof. Marcos", "18:00 - 19:00 PM", "20/20 Cupos Lleno")
-            ClassScheduleCard("Musculación Libre", "Prof. Gabriel", "19:00 - 21:00 PM", "Cupos Libres")
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFF001F29))
+                    .border(1.dp, PrimaryTurquoise.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                    .padding(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                IconButton(onClick = { selectedDateMillis -= (if (viewMode == 2) 30 * dayMs else if (viewMode == 1) 7 * dayMs else dayMs) }, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Default.ChevronLeft, null, tint = PrimaryTurquoise)
+                }
+                Text("HOY", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.clickable { selectedDateMillis = getCurrentTimeMillis() }.padding(horizontal = 6.dp))
+                IconButton(onClick = { selectedDateMillis += (if (viewMode == 2) 30 * dayMs else if (viewMode == 1) 7 * dayMs else dayMs) }, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Default.ChevronRight, null, tint = PrimaryTurquoise)
+                }
+            }
+
+            Text("Noviembre de 2026", color = TextWhite, fontSize = 16.sp, fontWeight = FontWeight.Black)
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0xFF00151C))
+                .border(1.dp, PrimaryTurquoise.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            val tabs = listOf("Día", "Semana", "Mes")
+            tabs.forEachIndexed { index, label ->
+                val isSelected = viewMode == index
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(38.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isSelected) PrimaryTurquoise else Color.Transparent)
+                        .clickable { viewMode = index },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = label,
+                        color = if (isSelected) Color.Black else TextWhite,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        Box(modifier = Modifier.fillMaxSize()) {
+            when (viewMode) {
+                0 -> {
+                    Column {
+                        Text("Eventos del día", color = PrimaryTurquoise, fontSize = 14.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(bottom = 8.dp))
+                        val generalEntries = schedulesMap["general_gym"] ?: schedulesMap["GENERAL_GYM"] ?: emptyList()
+                        if (generalEntries.isEmpty()) {
+                            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                                Text("No hay eventos programados para hoy", color = TextGray, fontSize = 14.sp)
+                            }
+                        } else {
+                            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items(generalEntries) { entry ->
+                                    Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color(0xFF001F29)).border(1.dp, PrimaryTurquoise.copy(alpha = 0.3f), RoundedCornerShape(10.dp)).padding(16.dp)) {
+                                        Column {
+                                            Text("${entry.startTime} - ${entry.endTime}", color = PrimaryTurquoise, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                            Spacer(Modifier.height(4.dp))
+                                            Text(entry.eventName, color = TextWhite, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                1 -> {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            val daysOfWeek = listOf("LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM")
+                            daysOfWeek.forEachIndexed { idx, dayName ->
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(44.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (idx == 0) PrimaryTurquoise.copy(alpha = 0.3f) else Color(0xFF001F29))
+                                        .border(1.dp, if (idx == 0) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.2f), RoundedCornerShape(8.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(dayName, color = if (idx >= 5) Color(0xFFE53935) else TextWhite, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                                }
+                            }
+                        }
+                        Text("Patrón Semanal de Clases", color = PrimaryTurquoise, fontSize = 14.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(bottom = 8.dp))
+                        val generalEntries = schedulesMap["general_gym"] ?: schedulesMap["GENERAL_GYM"] ?: emptyList()
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(generalEntries) { entry ->
+                                Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color(0xFF001F29)).border(1.dp, PrimaryTurquoise.copy(alpha = 0.3f), RoundedCornerShape(10.dp)).padding(16.dp)) {
+                                    Column {
+                                        Text("${entry.startTime} - ${entry.endTime}", color = PrimaryTurquoise, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(entry.eventName, color = TextWhite, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                else -> {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            listOf("LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM").forEach { day ->
+                                Text(day, color = TextGray, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                            }
+                        }
+                        
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(7),
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            items(30) { dayIndex ->
+                                val dayNum = dayIndex + 1
+                                val isWeekend = (dayIndex % 7 == 5) || (dayIndex % 7 == 6)
+                                Box(
+                                    modifier = Modifier
+                                        .aspectRatio(1f)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (dayNum == 9) PrimaryTurquoise.copy(alpha = 0.3f) else Color(0xFF001F29))
+                                        .border(1.dp, if (dayNum == 9) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                                        .clickable { viewMode = 0 },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = dayNum.toString(),
+                                        color = if (isWeekend) Color(0xFFFF5252) else TextWhite,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
