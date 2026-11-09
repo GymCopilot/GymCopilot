@@ -415,6 +415,7 @@ fun RealPublicStoreView(apiClient: GymKtorApiClient = GymKtorApiClient, onTabSel
                             val imageUri = if (row.size > 4 && row[4].jsonPrimitive.content != "null") row[4].jsonPrimitive.content else null
                             val desc = if (row.size > 5 && row[5].jsonPrimitive.content != "null") row[5].jsonPrimitive.content else ""
                             val bannerType = if (row.size > 8 && row[8].jsonPrimitive.content != "null") row[8].jsonPrimitive.content else null
+                            val bannerText = if (row.size > 9 && row[9].jsonPrimitive.content != "null") row[9].jsonPrimitive.content else null
 
                             remoteProducts.add(
                                 Product(
@@ -424,7 +425,8 @@ fun RealPublicStoreView(apiClient: GymKtorApiClient = GymKtorApiClient, onTabSel
                                     categoryId = catId,
                                     imageUri = imageUri,
                                     description = desc,
-                                    bannerType = bannerType
+                                    bannerType = bannerType,
+                                    bannerText = bannerText
                                 )
                             )
                         }

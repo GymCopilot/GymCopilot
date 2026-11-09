@@ -10,7 +10,13 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -431,19 +437,23 @@ fun StoreCategoryProductsSharedScreen(
                                     Icon(Icons.Default.FitnessCenter, null, tint = PrimaryTurquoise, modifier = Modifier.size(48.dp))
                                 }
 
-                                if (!product.bannerType.isNullOrBlank()) {
-                                    Surface(
-                                        color = Color(0xFFFF9800),
-                                        shape = RoundedCornerShape(topStart = 8.dp, bottomEnd = 8.dp),
-                                        modifier = Modifier.align(Alignment.TopStart)
-                                    ) {
-                                        Text(
-                                            text = product.bannerType,
-                                            color = Color.White,
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                        )
+                                val bannerText = product.bannerText?.takeIf { it.isNotBlank() } ?: product.bannerType ?: ""
+                                if (!product.bannerType.isNullOrBlank() && bannerText.isNotBlank()) {
+                                    Box(modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp))) {
+                                        when (product.bannerType) {
+                                            "ribbon" -> {
+                                                Box(modifier = Modifier.align(Alignment.TopStart).width(140.dp).offset(x = (-35).dp, y = 22.dp).rotate(-45f).background(Color.Red).padding(horizontal = 24.dp, vertical = 4.dp), contentAlignment = Alignment.Center) {
+                                                    Text(text = bannerText, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1)
+                                                }
+                                            }
+                                            "star" -> RosetteBanner(bannerText, hasRibbons = false, isStar = true)
+                                            "medal" -> RosetteBanner(bannerText, hasRibbons = true)
+                                            "medal_ribbon" -> {
+                                                Box(modifier = Modifier.align(Alignment.TopStart).padding(top = 16.dp).background(Color(0xFFFF9800), BannerPointedShape).padding(start = 8.dp, end = 16.dp, top = 6.dp, bottom = 6.dp).widthIn(min = 70.dp, max = 120.dp), contentAlignment = Alignment.CenterStart) {
+                                                    Text(text = bannerText, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Start, lineHeight = 12.sp, maxLines = 2, softWrap = true)
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -668,6 +678,64 @@ fun ShoppingCartSharedScreen(
                         Text("PEDIR POR WHATSAPP", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     }
                 }
+            }
+        }
+    }
+}
+
+private val StarBannerShape = GenericShape { size, _ ->
+    val points = 40
+    val center = Offset(size.width / 2f, size.height / 2f)
+    val maxRadius = size.width / 2f
+    val minRadius = maxRadius * 0.85f
+    val angleStep = (2 * PI / (points * 2)).toFloat()
+    for (i in 0 until points * 2) {
+        val radius = if (i % 2 == 0) maxRadius else minRadius
+        val angle = i * angleStep - (PI / 2).toFloat()
+        val x = center.x + radius * cos(angle).toFloat()
+        val y = center.y + radius * sin(angle).toFloat()
+        if (i == 0) moveTo(x, y) else lineTo(x, y)
+    }
+    close()
+}
+
+private val FivePointedStarShape = GenericShape { size, _ ->
+    val points = 5
+    val center = Offset(size.width / 2f, size.height / 2f)
+    val maxRadius = size.width / 2f
+    val minRadius = maxRadius * 0.45f
+    val angleStep = (PI / points).toFloat()
+    for (i in 0 until points * 2) {
+        val radius = if (i % 2 == 0) maxRadius else minRadius
+        val angle = i * angleStep - (PI / 2).toFloat()
+        val x = center.x + radius * cos(angle).toFloat()
+        val y = center.y + radius * sin(angle).toFloat()
+        if (i == 0) moveTo(x, y) else lineTo(x, y)
+    }
+    close()
+}
+
+private val BannerPointedShape = GenericShape { size, _ ->
+    moveTo(0f, 0f); lineTo(size.width * 0.88f, 0f); lineTo(size.width, size.height / 2f); lineTo(size.width * 0.88f, size.height); lineTo(0f, size.height); close()
+}
+
+private val RibbonShape = GenericShape { size, _ ->
+    moveTo(0f, 0f); lineTo(size.width, 0f); lineTo(size.width, size.height); lineTo(size.width / 2f, size.height * 0.75f); lineTo(0f, size.height); close()
+}
+
+@Composable
+private fun RosetteBanner(text: String, hasRibbons: Boolean, isStar: Boolean = false) {
+    Box(modifier = Modifier.padding(8.dp).size(60.dp), contentAlignment = Alignment.TopStart) {
+        Box(contentAlignment = Alignment.Center) {
+            if (hasRibbons) {
+                Row(modifier = Modifier.offset(y = 20.dp), horizontalArrangement = Arrangement.spacedBy((-6).dp)) {
+                    Box(modifier = Modifier.size(width = 18.dp, height = 32.dp).rotate(15f).background(Color(0xFFB71C1C), RibbonShape))
+                    Box(modifier = Modifier.size(width = 18.dp, height = 32.dp).rotate(-15f).background(Color(0xFFB71C1C), RibbonShape))
+                }
+            }
+            if (!isStar) Box(modifier = Modifier.size(56.dp).background(Color(0xFFD32F2F), StarBannerShape))
+            Box(modifier = Modifier.size(if (isStar) 56.dp else 46.dp).background(Color(0xFFFFD700), if (isStar) FivePointedStarShape else StarBannerShape), contentAlignment = Alignment.Center) {
+                Text(text = text, color = Color.Black, fontSize = 8.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, modifier = Modifier.width(if (isStar) 42.dp else 36.dp), lineHeight = 9.sp, maxLines = 2, softWrap = true)
             }
         }
     }
