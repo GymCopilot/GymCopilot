@@ -1,6 +1,7 @@
 package com.zexo.gymcopilot.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
@@ -15,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -660,8 +662,15 @@ fun FullClassesScheduleSection() {
                             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            listOf("LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM").forEach { day ->
-                                Text(day, color = TextGray, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                            listOf("LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM").forEachIndexed { idx, day ->
+                                Text(
+                                    day,
+                                    color = if (idx >= 5) Color(0xFFE57373) else TextGray,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.weight(1f),
+                                    textAlign = TextAlign.Center
+                                )
                             }
                         }
                         
@@ -674,21 +683,41 @@ fun FullClassesScheduleSection() {
                             items(30) { dayIndex ->
                                 val dayNum = dayIndex + 1
                                 val isWeekend = (dayIndex % 7 == 5) || (dayIndex % 7 == 6)
+                                val weekendRed = Color(0xFFE57373)
                                 Box(
                                     modifier = Modifier
-                                        .aspectRatio(1f)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(if (dayNum == 9) PrimaryTurquoise.copy(alpha = 0.3f) else Color(0xFF001F29))
-                                        .border(1.dp, if (dayNum == 9) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                                        .aspectRatio(0.85f)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Color(0xFF001F29))
+                                        .border(if (dayNum == 10) 2.dp else 1.dp, if (dayNum == 10) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
                                         .clickable { viewMode = 0 },
-                                    contentAlignment = Alignment.Center
+                                    contentAlignment = Alignment.TopStart
                                 ) {
-                                    Text(
-                                        text = dayNum.toString(),
-                                        color = if (isWeekend) Color(0xFFFF5252) else TextWhite,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp
-                                    )
+                                    if (isWeekend) {
+                                        Canvas(modifier = Modifier.fillMaxSize()) {
+                                            val step = 10.dp.toPx()
+                                            for (i in -size.height.toInt()..size.width.toInt() step step.toInt()) {
+                                                drawLine(
+                                                    color = weekendRed.copy(alpha = 0.25f),
+                                                    start = Offset(i.toFloat(), 0f),
+                                                    end = Offset(i + size.height, size.height),
+                                                    strokeWidth = 1.dp.toPx()
+                                                )
+                                            }
+                                        }
+                                    }
+                                    Column(modifier = Modifier.padding(6.dp)) {
+                                        Text(
+                                            text = dayNum.toString(),
+                                            color = when {
+                                                dayNum == 10 -> PrimaryTurquoise
+                                                isWeekend -> weekendRed
+                                                else -> TextWhite
+                                            },
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp
+                                        )
+                                    }
                                 }
                             }
                         }
