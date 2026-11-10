@@ -358,32 +358,36 @@ fun AppearanceSharedScreen(
                 // 6.5. ENTRADA DIRECTA (QUITAR INICIO DE LOGO Y MALVINAS)
                 item {
                     var skipSplash by remember { mutableStateOf(readLocalStorageFlag("gymcopilot_skip_splash") == "true") }
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
-                        shape = RoundedCornerShape(16.dp),
-                        border = BorderStroke(1.dp, PrimaryTurquoise.copy(alpha = 0.5f)),
-                        modifier = Modifier.fillMaxWidth()
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().border(1.dp, PrimaryTurquoise.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+                        color = Color(0xFF001F29),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
                         Row(
-                            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                Surface(
-                                    color = PrimaryTurquoise.copy(alpha = 0.15f),
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.size(40.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(Icons.Default.FlashOn, contentDescription = null, tint = PrimaryTurquoise, modifier = Modifier.size(22.dp))
-                                    }
-                                }
-                                Spacer(Modifier.width(16.dp))
-                                Column {
-                                    Text(text = "Entrada Directa (Sin Logo ni Malvinas)", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextWhite)
-                                    Text(text = "Entrar directamente al perfil sin animación inicial", fontSize = 11.sp, color = TextGray)
-                                }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.FlashOn,
+                                    contentDescription = null,
+                                    tint = PrimaryTurquoise,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    text = "Entrada Directa (Sin SplashScreen)",
+                                    color = TextWhite,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    maxLines = 1
+                                )
                             }
                             Switch(
                                 checked = skipSplash,

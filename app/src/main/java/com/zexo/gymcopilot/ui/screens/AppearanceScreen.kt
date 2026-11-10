@@ -542,19 +542,13 @@ fun AppearanceScreen(
                                     modifier = Modifier.size(24.dp)
                                 )
                                 Spacer(Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = if (appLanguage == "Español") "Entrada Directa (Sin Logo ni Malvinas)" else "Direct Entry (Skip Splash)",
-                                        color = contentColor,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 15.sp
-                                    )
-                                    Text(
-                                        text = if (appLanguage == "Español") "Entrar directamente al perfil sin animación inicial" else "Go straight to profile without splash",
-                                        color = TextGray,
-                                        fontSize = 11.sp
-                                    )
-                                }
+                                Text(
+                                    text = if (appLanguage == "Español") "Entrada Directa (Sin SplashScreen)" else "Direct Entry (Skip Splash)",
+                                    color = contentColor,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    maxLines = 1
+                                )
                             }
                             Switch(
                                 checked = skipSplashState,
