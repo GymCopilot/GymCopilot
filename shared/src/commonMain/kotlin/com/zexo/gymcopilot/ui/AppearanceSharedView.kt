@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.utils.decodeBase64ToBitmap
 import com.zexo.gymcopilot.utils.launchImagePicker
+import com.zexo.gymcopilot.utils.readLocalStorageFlag
+import com.zexo.gymcopilot.utils.saveLocalStorageFlag
 import gymcopilot.shared.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
 
@@ -349,6 +351,48 @@ fun AppearanceSharedScreen(
                             CustomSharedTextField(value = cityInput, onValueChange = { cityInput = it }, label = "Ciudad")
                             CustomSharedTextField(value = zipInput, onValueChange = { zipInput = it }, label = "Código Postal")
                             CustomSharedTextField(value = countryInput, onValueChange = { countryInput = it }, label = "País")
+                        }
+                    }
+                }
+
+                // 6.5. ENTRADA DIRECTA (QUITAR INICIO DE LOGO Y MALVINAS)
+                item {
+                    var skipSplash by remember { mutableStateOf(readLocalStorageFlag("gymcopilot_skip_splash") == "true") }
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, PrimaryTurquoise.copy(alpha = 0.5f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Surface(
+                                    color = PrimaryTurquoise.copy(alpha = 0.15f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Default.FlashOn, contentDescription = null, tint = PrimaryTurquoise, modifier = Modifier.size(22.dp))
+                                    }
+                                }
+                                Spacer(Modifier.width(16.dp))
+                                Column {
+                                    Text(text = "Entrada Directa (Sin Logo ni Malvinas)", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextWhite)
+                                    Text(text = "Entrar directamente al perfil sin animación inicial", fontSize = 11.sp, color = TextGray)
+                                }
+                            }
+                            Switch(
+                                checked = skipSplash,
+                                onCheckedChange = { checked ->
+                                    skipSplash = checked
+                                    saveLocalStorageFlag("gymcopilot_skip_splash", if (checked) "true" else "false")
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = PrimaryTurquoise)
+                            )
                         }
                     }
                 }

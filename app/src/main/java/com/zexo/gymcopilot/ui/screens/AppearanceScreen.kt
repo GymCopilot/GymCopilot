@@ -517,6 +517,58 @@ fun AppearanceScreen(
                     }
                 }
                 item {
+                    val skipSplashState by dataStoreManager.getSkipSplashScreen().collectAsState(initial = false)
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().border(1.dp, accentColor, containerShape),
+                        color = buttonBgColor,
+                        shape = containerShape
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                val contentColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
+                                Icon(
+                                    imageVector = Icons.Default.FlashOn,
+                                    contentDescription = null,
+                                    tint = accentColor,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = if (appLanguage == "Español") "Entrada Directa (Sin Logo ni Malvinas)" else "Direct Entry (Skip Splash)",
+                                        color = contentColor,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp
+                                    )
+                                    Text(
+                                        text = if (appLanguage == "Español") "Entrar directamente al perfil sin animación inicial" else "Go straight to profile without splash",
+                                        color = TextGray,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+                            Switch(
+                                checked = skipSplashState,
+                                onCheckedChange = { checked ->
+                                    scope.launch {
+                                        dataStoreManager.setSkipSplashScreen(checked)
+                                    }
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = accentColor)
+                            )
+                        }
+                    }
+                }
+                item {
                     Surface(
                         onClick = {
                             if (nameState.isNotBlank()) {

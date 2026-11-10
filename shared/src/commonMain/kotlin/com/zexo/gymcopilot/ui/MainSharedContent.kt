@@ -104,7 +104,8 @@ fun SharedGymCopilotApp(
     initialRole: String = "admin",
     gymName: String = "Tu Gimnasio"
 ) {
-    var screenState by remember { mutableStateOf(AppScreenState.SPLASH) }
+    val skipSplash = readLocalStorageFlag("gymcopilot_skip_splash") == "true"
+    var screenState by remember { mutableStateOf(if (skipSplash) AppScreenState.MAIN_APP else AppScreenState.SPLASH) }
     var currentRole by remember { mutableStateOf(initialRole.lowercase()) }
     var activeGymName by remember { mutableStateOf(gymName) }
     var showInstallBanner by remember { mutableStateOf(false) }

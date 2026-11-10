@@ -83,7 +83,12 @@ class MainActivity : ComponentActivity() {
             val lockExpirationTime by dataStoreManager.getAppLockExpirationTime().collectAsState(initial = 0L)
             
             var isAppLocked by remember { mutableStateOf(false) }
-            var showSplash by remember { mutableStateOf(true) }
+            val skipSplash by dataStoreManager.getSkipSplashScreen().collectAsState(initial = false)
+            var showSplash by remember { mutableStateOf(!skipSplash) }
+
+            LaunchedEffect(skipSplash) {
+                if (skipSplash) showSplash = false
+            }
 
             LaunchedEffect(gymName) {
                 if (gymName != null) {
@@ -92,8 +97,10 @@ class MainActivity : ComponentActivity() {
             }
 
             LaunchedEffect(Unit) {
-                delay(4500) // Duración total para permitir el fade out completo
-                showSplash = false
+                if (!skipSplash) {
+                    delay(4500) // Duración total para permitir el fade out completo
+                    showSplash = false
+                }
             }
 
             LaunchedEffect(lockExpirationTime) {

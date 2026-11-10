@@ -122,7 +122,11 @@ class DataStoreManager(private val context: Context) {
         val GYM_WIFI_SSID2 = stringPreferencesKey("GYM_WIFI_SSID2")
         val GYM_WIFI_SSID3 = stringPreferencesKey("GYM_WIFI_SSID3")
         val LAST_WIFI_CHECKIN_DATE = stringPreferencesKey("LAST_WIFI_CHECKIN_DATE")
+        val SKIP_SPLASH_SCREEN = booleanPreferencesKey("SKIP_SPLASH_SCREEN")
     }
+
+    fun getSkipSplashScreen(): Flow<Boolean> = dataStore.data.map { it[SKIP_SPLASH_SCREEN] ?: false }
+    suspend fun setSkipSplashScreen(skip: Boolean) { dataStore.edit { it[SKIP_SPLASH_SCREEN] = skip } }
 
     suspend fun setAuthToken(token: String) { dataStore.edit { it[AUTH_TOKEN] = token } }
     fun getAuthToken(): Flow<String?> = dataStore.data.map { it[AUTH_TOKEN] }
