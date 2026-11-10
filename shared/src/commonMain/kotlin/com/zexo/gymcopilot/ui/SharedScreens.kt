@@ -657,6 +657,7 @@ fun FullClassesScheduleSection() {
                     }
                 }
                 else -> {
+                    val cells = remember { generateMonthGrid(2026, 10) }
                     Column {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
@@ -680,20 +681,19 @@ fun FullClassesScheduleSection() {
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            items(30) { dayIndex ->
-                                val dayNum = dayIndex + 1
-                                val isWeekend = (dayIndex % 7 == 5) || (dayIndex % 7 == 6)
+                            items(cells) { cell ->
                                 val weekendRed = Color(0xFFE57373)
+                                val isSelected = cell.monthOffset == 0 && cell.dayNum == 10
                                 Box(
                                     modifier = Modifier
                                         .aspectRatio(0.85f)
                                         .clip(RoundedCornerShape(6.dp))
                                         .background(Color(0xFF001F29))
-                                        .border(if (dayNum == 10) 2.dp else 1.dp, if (dayNum == 10) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
-                                        .clickable { viewMode = 0 },
+                                        .border(if (isSelected) 2.dp else 1.dp, if (isSelected) PrimaryTurquoise else PrimaryTurquoise.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+                                        .clickable { if (cell.monthOffset == 0) viewMode = 0 },
                                     contentAlignment = Alignment.TopStart
                                 ) {
-                                    if (isWeekend) {
+                                    if (cell.isWeekend) {
                                         Canvas(modifier = Modifier.fillMaxSize()) {
                                             val step = 10.dp.toPx()
                                             for (i in -size.height.toInt()..size.width.toInt() step step.toInt()) {
@@ -708,13 +708,14 @@ fun FullClassesScheduleSection() {
                                     }
                                     Column(modifier = Modifier.padding(6.dp)) {
                                         Text(
-                                            text = dayNum.toString(),
+                                            text = cell.dayNum.toString(),
                                             color = when {
-                                                dayNum == 10 -> PrimaryTurquoise
-                                                isWeekend -> weekendRed
+                                                isSelected -> PrimaryTurquoise
+                                                cell.monthOffset != 0 -> TextGray.copy(alpha = 0.3f)
+                                                cell.isWeekend -> weekendRed
                                                 else -> TextWhite
                                             },
-                                            fontWeight = FontWeight.Bold,
+                                            fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
                                             fontSize = 13.sp
                                         )
                                     }
@@ -726,6 +727,73 @@ fun FullClassesScheduleSection() {
             }
         }
     }
+}
+
+data class CalendarCell(
+    val dayNum: Int,
+    val monthOffset: Int,
+    val isWeekend: Boolean
+)
+
+private fun getDaysInMonth(year: Int, month: Int): Int {
+    return when (month) {
+        0, 2, 4, 6, 7, 9, 11 -> 31
+        3, 5, 8, 10 -> 30
+        1 -> if ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)) 29 else 28
+        else -> 31
+    }
+}
+
+private fun getFirstDayOfWeek(year: Int, month: Int): Int {
+    var y = year
+    var m = month + 1
+    if (m < 3) {
+        m += 12
+        y -= 1
+    }
+    val q = 1
+    val K = y % 100
+    val J = y / 100
+    val h = (q + (13 * (m + 1)) / 5 + K + (K / 4) + (J / 4) + (5 * J)) % 7
+    return when (h) {
+        0 -> 5
+        1 -> 6
+        2 -> 0
+        3 -> 1
+        4 -> 2
+        5 -> 3
+        6 -> 4
+        else -> 0
+    }
+}
+
+private fun generateMonthGrid(year: Int, month: Int): List<CalendarCell> {
+    val firstDayOfWeek = getFirstDayOfWeek(year, month)
+    val daysInCurrMonth = getDaysInMonth(year, month)
+    val prevMonth = if (month == 0) 11 else month - 1
+    val prevYear = if (month == 0) year - 1 else year
+    val daysInPrevMonth = getDaysInMonth(prevYear, prevMonth)
+
+    val cells = mutableListOf<CalendarCell>()
+
+    for (i in (firstDayOfWeek - 1) downTo 0) {
+        val dayNum = daysInPrevMonth - i
+        val col = cells.size % 7
+        cells.add(CalendarCell(dayNum, -1, col >= 5))
+    }
+
+    for (dayNum in 1..daysInCurrMonth) {
+        val col = cells.size % 7
+        cells.add(CalendarCell(dayNum, 0, col >= 5))
+    }
+
+    var nextDayNum = 1
+    while (cells.size % 7 != 0 || cells.size < 35) {
+        val col = cells.size % 7
+        cells.add(CalendarCell(nextDayNum++, 1, col >= 5))
+    }
+
+    return cells
 }
 
 
