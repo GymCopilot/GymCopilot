@@ -232,6 +232,10 @@ fun MemberDashboardSharedScreen(
         if (uri != null) decodeBase64ToBitmap(uri) else null
     }
 
+    var bannerTitle by remember { mutableStateOf("Asistencia Registrada") }
+    var bannerMessage by remember { mutableStateOf("Asistencia registrada") }
+    var bannerColor by remember { mutableStateOf(Color(0xFF00C853)) }
+
     var assignedProfPhotoUri by remember { mutableStateOf<String?>(null) }
     var assignedProfColorInt by remember { mutableStateOf<Int?>(null) }
     var assignedProfSpecialty by remember { mutableStateOf("") }
@@ -502,62 +506,91 @@ fun MemberDashboardSharedScreen(
                         ) {
                             launchQrScanner { scannedCode ->
                                 val cleanCode = scannedCode.trim()
-                                if (cleanCode.startsWith("MEMBERLINK|")) {
-                                    val parts = cleanCode.split("|")
-                                    if (parts.size >= 4) {
-                                        activeFirstName = parts[1]
-                                        activeLastName = parts[2]
-                                        activeEmail = parts[3]
-                                        if (parts.size >= 5 && parts[4].isNotBlank()) activeGymUrl = parts[4]
-                                        if (parts.size >= 6 && parts[5].isNotBlank()) activeGymName = parts[5]
+                                val isLinking = cleanCode.startsWith("MEMBERLINK|") || cleanCode.startsWith("MEMBER_LINK:")
+                                if (isLinking) {
+                                    if (cleanCode.startsWith("MEMBERLINK|")) {
+                                        val parts = cleanCode.split("|")
+                                        if (parts.size >= 4) {
+                                            activeFirstName = parts[1]
+                                            activeLastName = parts[2]
+                                            activeEmail = parts[3]
+                                            if (parts.size >= 5 && parts[4].isNotBlank()) activeGymUrl = parts[4]
+                                            if (parts.size >= 6 && parts[5].isNotBlank()) activeGymName = parts[5]
+                                        }
+                                    } else if (cleanCode.startsWith("MEMBER_LINK:")) {
+                                        val parts = cleanCode.split(":")
+                                        if (parts.size >= 5) {
+                                            activeEmail = parts[2]
+                                            activeFirstName = parts[3]
+                                            activeLastName = parts[4]
+                                        }
                                     }
-                                } else if (cleanCode.startsWith("MEMBER_LINK:")) {
-                                    val parts = cleanCode.split(":")
-                                    if (parts.size >= 5) {
-                                        activeEmail = parts[2]
-                                        activeFirstName = parts[3]
-                                        activeLastName = parts[4]
-                                    }
-                                } else if (cleanCode.contains("@")) {
-                                    activeEmail = cleanCode.trim()
-                                }
 
-                                saveLocalMemberProfile(
-                                    LocalMemberData(
-                                        firstName = activeFirstName,
-                                        lastName = activeLastName,
-                                        email = activeEmail,
-                                        phone = activePhone,
-                                        address = activeAddress,
-                                        weight = activeWeight,
-                                        height = activeHeight,
-                                        photoUri = activePhotoUri,
-                                        gymName = activeGymName,
-                                        gymApiUrl = activeGymUrl,
-                                        assignedTrainer = activeAssignedTrainer
-                                    )
-                                )
-
-                                coroutineScope.launch {
-                                    try {
-                                        val gymIdVal = activeGymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
-                                        val localProfile = readLocalMemberProfile()
-                                        val ssId = localProfile?.spreadsheetId.orEmpty()
-                                        val paramChar = if (activeGymUrl.contains("?")) "&" else "?"
-                                        val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
-                                        val checkInUrl = "$activeGymUrl${paramChar}action=check_in&gymId=$gymIdVal&email=${activeEmail}&memberEmail=${activeEmail}$ssParam"
-                                        val checkInReq = CheckInRequest(
-                                            action = "check_in",
-                                            gymId = gymIdVal,
-                                            memberEmail = activeEmail,
-                                            timestamp = getCurrentTimeMillis(),
-                                            spreadsheetId = ssId
+                                    saveLocalMemberProfile(
+                                        LocalMemberData(
+                                            firstName = activeFirstName,
+                                            lastName = activeLastName,
+                                            email = activeEmail,
+                                            phone = activePhone,
+                                            address = activeAddress,
+                                            weight = activeWeight,
+                                            height = activeHeight,
+                                            photoUri = activePhotoUri,
+                                            gymName = activeGymName,
+                                            gymApiUrl = activeGymUrl,
+                                            assignedTrainer = activeAssignedTrainer
                                         )
-                                        apiClient.postData(checkInUrl, checkInReq)
-                                    } catch (_: Throwable) {}
-                                }
+                                    )
 
-                                showCheckInSuccessBanner = true
+                                    bannerTitle = "Cuenta vinculada"
+                                    bannerMessage = "Cuenta vinculada"
+                                    bannerColor = PrimaryTurquoise
+                                    showCheckInSuccessBanner = true
+                                } else {
+                                    if (cleanCode.contains("@")) {
+                                        activeEmail = cleanCode.trim()
+                                    }
+
+                                    saveLocalMemberProfile(
+                                        LocalMemberData(
+                                            firstName = activeFirstName,
+                                            lastName = activeLastName,
+                                            email = activeEmail,
+                                            phone = activePhone,
+                                            address = activeAddress,
+                                            weight = activeWeight,
+                                            height = activeHeight,
+                                            photoUri = activePhotoUri,
+                                            gymName = activeGymName,
+                                            gymApiUrl = activeGymUrl,
+                                            assignedTrainer = activeAssignedTrainer
+                                        )
+                                    )
+
+                                    coroutineScope.launch {
+                                        try {
+                                            val gymIdVal = activeGymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+                                            val localProfile = readLocalMemberProfile()
+                                            val ssId = localProfile?.spreadsheetId.orEmpty()
+                                            val paramChar = if (activeGymUrl.contains("?")) "&" else "?"
+                                            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+                                            val checkInUrl = "$activeGymUrl${paramChar}action=check_in&gymId=$gymIdVal&email=${activeEmail}&memberEmail=${activeEmail}$ssParam"
+                                            val checkInReq = CheckInRequest(
+                                                action = "check_in",
+                                                gymId = gymIdVal,
+                                                memberEmail = activeEmail,
+                                                timestamp = getCurrentTimeMillis(),
+                                                spreadsheetId = ssId
+                                            )
+                                            apiClient.postData(checkInUrl, checkInReq)
+                                        } catch (_: Throwable) {}
+                                    }
+
+                                    bannerTitle = "Asistencia registrada"
+                                    bannerMessage = "Asistencia registrada"
+                                    bannerColor = Color(0xFF00C853)
+                                    showCheckInSuccessBanner = true
+                                }
                             }
                         }
                     }
@@ -764,21 +797,21 @@ fun MemberDashboardSharedScreen(
     if (showCheckInSuccessBanner) {
         AlertDialog(
             onDismissRequest = { showCheckInSuccessBanner = false },
-            title = { Text("Asistencia Registrada", color = TextWhite, fontWeight = FontWeight.Bold) },
+            title = { Text(bannerTitle, color = TextWhite, fontWeight = FontWeight.Bold) },
             text = {
                 Surface(
-                    color = Color(0xFF00C853).copy(alpha = 0.2f),
+                    color = bannerColor.copy(alpha = 0.2f),
                     shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.5.dp, Color(0xFF00C853)),
+                    border = BorderStroke(1.5.dp, bannerColor),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.padding(16.dp)
                     ) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF00C853), modifier = Modifier.size(48.dp))
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = bannerColor, modifier = Modifier.size(48.dp))
                         Spacer(Modifier.height(8.dp))
-                        Text("¡Check-in realizado con éxito!", color = TextWhite, fontWeight = FontWeight.Bold)
+                        Text(bannerMessage, color = TextWhite, fontWeight = FontWeight.Bold)
                     }
                 }
             },
