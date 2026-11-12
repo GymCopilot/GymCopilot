@@ -391,7 +391,7 @@ fun MemberDashboardSharedScreen(
                                     bitmap = gymLogoBitmap,
                                     contentDescription = "Gym Logo",
                                     contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
+                                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(20.dp))
                                 )
                             } else {
                                 Icon(

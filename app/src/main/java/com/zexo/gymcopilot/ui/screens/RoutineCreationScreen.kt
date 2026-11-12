@@ -600,9 +600,8 @@ fun RoutineCreationScreen(
                                     if (routineId == null) dataStoreManager.addRoutine(newRoutine)
                                     else dataStoreManager.updateRoutine(newRoutine)
 
-                                    if (userRole?.lowercase() == "member" && routineType == "Personal") {
-                                        repository.syncMemberRoutine("", userEmail ?: "", Json.encodeToString(newRoutine))
-                                    }
+                                    val targetEmail = userEmail ?: ""
+                                    repository.syncMemberRoutine("", targetEmail, Json.encodeToString(newRoutine))
                                     onBack()
                                 }
                             } else {

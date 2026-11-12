@@ -298,23 +298,33 @@ function processAction(action, data, e) {
 
     var values = sheet.getDataRange().getValues();
     var rowIndex = -1;
+    var existingRow = [];
     for (var i = 1; i < values.length; i++) {
       var rowId = String(values[i][0] || "").trim().toLowerCase();
       var rowEmail = String(values[i][3] || "").trim().toLowerCase();
       if ((searchId !== "" && rowId === searchId) || (searchEmail !== "" && rowEmail === searchEmail)) {
         rowIndex = i + 1;
+        existingRow = values[i];
         break;
       }
     }
 
+    var newId = data.professorId || data.id || searchId || (existingRow[0] || ("prof_" + Date.now()));
+    var newFirstName = (data.firstName !== undefined && data.firstName !== null && data.firstName !== "") ? data.firstName : (existingRow[1] || "");
+    var newLastName = (data.lastName !== undefined && data.lastName !== null && data.lastName !== "") ? data.lastName : (existingRow[2] || "");
+    var newEmail = (data.email !== undefined && data.email !== null && data.email !== "") ? data.email : (existingRow[3] || "");
+    var newSpecialty = (data.specialty !== undefined && data.specialty !== null) ? data.specialty : (existingRow[4] || "");
+    var newColor = (data.profileColor !== undefined && data.profileColor !== null && data.profileColor !== "" && data.profileColor !== 0) ? data.profileColor : (existingRow[5] !== undefined && existingRow[5] !== "" ? existingRow[5] : (data.profileColor !== undefined ? data.profileColor : ""));
+    var newPhoto = (data.photoUri !== undefined && data.photoUri !== null && data.photoUri !== "") ? data.photoUri : (existingRow[6] || "");
+
     var rowData = [
-      data.professorId || data.id || searchId || ("prof_" + Date.now()),
-      data.firstName !== undefined ? data.firstName : "",
-      data.lastName !== undefined ? data.lastName : "",
-      data.email !== undefined ? data.email : "",
-      data.specialty !== undefined ? data.specialty : "",
-      data.profileColor !== undefined ? data.profileColor : "",
-      data.photoUri || "",
+      newId,
+      newFirstName,
+      newLastName,
+      newEmail,
+      newSpecialty,
+      newColor,
+      newPhoto,
       new Date()
     ];
 
