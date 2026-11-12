@@ -590,8 +590,10 @@ fun MembershipStatusCard(
         else -> Color(0xFF00C853) // Verde activo (> 7 días)
     }
 
+    val shouldPulse = !isVigente || (daysRemaining != null && daysRemaining <= 7L)
+
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val pulseAlpha by infiniteTransition.animateFloat(
+    val pulseAlphaAnimated by infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = 0.25f,
         animationSpec = infiniteRepeatable(
@@ -600,6 +602,7 @@ fun MembershipStatusCard(
         ),
         label = "alpha"
     )
+    val pulseAlpha = if (shouldPulse) pulseAlphaAnimated else 1f
 
     val cardBorderColor = if (isVigente) statusColor else Color(0xFFFF3D00)
 
