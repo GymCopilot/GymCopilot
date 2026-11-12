@@ -41,6 +41,7 @@ import com.zexo.gymcopilot.utils.readLocalMemberProfile
 import com.zexo.gymcopilot.utils.saveLocalMemberProfile
 import gymcopilot.shared.generated.resources.*
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -506,14 +507,26 @@ fun MemberDashboardSharedScreen(
                         ) {
                             launchQrScanner { scannedCode ->
                                 val cleanCode = scannedCode.trim()
-                                val isValidGymQr = cleanCode.startsWith("ATTENDANCE:") || cleanCode.startsWith("gym_id:") || cleanCode.startsWith("MEMBERLINK|") || cleanCode.startsWith("MEMBER_LINK:")
+                                val isValidGymQr = cleanCode.startsWith("PROFLINK|") ||
+                                    cleanCode.startsWith("MEMBERLINK|") || 
+                                    cleanCode.startsWith("MEMBER_LINK:") || 
+                                    cleanCode.startsWith("ATTENDANCE:") || 
+                                    cleanCode.startsWith("gym_id:") ||
+                                    try {
+                                        val json = Json.parseToJsonElement(cleanCode)
+                                        val obj = json as? JsonObject
+                                        obj != null && (obj.containsKey("gym_id") || obj.containsKey("id") || obj.containsKey("action") || obj.containsKey("gym_api_url") || obj.containsKey("email"))
+                                    } catch (e: Throwable) {
+                                        false
+                                    }
+
                                 if (!isValidGymQr) {
                                     bannerTitle = "QR Inválido"
                                     bannerMessage = "Debe escanear el código QR oficial del gimnasio"
                                     bannerColor = Color(0xFFFF3D00)
                                     showCheckInSuccessBanner = true
                                 } else {
-                                    val isLinking = cleanCode.startsWith("MEMBERLINK|") || cleanCode.startsWith("MEMBER_LINK:")
+                                    val isLinking = cleanCode.startsWith("MEMBERLINK|") || cleanCode.startsWith("MEMBER_LINK:") || cleanCode.startsWith("PROFLINK|")
                                     if (isLinking) {
                                         if (cleanCode.startsWith("MEMBERLINK|")) {
                                             val parts = cleanCode.split("|")
@@ -550,30 +563,11 @@ fun MemberDashboardSharedScreen(
                                         )
 
                                         bannerTitle = "Cuenta vinculada"
-                                        bannerMessage = "Cuenta vinculada"
+                                        bannerMessage = "Cuenta vinculada con éxito"
                                         bannerColor = PrimaryTurquoise
                                         showCheckInSuccessBanner = true
                                     } else {
-                                        if (cleanCode.contains("@")) {
-                                            activeEmail = cleanCode.trim()
-                                        }
-
-                                        saveLocalMemberProfile(
-                                            LocalMemberData(
-                                                firstName = activeFirstName,
-                                                lastName = activeLastName,
-                                                email = activeEmail,
-                                                phone = activePhone,
-                                                address = activeAddress,
-                                                weight = activeWeight,
-                                                height = activeHeight,
-                                                photoUri = activePhotoUri,
-                                                gymName = activeGymName,
-                                                gymApiUrl = activeGymUrl,
-                                                assignedTrainer = activeAssignedTrainer
-                                            )
-                                        )
-
+                                        // Attendance Check-in only (No accidental re-linking)
                                         coroutineScope.launch {
                                             try {
                                                 val gymIdVal = activeGymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
@@ -594,7 +588,7 @@ fun MemberDashboardSharedScreen(
                                         }
 
                                         bannerTitle = "Asistencia registrada"
-                                        bannerMessage = "Asistencia registrada"
+                                        bannerMessage = "¡Asistencia registrada!"
                                         bannerColor = Color(0xFF00C853)
                                         showCheckInSuccessBanner = true
                                     }
