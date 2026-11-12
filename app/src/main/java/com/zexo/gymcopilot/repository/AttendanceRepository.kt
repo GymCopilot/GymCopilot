@@ -1223,8 +1223,11 @@ class AttendanceRepository(
                         
                         val index = localRoutines.indexOfFirst { it.id == remoteRoutine.id }
                         if (index != -1) {
-                            if (localRoutines[index] != remoteRoutine) {
-                                localRoutines[index] = remoteRoutine
+                            val local = localRoutines[index]
+                            val mergedEmails = (local.assignedMemberEmails + remoteRoutine.assignedMemberEmails).distinct()
+                            val mergedRoutine = remoteRoutine.copy(assignedMemberEmails = mergedEmails)
+                            if (local != mergedRoutine) {
+                                localRoutines[index] = mergedRoutine
                                 anyUpdated = true
                             }
                         } else {
