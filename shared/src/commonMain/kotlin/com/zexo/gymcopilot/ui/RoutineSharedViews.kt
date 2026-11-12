@@ -34,6 +34,7 @@ import com.zexo.gymcopilot.model.Routine
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
 import com.zexo.gymcopilot.utils.getCurrentTimeMillis
 import com.zexo.gymcopilot.utils.playAudioSound
+import com.zexo.gymcopilot.utils.readLocalMemberProfile
 import com.zexo.gymcopilot.utils.readLocalStorageFlag
 import com.zexo.gymcopilot.utils.saveLocalStorageFlag
 import gymcopilot.shared.generated.resources.*
@@ -41,6 +42,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.compose.resources.painterResource
 
 @Composable
@@ -61,6 +65,13 @@ fun FullRoutinesSection(
 
     val userRoutines = remember { mutableStateListOf<Routine>() }
 
+    fun persistRoutines() {
+        try {
+            val jsonStr = Json.encodeToString(userRoutines.toList())
+            saveLocalStorageFlag("gymcopilot_user_routines", jsonStr)
+        } catch (e: Exception) {}
+    }
+
     LaunchedEffect(Unit) {
         try {
             val savedJson = readLocalStorageFlag("gymcopilot_user_routines")
@@ -70,13 +81,56 @@ fun FullRoutinesSection(
                 userRoutines.addAll(parsed)
             }
         } catch (e: Exception) {}
-    }
 
-    fun persistRoutines() {
         try {
-            val jsonStr = Json.encodeToString(userRoutines.toList())
-            saveLocalStorageFlag("gymcopilot_user_routines", jsonStr)
-        } catch (e: Exception) {}
+            val localProfile = readLocalMemberProfile()
+            val gymUrl = localProfile?.gymApiUrl.orEmpty().ifBlank { "https://script.google.com/macros/s/AKfycbzXYYMu43-ATeyxQmwdF3CuRYXi7KbpChyTQEBFIsWh7SCHv2XugxsWen61oBeDdzw/exec" }
+            val gymName = localProfile?.gymName.orEmpty().ifBlank { "Gym 47" }
+            val gymIdVal = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val myEmail = localProfile?.email.orEmpty().lowercase().trim()
+            val ssId = localProfile?.spreadsheetId.orEmpty()
+            val paramChar = if (gymUrl.contains("?")) "&" else "?"
+            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+            val routinesUrl = "$gymUrl${paramChar}type=routines&gymId=$gymIdVal$ssParam"
+
+            val responseText = GymKtorApiClient.getData(routinesUrl)
+            if (responseText.isNotBlank() && responseText.contains("success")) {
+                val jsonElement = GymKtorApiClient.jsonInstance.parseToJsonElement(responseText)
+                val jsonObject = jsonElement as? JsonObject
+                val dataArray = jsonObject?.get("data") as? JsonArray
+                if (dataArray != null && dataArray.size > 1) {
+                    val remoteRoutines = mutableListOf<Routine>()
+                    for (i in 1 until dataArray.size) {
+                        val row = dataArray[i] as? JsonArray
+                        if (row != null && row.size >= 4) {
+                            val memberEmailInRow = row[1].jsonPrimitive.content.lowercase().trim()
+                            val routineJson = if (row.size >= 5) row[4].jsonPrimitive.content else row[3].jsonPrimitive.content
+                            if (routineJson.isNotBlank() && routineJson != "null") {
+                                try {
+                                    var remoteRoutine = Json.decodeFromString<Routine>(routineJson)
+                                    remoteRoutine = remoteRoutine.copy(
+                                        creatorEmail = remoteRoutine.creatorEmail.lowercase().trim(),
+                                        assignedMemberEmails = remoteRoutine.assignedMemberEmails.map { it.lowercase().trim() }
+                                    )
+                                    val isAssignedToMe = myEmail.isNotBlank() && (
+                                        memberEmailInRow == myEmail ||
+                                        remoteRoutine.assignedMemberEmails.contains(myEmail)
+                                    )
+                                    if (isAssignedToMe || myEmail.isBlank()) {
+                                        remoteRoutines.add(remoteRoutine)
+                                    }
+                                } catch (_: Throwable) {}
+                            }
+                        }
+                    }
+                    if (remoteRoutines.isNotEmpty()) {
+                        userRoutines.clear()
+                        userRoutines.addAll(remoteRoutines.distinctBy { it.id })
+                        persistRoutines()
+                    }
+                }
+            }
+        } catch (_: Throwable) {}
     }
 
     if (showCreationScreen || editingRoutineId != null) {

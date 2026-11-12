@@ -1172,9 +1172,11 @@ class AttendanceRepository(
 
     private suspend fun processRoutineRows(rows: JsonArray) {
         val userEmail = dataStoreManager.getUserEmail().first().lowercase().trim()
+        val linkedMemberEmail = dataStoreManager.getLinkedMemberEmail().first()?.lowercase()?.trim().orEmpty()
+        val effectiveUserEmail = userEmail.ifBlank { linkedMemberEmail }
         val userRole = dataStoreManager.getUserRole().first()?.lowercase()
         val rawProfId = dataStoreManager.getLinkedProfessorId().first()
-        val currentProfId = if (!rawProfId.isNullOrBlank()) rawProfId.trim() else userEmail
+        val currentProfId = if (!rawProfId.isNullOrBlank()) rawProfId.trim() else effectiveUserEmail
 
         val localRoutines = dataStoreManager.getRoutines().first().toMutableList()
         var anyUpdated = false
@@ -1184,18 +1186,11 @@ class AttendanceRepository(
             val row = rows[i].asJsonArray
             if (row.size() < 4) continue
             
-            val memberEmail = row[1].asString.lowercase().trim()
+            val memberEmailInRow = row[1].asString.lowercase().trim()
             val professorIdInRow = row[2].asString.trim()
             val routineJson = if (row.size() >= 5) row[4].asString else row[3].asString
 
-            val isForThisUser = if (userRole == "professor" || userRole == "admin") {
-                (professorIdInRow.isNotBlank() && (professorIdInRow == currentProfId || professorIdInRow == userEmail)) || 
-                memberEmail == userEmail
-            } else {
-                memberEmail == userEmail
-            }
-
-            if (isForThisUser && routineJson.isNotBlank()) {
+            if (routineJson.isNotBlank()) {
                 try {
                     var remoteRoutine = Json.decodeFromString<Routine>(routineJson)
                     remoteRoutine = remoteRoutine.copy(
@@ -1203,26 +1198,39 @@ class AttendanceRepository(
                         assignedMemberEmails = remoteRoutine.assignedMemberEmails.map { it.lowercase().trim() }
                     )
 
-                    if ((userRole == "professor" || userRole == "admin") && memberEmail != userEmail) {
-                        remoteRoutine = remoteRoutine.copy(id = "${remoteRoutine.id}::$memberEmail")
-                    }
+                    val isAssignedToMe = effectiveUserEmail.isNotBlank() && (
+                        memberEmailInRow == effectiveUserEmail ||
+                        remoteRoutine.assignedMemberEmails.contains(effectiveUserEmail)
+                    )
 
-                    remoteRoutineIdsForUser.add(remoteRoutine.id)
+                    val isMyCreatedRoutine = (userRole == "professor" || userRole == "admin") && (
+                        (professorIdInRow.isNotBlank() && (professorIdInRow == currentProfId || professorIdInRow == effectiveUserEmail)) ||
+                        remoteRoutine.creatorEmail == effectiveUserEmail ||
+                        memberEmailInRow == effectiveUserEmail
+                    )
 
-                    if (remoteRoutine.status == "Completada" && !isToday(remoteRoutine.updatedAt)) {
-                        remoteRoutine = remoteRoutine.copy(status = "Activa")
-                        anyUpdated = true
-                    }
-                    
-                    val index = localRoutines.indexOfFirst { it.id == remoteRoutine.id }
-                    if (index != -1) {
-                        if (localRoutines[index] != remoteRoutine) {
-                            localRoutines[index] = remoteRoutine
+                    if (isAssignedToMe || isMyCreatedRoutine) {
+                        if ((userRole == "professor" || userRole == "admin") && memberEmailInRow != effectiveUserEmail && memberEmailInRow.isNotBlank()) {
+                            remoteRoutine = remoteRoutine.copy(id = "${remoteRoutine.id}::$memberEmailInRow")
+                        }
+
+                        remoteRoutineIdsForUser.add(remoteRoutine.id)
+
+                        if (remoteRoutine.status == "Completada" && !isToday(remoteRoutine.updatedAt)) {
+                            remoteRoutine = remoteRoutine.copy(status = "Activa")
                             anyUpdated = true
                         }
-                    } else {
-                        localRoutines.add(remoteRoutine)
-                        anyUpdated = true
+                        
+                        val index = localRoutines.indexOfFirst { it.id == remoteRoutine.id }
+                        if (index != -1) {
+                            if (localRoutines[index] != remoteRoutine) {
+                                localRoutines[index] = remoteRoutine
+                                anyUpdated = true
+                            }
+                        } else {
+                            localRoutines.add(remoteRoutine)
+                            anyUpdated = true
+                        }
                     }
                 } catch (e: Exception) {
                     Log.e("RoutineSync", "Error decoding: ${e.message}")
