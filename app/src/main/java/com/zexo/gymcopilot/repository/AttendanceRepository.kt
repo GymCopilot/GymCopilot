@@ -52,12 +52,11 @@ class AttendanceRepository(
             val encLastName = java.net.URLEncoder.encode(professor.lastName, "UTF-8")
             val encEmail = java.net.URLEncoder.encode(professor.email, "UTF-8")
             val encSpecialty = java.net.URLEncoder.encode(professor.specialty ?: "", "UTF-8")
-            val encPhoto = java.net.URLEncoder.encode(professor.photoUri ?: "", "UTF-8")
             val colorVal = professor.profileColor ?: 0
 
             val paramChar = if (gymUrl.contains("?")) "&" else "?"
             val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
-            val requestUrl = "$gymUrl${paramChar}action=update_professor&gymId=$gymId&professorId=$encProfId&email=$encEmail&firstName=$encFirstName&lastName=$encLastName&specialty=$encSpecialty&profileColor=$colorVal&photoUri=$encPhoto$ssParam"
+            val requestUrl = "$gymUrl${paramChar}action=update_professor&gymId=$gymId&professorId=$encProfId&email=$encEmail&firstName=$encFirstName&lastName=$encLastName&specialty=$encSpecialty&profileColor=$colorVal$ssParam"
             
             try {
                 val responseText = GymKtorApiClient.postData(requestUrl, request)
