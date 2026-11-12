@@ -720,11 +720,8 @@ class AttendanceRepository(
             }
 
             val currentLocalLogo = dataStoreManager.getGymLogoUri().first()
-            val timeSinceLocalUpdate = System.currentTimeMillis() - lastLocalLogoUpdateTimestamp
-            if (timeSinceLocalUpdate > 60_000L || currentLocalLogo.isNullOrBlank()) {
-                if (!logo.isNullOrBlank() && logo != "null" && logo != currentLocalLogo && logo.startsWith("data:image")) {
-                    dataStoreManager.setGymLogoUri(logo)
-                }
+            if (!logo.isNullOrBlank() && logo != "null" && logo != currentLocalLogo && logo.startsWith("data:image")) {
+                dataStoreManager.setGymLogoUri(logo)
             }
 
             val currentLocalPhone = dataStoreManager.getGymPhone().first()
