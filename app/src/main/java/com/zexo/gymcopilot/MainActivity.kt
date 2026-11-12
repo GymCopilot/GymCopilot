@@ -96,11 +96,17 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            val apiService = remember { NetworkModule.getApiService("") }
+            val attendanceRepository = remember { AttendanceRepository(apiService, dataStoreManager) }
+
             LaunchedEffect(Unit) {
                 if (!skipSplash) {
                     delay(4500) // Duración total para permitir el fade out completo
                     showSplash = false
                 }
+                try {
+                    attendanceRepository.syncGymConfigFromServer()
+                } catch (_: Throwable) {}
             }
 
             LaunchedEffect(lockExpirationTime) {
@@ -121,8 +127,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
             
-            val apiService = remember { NetworkModule.getApiService("") }
-            val attendanceRepository = remember { AttendanceRepository(apiService, dataStoreManager) }
             val scheduleRepository = remember { ScheduleRepository(apiService, dataStoreManager) }
             val googleCloudRepository = remember { GoogleCloudRepository(dataStoreManager) }
             val billingManager = remember { BillingManager(context) }
