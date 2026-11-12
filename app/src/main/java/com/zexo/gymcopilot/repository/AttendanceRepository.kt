@@ -168,25 +168,37 @@ class AttendanceRepository(
             if (gymUrl.isBlank()) return Result.failure(Exception("URL no configurada"))
             val gymName = dataStoreManager.getGymName().first()
             val gymId = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val userEmail = dataStoreManager.getUserEmail().first()
             val ssId = dataStoreManager.getGymSpreadsheetId().first()
-            
+            val effectiveEmail = memberEmail.ifBlank { userEmail }
+
             val request = RoutineSyncRequest(
                 action = action,
                 professorId = professorId,
-                memberEmail = memberEmail.lowercase().trim(),
+                memberEmail = effectiveEmail.lowercase().trim(),
                 routine = routineJson,
                 routineId = routineId,
                 status = status,
                 gymId = gymId,
+                email = userEmail,
                 timestamp = System.currentTimeMillis(),
                 spreadsheetId = ssId
             )
+            val encRoutine = URLEncoder.encode(routineJson, "UTF-8")
+            val encMemberEmail = URLEncoder.encode(effectiveEmail, "UTF-8")
             val paramChar = if (gymUrl.contains("?")) "&" else "?"
             val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
-            val requestUrl = "$gymUrl${paramChar}action=$action&gymId=$gymId&memberEmail=${java.net.URLEncoder.encode(memberEmail, "UTF-8")}$ssParam"
+            val requestUrl = "$gymUrl${paramChar}action=$action&gymId=$gymId&email=${URLEncoder.encode(userEmail, "UTF-8")}&memberEmail=$encMemberEmail&routine=$encRoutine$ssParam"
             try {
-                GymKtorApiClient.postData(requestUrl, request)
-                Result.success(Unit)
+                val responseText = GymKtorApiClient.postData(requestUrl, request)
+                if (responseText.isNotBlank()) {
+                    Result.success(Unit)
+                } else {
+                    val dynamicService = NetworkModule.getApiService(gymUrl)
+                    val response = dynamicService.postRoutineSync(requestUrl, null, request)
+                    if (response.isSuccessful || response.code() == 302) Result.success(Unit)
+                    else Result.failure(Exception("Error syncing routine: ${response.code()}"))
+                }
             } catch (e: Exception) {
                 val dynamicService = NetworkModule.getApiService(gymUrl)
                 val response = dynamicService.postRoutineSync(requestUrl, null, request)

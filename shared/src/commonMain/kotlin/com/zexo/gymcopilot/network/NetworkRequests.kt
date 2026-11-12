@@ -78,7 +78,9 @@ data class RoutineSyncRequest(
     val routineId: String = "",
     val status: String? = null,
     val timestamp: Long = 0L,
-    val spreadsheetId: String? = null
+    val spreadsheetId: String? = null,
+    val gymId: String? = null,
+    val email: String? = null
 )
 
 @Serializable

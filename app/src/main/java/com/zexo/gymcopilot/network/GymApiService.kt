@@ -73,6 +73,7 @@ data class RoutineSyncRequest(
     val routineId: String = "",
     val status: String? = null,
     val gymId: String? = null,
+    val email: String? = null,
     val timestamp: Long = System.currentTimeMillis(),
     val spreadsheetId: String? = null
 )
