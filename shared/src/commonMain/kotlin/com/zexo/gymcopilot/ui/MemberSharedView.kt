@@ -374,13 +374,13 @@ fun MemberDashboardSharedScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.weight(1f)
                     ) {
+                        val logoShape = if (showLogoBorder) RoundedCornerShape(20.dp) else RoundedCornerShape(12.dp)
                         Box(
                             modifier = Modifier
                                 .size(121.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(Color(0xFF00151C))
+                                .clip(logoShape)
                                 .then(
-                                    if (showLogoBorder) Modifier.border(BorderStroke(2.dp, PrimaryTurquoise), RoundedCornerShape(20.dp))
+                                    if (showLogoBorder) Modifier.border(BorderStroke(2.dp, PrimaryTurquoise), logoShape)
                                     else Modifier
                                 )
                                 .clickable { showMemberProfileScreen = true },
@@ -390,8 +390,8 @@ fun MemberDashboardSharedScreen(
                                 Image(
                                     bitmap = gymLogoBitmap,
                                     contentDescription = "Gym Logo",
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(20.dp))
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.fillMaxSize().padding(if (showLogoBorder) 8.dp else 0.dp)
                                 )
                             } else {
                                 Icon(

@@ -20,6 +20,7 @@ class AttendanceRepository(
     private val apiService: GymApiService,
     private val dataStoreManager: DataStoreManager
 ) {
+    private var lastLocalLogoUpdateTimestamp: Long = 0L
     private val sheetDateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
 
     private fun isToday(timestamp: Long): Boolean {
@@ -554,6 +555,7 @@ class AttendanceRepository(
         gymIsOpen: Boolean? = null
     ): Result<Unit> {
         return try {
+            if (logoUri != null) lastLocalLogoUpdateTimestamp = System.currentTimeMillis()
             val gymUrl = dataStoreManager.getGymApiUrl().first()
             if (gymUrl.isBlank()) return Result.failure(Exception("URL no configurada"))
             
@@ -718,8 +720,11 @@ class AttendanceRepository(
             }
 
             val currentLocalLogo = dataStoreManager.getGymLogoUri().first()
-            if (!logo.isNullOrBlank() && logo != "null" && logo != currentLocalLogo && logo.startsWith("data:image")) {
-                dataStoreManager.setGymLogoUri(logo)
+            val timeSinceLocalUpdate = System.currentTimeMillis() - lastLocalLogoUpdateTimestamp
+            if (timeSinceLocalUpdate > 60_000L || currentLocalLogo.isNullOrBlank()) {
+                if (!logo.isNullOrBlank() && logo != "null" && logo != currentLocalLogo && logo.startsWith("data:image")) {
+                    dataStoreManager.setGymLogoUri(logo)
+                }
             }
 
             val currentLocalPhone = dataStoreManager.getGymPhone().first()
