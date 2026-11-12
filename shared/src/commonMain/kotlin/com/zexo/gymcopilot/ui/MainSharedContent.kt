@@ -26,13 +26,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
 import com.zexo.gymcopilot.utils.decodeBase64ToBitmap
+import com.zexo.gymcopilot.utils.getCurrentTimeMillis
 import com.zexo.gymcopilot.utils.isIOSDevice
 import com.zexo.gymcopilot.utils.isStandaloneMode
 import com.zexo.gymcopilot.utils.isWebTarget
 import com.zexo.gymcopilot.utils.readLocalMemberProfile
 import com.zexo.gymcopilot.utils.readLocalStorageFlag
+import com.zexo.gymcopilot.utils.saveLocalMemberProfile
 import com.zexo.gymcopilot.utils.saveLocalStorageFlag
 import com.zexo.gymcopilot.utils.triggerPwaInstall
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import gymcopilot.shared.generated.resources.*
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.painterResource
@@ -436,7 +441,55 @@ fun MainAppView(
     onChangeRole: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
+    var unreadChatCount by remember { mutableIntStateOf(0) }
     val isWeb = remember { isWebTarget() }
+
+    LaunchedEffect(gymName, userRole) {
+        val localData = readLocalMemberProfile()
+        val gymUrl = localData?.gymApiUrl.orEmpty().ifBlank { "https://script.google.com/macros/s/AKfycbzXYYMu43-ATeyxQmwdF3CuRYXi7KbpChyTQEBFIsWh7SCHv2XugxsWen61oBeDdzw/exec" }
+        val myEmail = localData?.email.orEmpty().lowercase().trim()
+        val gymIdVal = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+        val ssId = localData?.spreadsheetId.orEmpty()
+        val paramChar = if (gymUrl.contains("?")) "&" else "?"
+        val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+        val chatsUrl = "$gymUrl${paramChar}type=chats&gymId=$gymIdVal$ssParam"
+
+        while (true) {
+            try {
+                val responseText = GymKtorApiClient.getData(chatsUrl)
+                if (responseText.isNotBlank() && responseText.contains("success")) {
+                    val jsonElement = GymKtorApiClient.jsonInstance.parseToJsonElement(responseText)
+                    val jsonObject = jsonElement as? JsonObject
+                    val dataArray = jsonObject?.get("data") as? JsonArray
+                    if (dataArray != null && dataArray.size > 1) {
+                        val lastReadStr = readLocalStorageFlag("gymcopilot_last_read_chat") ?: "0"
+                        val lastReadTs = lastReadStr.toLongOrNull() ?: 0L
+                        var hasUnread = false
+
+                        for (i in 1 until dataArray.size) {
+                            val row = dataArray[i] as? JsonArray
+                            if (row != null && row.size >= 4) {
+                                val sender = row[1].jsonPrimitive.content.lowercase().trim()
+                                val recipient = row[2].jsonPrimitive.content.lowercase().trim()
+                                val tsStr = if (row.size > 4) row[4].jsonPrimitive.content else "0"
+                                val ts = tsStr.toDoubleOrNull()?.toLong() ?: tsStr.toLongOrNull() ?: 0L
+
+                                val isForMe = recipient.contains("general") || (myEmail.isNotBlank() && recipient == myEmail) || userRole == "admin" || userRole == "profesor"
+                                val isNotFromMe = sender != myEmail
+
+                                if (isForMe && isNotFromMe && ts > lastReadTs) {
+                                    hasUnread = true
+                                    break
+                                }
+                            }
+                        }
+                        unreadChatCount = if (hasUnread) 1 else 0
+                    }
+                }
+            } catch (_: Throwable) {}
+            delay(10000)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -454,7 +507,19 @@ fun MainAppView(
             RoleNavigationBar(
                 userRole = userRole,
                 selectedTab = selectedTab,
-                onTabSelected = { selectedTab = it }
+                unreadChatCount = unreadChatCount,
+                onTabSelected = { index ->
+                    selectedTab = index
+                    val items = when (userRole) {
+                        "admin" -> listOf("Home", "Store", "Clientes", "Profesores", "Config")
+                        "profesor" -> listOf("Home", "Tienda", "Horarios", "Alumnos", "Rutinas", "Chat")
+                        else -> listOf("Home", "Tienda", "Clases", "Rutinas", "Chat")
+                    }
+                    if (items.getOrNull(index) == "Chat") {
+                        unreadChatCount = 0
+                        saveLocalStorageFlag("gymcopilot_last_read_chat", getCurrentTimeMillis().toString())
+                    }
+                }
             )
         },
         containerColor = Color.Transparent
@@ -542,6 +607,7 @@ fun HeaderBar(
 fun RoleNavigationBar(
     userRole: String,
     selectedTab: Int,
+    unreadChatCount: Int = 0,
     onTabSelected: (Int) -> Unit
 ) {
     val items = when (userRole) {
@@ -583,12 +649,23 @@ fun RoleNavigationBar(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Icon(
-                        painter = iconPainter,
-                        contentDescription = label,
-                        tint = if (isSelected) PrimaryTurquoise else TextGray,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Box(contentAlignment = Alignment.TopEnd) {
+                        Icon(
+                            painter = iconPainter,
+                            contentDescription = label,
+                            tint = if (isSelected) PrimaryTurquoise else TextGray,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        if (label == "Chat" && unreadChatCount > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .size(9.dp)
+                                    .offset(x = 2.dp, y = (-2).dp)
+                                    .background(Color.Red, CircleShape)
+                                    .border(1.dp, Color(0xFF00151C), CircleShape)
+                            )
+                        }
+                    }
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = label,
