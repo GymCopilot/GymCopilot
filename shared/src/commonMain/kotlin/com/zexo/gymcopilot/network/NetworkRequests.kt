@@ -63,6 +63,8 @@ data class MemberSyncRequest(
 data class PlansSyncRequest(
     val action: String = "update_plans",
     val plans: List<SubscriptionPlan>,
+    val gymId: String? = null,
+    val email: String? = null,
     val timestamp: Long = 0L,
     val spreadsheetId: String? = null
 )
