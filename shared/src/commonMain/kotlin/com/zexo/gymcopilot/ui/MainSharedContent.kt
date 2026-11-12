@@ -31,12 +31,8 @@ import com.zexo.gymcopilot.utils.isStandaloneMode
 import com.zexo.gymcopilot.utils.isWebTarget
 import com.zexo.gymcopilot.utils.readLocalMemberProfile
 import com.zexo.gymcopilot.utils.readLocalStorageFlag
-import com.zexo.gymcopilot.utils.saveLocalMemberProfile
 import com.zexo.gymcopilot.utils.saveLocalStorageFlag
 import com.zexo.gymcopilot.utils.triggerPwaInstall
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import gymcopilot.shared.generated.resources.*
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.painterResource
@@ -130,40 +126,6 @@ fun SharedGymCopilotApp(
             if (localData.photoUri != null) {
                 gymLogoUri = localData.photoUri
             }
-
-            try {
-                val gymUrl = localData.gymApiUrl.orEmpty().ifBlank { "https://script.google.com/macros/s/AKfycbzXYYMu43-ATeyxQmwdF3CuRYXi7KbpChyTQEBFIsWh7SCHv2XugxsWen61oBeDdzw/exec" }
-                val gymIdVal = activeGymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
-                val ssId = localData.spreadsheetId.orEmpty()
-                val paramChar = if (gymUrl.contains("?")) "&" else "?"
-                val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
-                val url = "$gymUrl${paramChar}type=config&gymId=$gymIdVal$ssParam"
-                val responseText = GymKtorApiClient.getData(url)
-                if (responseText.isNotBlank() && responseText.contains("success")) {
-                    val jsonElement = GymKtorApiClient.jsonInstance.parseToJsonElement(responseText)
-                    val jsonObject = jsonElement as? JsonObject
-                    val dataArray = jsonObject?.get("data") as? JsonArray
-                    if (dataArray != null) {
-                        for (i in 0 until dataArray.size) {
-                            val row = dataArray[i] as? JsonArray
-                            if (row != null && row.size > 0 && row[0].jsonPrimitive.content == "GYM_CONFIG") {
-                                if (row.size > 1) {
-                                    val rName = row[1].jsonPrimitive.content
-                                    if (rName.isNotBlank() && rName != "null") activeGymName = rName
-                                }
-                                if (row.size > 2) {
-                                    val rLogo = row[2].jsonPrimitive.content
-                                    if (rLogo.isNotBlank() && rLogo != "null") {
-                                        gymLogoUri = rLogo
-                                        saveLocalMemberProfile(localData.copy(gymName = activeGymName, photoUri = rLogo))
-                                    }
-                                }
-                                break
-                            }
-                        }
-                    }
-                }
-            } catch (_: Throwable) {}
         }
     }
 
