@@ -1076,24 +1076,11 @@ class AttendanceRepository(
                 val fName = row[1].asString
                 val lName = row[2].asString
                 val email = row[3].asString
-                val specialty = if (row.size() > 4) row[4].asString else ""
+                val specialty = if (row.size() > 4 && !row[4].isJsonNull) row[4].asString else ""
 
-                var colorVal: Int? = null
-                var photo: String? = null
-
-                for (j in 4 until row.size()) {
-                    val cell = row[j].asString.trim()
-                    if (cell.contains("http") || cell.contains("drive.google.com") ||
-                        cell.startsWith("content://") || cell.startsWith("data:image") ||
-                        cell.contains("/files/") || cell.contains("/cache/")) { 
-                        photo = cell
-                    } else if (colorVal == null) {
-                        val c = cell.toIntOrNull()
-                        if (c != null && (c < -1000 || c > 1000)) {
-                            colorVal = c
-                        }
-                    }
-                }
+                val colorVal = if (row.size() > 5 && !row[5].isJsonNull) row[5].asString.toIntOrNull() else null
+                val photoCell = if (row.size() > 6 && !row[6].isJsonNull) row[6].asString.trim() else ""
+                val photo = if (photoCell.isBlank() || photoCell == "null") null else photoCell
 
                 remoteProfessors.add(Professor(
                     id = profId,
