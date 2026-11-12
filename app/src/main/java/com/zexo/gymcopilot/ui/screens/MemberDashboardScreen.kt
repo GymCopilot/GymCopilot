@@ -2,6 +2,7 @@ package com.zexo.gymcopilot.ui.screens
 
 import android.graphics.BitmapFactory
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -84,7 +85,9 @@ fun MemberDashboardScreen(
     val plans by dataStoreManager.getSubscriptionPlans().collectAsState(initial = emptyList())
     val members by dataStoreManager.getMembers().collectAsState(initial = emptyList())
     val professors by dataStoreManager.getProfessors().collectAsState(initial = emptyList())
-    val currentMember = remember(members, userEmail) { members.find { it.email.equals(userEmail, ignoreCase = true) } }
+    val linkedMemberEmail by dataStoreManager.getLinkedMemberEmail().collectAsState(initial = "")
+    val effectiveEmail = remember(userEmail, linkedMemberEmail) { userEmail.ifBlank { linkedMemberEmail } }
+    val currentMember = remember(members, effectiveEmail) { members.find { it.email.equals(effectiveEmail, ignoreCase = true) } }
 
     val myProfessor = remember(currentMember, professors) {
         if (currentMember?.assignedTrainer.isNullOrBlank()) null
@@ -197,8 +200,8 @@ fun MemberDashboardScreen(
 
     val membershipStatus = remember(currentMember) {
         if (currentMember == null) "Pendiente de pago"
-        else if (currentMember.membershipStatus.equals("ACTIVO", ignoreCase = true) && currentMember.nextRenewalDate > System.currentTimeMillis()) "Vigente"
-        else "Pendiente de pago"
+        else if (currentMember.membershipStatus.equals("ACTIVO", ignoreCase = true) || currentMember.membershipStatus.equals("ACTIVA", ignoreCase = true) || currentMember.membershipStatus.equals("ACTIVE", ignoreCase = true) || currentMember.membershipStatus.equals("Vigente", ignoreCase = true)) "Activo"
+        else currentMember.membershipStatus.ifBlank { "Pendiente de pago" }
     }
     
     val nextRenewal = remember(currentMember) {
@@ -575,41 +578,30 @@ fun MembershipStatusCard(
     accentColor: Color,
     shape: androidx.compose.ui.graphics.Shape
 ) {
-    val isVigente = status == "Vigente"
-    val statusColor = if (isVigente) Color(0xFF4CAF50) else Color(0xFFF44336)
+    val isVigente = status.equals("Vigente", ignoreCase = true) || status.equals("Activo", ignoreCase = true) || status.equals("ACTIVO", ignoreCase = true) || status.equals("ACTIVE", ignoreCase = true) || status.equals("ACTIVA", ignoreCase = true)
+    val statusText = if (isVigente) "Activo" else "Pendiente de pago"
+    val statusColor = if (isVigente) Color(0xFF00C853) else Color(0xFFFF3D00)
     
     val countdownColor = when {
-        !isVigente -> Color(0xFFF44336)
+        !isVigente -> Color(0xFFFF3D00)
         daysRemaining == null -> TextGray
-        daysRemaining <= 3L -> Color(0xFFF44336) // Rojo (3 días o menos / Vence hoy)
-        daysRemaining <= 7L -> Color(0xFFFFEB3B) // Amarillo (4 a 7 días / 1 semana)
-        else -> Color(0xFF4CAF50) // Verde activo (> 7 días)
-    }
-
-    val pulseDuration = when {
-        !isVigente || (daysRemaining != null && daysRemaining <= 3L) -> 800
-        daysRemaining != null && daysRemaining in 4L..7L -> 1400
-        else -> 0
+        daysRemaining <= 3L -> Color(0xFFFF3D00) // Rojo (3 días o menos / Vence hoy)
+        daysRemaining <= 7L -> Color(0xFFFFD54F) // Amarillo (4 a 7 días / 1 semana)
+        else -> Color(0xFF00C853) // Verde activo (> 7 días)
     }
 
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val pulseAlpha by if (pulseDuration > 0) {
-        infiniteTransition.animateFloat(
-            initialValue = 1f,
-            targetValue = 0.3f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(pulseDuration, easing = LinearEasing),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "alpha"
-        )
-    } else {
-        remember { mutableFloatStateOf(1f) }
-    }
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.25f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "alpha"
+    )
 
-    val cardBorderColor = if (isVigente) accentColor else Color(0xFFF44336)
-    val iconBgColor = if (isVigente) Color(0xFF0A2F35) else Color(0xFF350A0A)
-    val iconVector = if (isVigente) Icons.Default.VerifiedUser else Icons.Default.GppBad
+    val cardBorderColor = if (isVigente) statusColor else Color(0xFFFF3D00)
 
     Card(
         modifier = Modifier.fillMaxWidth().border(1.5.dp, cardBorderColor, shape),
@@ -619,7 +611,7 @@ fun MembershipStatusCard(
         Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 Text("ESTADO DE MEMBRESÍA", color = TextGray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Text(status, color = statusColor, fontSize = 28.sp, fontWeight = FontWeight.Black)
+                Text(statusText, color = statusColor, fontSize = 28.sp, fontWeight = FontWeight.Black)
                 Text("Plan: $planName", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 
                 Row(
@@ -647,8 +639,26 @@ fun MembershipStatusCard(
                     }
                 }
             }
-            Box(modifier = Modifier.size(60.dp).background(iconBgColor, CircleShape), contentAlignment = Alignment.Center) {
-                Icon(iconVector, null, tint = statusColor, modifier = Modifier.size(36.dp))
+            Surface(
+                color = if (isVigente) Color(0xFF0B2914) else Color(0xFF380808),
+                shape = CircleShape,
+                border = BorderStroke(1.5.dp, statusColor),
+                modifier = Modifier.size(64.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Shield,
+                        contentDescription = "Shield Badge",
+                        tint = statusColor,
+                        modifier = Modifier.size(42.dp)
+                    )
+                    Icon(
+                        imageVector = if (isVigente) Icons.Default.Check else Icons.Default.Close,
+                        contentDescription = if (isVigente) "Check" else "Cross",
+                        tint = Color.Black,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }
