@@ -1854,6 +1854,10 @@ fun AdminDashboardScreen(
                 
                 coroutineScope.launch {
                     val emailScanned = parseEmailFromAdminQr(qrContent).lowercase().trim()
+                    if (emailScanned.isBlank()) {
+                        Toast.makeText(context, if (appLanguage == "Español") "QR inválido. Utilice el código QR oficial del gimnasio." else "Invalid QR. Use official gym QR.", Toast.LENGTH_LONG).show()
+                        return@launch
+                    }
                     val professor = professors.find { it.email.lowercase().trim() == emailScanned }
                     val existingMember = members.find { it.email.lowercase().trim() == emailScanned }
                         ?: members.find { "${it.firstName} ${it.lastName}".lowercase().trim() == emailScanned }
@@ -2464,13 +2468,17 @@ private fun decodeAdminBitmap(reader: MultiFormatReader, bitmap: Bitmap): String
 }
 
 private fun parseEmailFromAdminQr(raw: String): String {
-    if (raw.startsWith("ATTENDANCE:")) {
-        val parts = raw.split(":")
+    val clean = raw.trim()
+    if (!clean.startsWith("ATTENDANCE:") && !clean.startsWith("gym_id:") && !clean.startsWith("MEMBERLINK|") && !clean.startsWith("MEMBER_LINK:")) {
+        return ""
+    }
+    if (clean.startsWith("ATTENDANCE:")) {
+        val parts = clean.split(":")
         if (parts.size >= 2) return parts.last().trim()
     }
-    try { val json = JSONObject(raw); return json.optString("email", json.optString("Email", raw)) } catch (e: Exception) { }
-    val emailMatch = Regex("""[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}""").find(raw)?.value
-    return emailMatch ?: raw
+    try { val json = JSONObject(clean); return json.optString("email", json.optString("Email", clean)) } catch (e: Exception) { }
+    val emailMatch = Regex("""[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}""").find(clean)?.value
+    return emailMatch ?: ""
 }
 
 class SpeechBubbleRightShape(private val cornerRadius: Float) : Shape {
