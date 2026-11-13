@@ -142,7 +142,12 @@ fun RoutineDashboardScreen(
     val isProfessor = userRole?.lowercase() == "professor" || userRole?.lowercase() == "admin"
     val totalCount = if (isProfessor) savedRoutines.count { !it.id.contains("::") } else filteredRoutines.size
     val completedCount = savedRoutines.count { it.status == "Completada" }
-    val assignedCount = savedRoutines.sumOf { it.assignedMemberEmails.size }
+    val assignedCount = if (isProfessor) {
+        savedRoutines.count { it.type == "Asignada" || it.assignedMemberEmails.isNotEmpty() }
+    } else {
+        val normalizedEmail = effectiveEmail.orEmpty().lowercase().trim()
+        savedRoutines.count { it.assignedMemberEmails.any { e -> e.lowercase().trim() == normalizedEmail } }
+    }
 
     if (showCategorySheet) {
         ModalBottomSheet(
