@@ -26,7 +26,7 @@ object LockConfig {
      */
     const val APP_ENVIRONMENT = 0
 
-    private const val TEST_API_URL = "https://script.google.com/macros/s/TU_SCRIPT_ID_DE_PRUEBA/exec"
+    private const val TEST_API_URL = "https://script.google.com/macros/s/AKfycbx_dcSbPWVqvV48_hCp0L2u5KQ3AWqtfi0e5_wwwD0Fjtbf9FbmKRzZCPCSYw4pvtkz/exec"
     private const val PRODUCTION_API_URL = "https://script.google.com/macros/s/AKfycbzXYYMu43-ATeyxQmwdF3CuRYXi7KbpChyTQEBFIsWh7SCHv2XugxsWen61oBeDdzw/exec"
 
     /**
