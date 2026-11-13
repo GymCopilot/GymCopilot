@@ -67,7 +67,7 @@ fun LoginScreen(onRoleSelected: (String) -> Unit, onSettingsClick: () -> Unit) {
     val userRole by dataStoreManager.getUserRole().collectAsState(initial = null)
 
     val isRoleLocked = remember(userRole) { 
-        LockConfig.IS_ROLE_LOCK_ENABLED == 1 && !userRole.isNullOrBlank() 
+        LockConfig.ANDROID_ROLE_LOCK_ENABLED == 1 && !userRole.isNullOrBlank() 
     }
 
     val welcome: String; val selectRole: String

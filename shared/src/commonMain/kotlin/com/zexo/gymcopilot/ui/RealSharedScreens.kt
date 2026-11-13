@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.model.*
 import com.zexo.gymcopilot.LockConfig
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
+import com.zexo.gymcopilot.utils.readLocalStorageFlag
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import com.zexo.gymcopilot.utils.readLocalStorageFlag

@@ -112,11 +112,19 @@ fun SharedGymCopilotApp(
 ) {
     val skipSplash = readLocalStorageFlag("gymcopilot_skip_splash") == "true"
     var screenState by remember { mutableStateOf(if (skipSplash) AppScreenState.MAIN_APP else AppScreenState.SPLASH) }
-    var currentRole by remember { mutableStateOf(if (LockConfig.IS_ROLE_LOCK_ENABLED == 1) "member" else initialRole.lowercase()) }
+    var currentRole by remember { mutableStateOf(if (LockConfig.WEB_ROLE_LOCK_ENABLED == 1) "member" else initialRole.lowercase()) }
     var activeGymName by remember { mutableStateOf(gymName) }
     var showInstallBanner by remember { mutableStateOf(false) }
     var showInstructionsDialog by remember { mutableStateOf(false) }
-    var gymLogoUri by remember { mutableStateOf<String?>(null) }
+    var gymLogoUri by remember {
+        mutableStateOf(
+            try {
+                readLocalMemberProfile()?.photoUri 
+                    ?: readLocalStorageFlag("gymcopilot_cache_logo") 
+                    ?: readLocalStorageFlag("gymcopilot_member_photo")
+            } catch (e: Throwable) { null }
+        )
+    }
     val isIOS = remember { isIOSDevice() }
 
     LaunchedEffect(Unit) {
@@ -436,7 +444,7 @@ fun LoginScreenView(
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            val isRoleLocked = LockConfig.IS_ROLE_LOCK_ENABLED == 1
+            val isRoleLocked = LockConfig.WEB_ROLE_LOCK_ENABLED == 1
 
             if (!isRoleLocked) {
                 item {
@@ -611,7 +619,7 @@ fun HeaderBar(
                 )
             }
 
-            val isRoleLocked = LockConfig.IS_ROLE_LOCK_ENABLED == 1
+            val isRoleLocked = LockConfig.WEB_ROLE_LOCK_ENABLED == 1
             Surface(
                 color = PrimaryTurquoise.copy(alpha = 0.15f),
                 shape = RoundedCornerShape(20.dp),

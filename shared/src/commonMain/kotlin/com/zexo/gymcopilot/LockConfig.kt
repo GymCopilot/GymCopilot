@@ -4,20 +4,21 @@ package com.zexo.gymcopilot
  * Configuración global del sistema, bloqueo y entorno de la aplicación (Web y Android).
  */
 object LockConfig {
-    /**
-     * Define cuántos días permanecerá desbloqueada la aplicación.
-     * 0: Desactiva el sistema de bloqueo.
-     * 1+: Días permitidos antes de solicitar el código de desbloqueo.
-     * Número negativo (ej. -1): Bloqueo inmediato al ingresar por primera vez.
-     */
     const val LOCK_DAYS = 0
 
     /**
-     * Define si el sistema de bloqueo de perfil está activo.
-     * 0: Desactivado (Se muestran todos los roles).
-     * 1: Activado (Solo se muestra el rol seleccionado previamente).
+     * Bloqueo de perfiles específico para Android.
+     * 0: Desactivado.
+     * 1: Activado.
      */
-    const val IS_ROLE_LOCK_ENABLED = 0
+    const val ANDROID_ROLE_LOCK_ENABLED = 0
+
+    /**
+     * Bloqueo / Visibilidad de perfiles específico para la App Web.
+     * 0: Muestra todos los roles en la Web.
+     * 1: Muestra únicamente el perfil del alumno (socio) en la Web (durante desarrollo).
+     */
+    const val WEB_ROLE_LOCK_ENABLED = 1
 
     /**
      * Define el entorno operativo de la aplicación.

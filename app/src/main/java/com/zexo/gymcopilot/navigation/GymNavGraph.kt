@@ -126,7 +126,7 @@ fun GymNavGraph(
     val onAdminSettings = { navController.navigate(Screen.AppSettings.route) }
 
     val onMemberHome = { 
-        if (isSubscribed || LockConfig.IS_ROLE_LOCK_ENABLED == 0) {
+        if (isSubscribed || LockConfig.ANDROID_ROLE_LOCK_ENABLED == 0) {
             navController.navigate(Screen.MemberDashboard.route) { popUpTo(0) }
         } else {
             navController.navigate(Screen.Paywall.route)
@@ -150,7 +150,7 @@ fun GymNavGraph(
     NavHost(
         navController = navController,
         startDestination = remember(initialUserRole, initialIsSubscribed) {
-            if (LockConfig.IS_ROLE_LOCK_ENABLED == 0) {
+            if (LockConfig.ANDROID_ROLE_LOCK_ENABLED == 0) {
                 Screen.Login.route
             } else {
                 when (initialUserRole) {
@@ -695,7 +695,7 @@ fun GymNavGraph(
             ReportProblemScreen(onBack = { navController.popBackStack() })
         }
         composable(Screen.Paywall.route) {
-            if (LockConfig.IS_ROLE_LOCK_ENABLED == 0) {
+            if (LockConfig.ANDROID_ROLE_LOCK_ENABLED == 0) {
                 LaunchedEffect(Unit) {
                     navController.navigate(Screen.MemberDashboard.route) {
                         popUpTo(Screen.Paywall.route) { inclusive = true }
