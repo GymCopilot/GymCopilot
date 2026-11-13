@@ -446,11 +446,13 @@ class DataStoreManager(private val context: Context) {
     suspend fun updateRoutine(updatedRoutine: Routine) {
         dataStore.edit { preferences ->
             val current = try { Json.decodeFromString<MutableList<Routine>>(preferences[GYM_ROUTINES] ?: "[]") } catch (e: Exception) { mutableListOf() }
-            val index = current.indexOfFirst { it.id == updatedRoutine.id }
+            val index = current.indexOfFirst { it.id == updatedRoutine.id || (it.name.lowercase() == updatedRoutine.name.lowercase()) }
             if (index != -1) {
                 current[index] = updatedRoutine
-                preferences[GYM_ROUTINES] = Json.encodeToString(current)
+            } else {
+                current.add(updatedRoutine)
             }
+            preferences[GYM_ROUTINES] = Json.encodeToString(current)
         }
     }
 
