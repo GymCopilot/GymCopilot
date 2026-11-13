@@ -94,12 +94,15 @@ fun RoutineDashboardScreen(
     var routineToAssign by remember { mutableStateOf<Routine?>(null) }
     var routineToDelete by remember { mutableStateOf<Routine?>(null) }
 
+    val linkedMemberEmail by dataStoreManager.getLinkedMemberEmail().collectAsState(initial = "")
+    val effectiveEmail = remember(userEmail, linkedMemberEmail) { userEmail.takeIf { it.isNotBlank() } ?: linkedMemberEmail }
+
     val repository = remember(gymApiUrl) {
         AttendanceRepository(NetworkModule.getApiService(gymApiUrl), dataStoreManager)
     }
 
-    LaunchedEffect(gymApiUrl, userEmail) {
-        if (gymApiUrl.isNotBlank() && userEmail.isNotBlank()) {
+    LaunchedEffect(gymApiUrl, effectiveEmail) {
+        if (gymApiUrl.isNotBlank() && !effectiveEmail.isNullOrBlank()) {
             while (isActive) {
                 repository.syncRoutinesFromServer()
                 repository.syncProfessorsFromServer()
@@ -108,11 +111,11 @@ fun RoutineDashboardScreen(
         }
     }
 
-    val filteredRoutines = remember(savedRoutines, searchQuery, userRole, userEmail, favoritesFilterActive, selectedCategory) {
+    val filteredRoutines = remember(savedRoutines, searchQuery, userRole, effectiveEmail, favoritesFilterActive, selectedCategory) {
         val base = if (userRole?.lowercase() == "professor" || userRole?.lowercase() == "admin") {
             savedRoutines.filter { !it.id.contains("::") }
         } else {
-            val normalizedEmail = userEmail.lowercase().trim()
+            val normalizedEmail = effectiveEmail.orEmpty().lowercase().trim()
             savedRoutines.filter { it.creatorEmail.lowercase().trim() == normalizedEmail || it.assignedMemberEmails.any { e -> e.lowercase().trim() == normalizedEmail } }
         }
 
