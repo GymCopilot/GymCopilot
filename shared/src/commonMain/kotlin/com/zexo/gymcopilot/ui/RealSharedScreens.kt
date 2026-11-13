@@ -386,10 +386,22 @@ fun RealPublicStoreView(apiClient: GymKtorApiClient = GymKtorApiClient, onTabSel
     val cartItems = remember { mutableStateListOf<Product>() }
     var productsList by remember {
         mutableStateOf(
-            listOf(
-                Product(id = "1", name = "Proteinaaaaaaaaa", price = 12000.0, categoryId = "EQUIPAMIENTO", description = "Proteína en polvo", bannerType = "2x1"),
-                Product(id = "2", name = "otra proteinaeina", price = 7888.0, categoryId = "NUTRITION", description = "Whey protein 100% ENA", bannerType = "Tiempo limitado")
-            )
+            try {
+                val cached = readLocalStorageFlag("gymcopilot_cache_products")
+                if (!cached.isNullOrBlank()) {
+                    Json.decodeFromString<List<Product>>(cached)
+                } else {
+                    listOf(
+                        Product(id = "1", name = "Proteinaaaaaaaaa", price = 12000.0, categoryId = "EQUIPAMIENTO", description = "Proteína en polvo", bannerType = "2x1"),
+                        Product(id = "2", name = "otra proteinaeina", price = 7888.0, categoryId = "NUTRITION", description = "Whey protein 100% ENA", bannerType = "Tiempo limitado")
+                    )
+                }
+            } catch (e: Throwable) {
+                listOf(
+                    Product(id = "1", name = "Proteinaaaaaaaaa", price = 12000.0, categoryId = "EQUIPAMIENTO", description = "Proteína en polvo", bannerType = "2x1"),
+                    Product(id = "2", name = "otra proteinaeina", price = 7888.0, categoryId = "NUTRITION", description = "Whey protein 100% ENA", bannerType = "Tiempo limitado")
+                )
+            }
         )
     }
 
