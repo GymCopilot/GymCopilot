@@ -28,6 +28,9 @@ import com.zexo.gymcopilot.shared.network.GymKtorApiClient
 import com.zexo.gymcopilot.utils.playTickSound
 import com.zexo.gymcopilot.utils.readLocalMemberProfile
 import gymcopilot.shared.generated.resources.*
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.compose.resources.painterResource
 
 data class ExerciseEntryShared(
@@ -518,13 +521,56 @@ fun RoutineCreationSharedScreen(
     var routineType by remember(routineToEdit) { mutableStateOf(routineToEdit?.type?.ifBlank { "Personal" } ?: "Personal") }
     var routineStatus by remember(routineToEdit) { mutableStateOf(routineToEdit?.status?.ifBlank { "Activa" } ?: "Activa") }
 
-    // Obtener profesor asignado desde la base de datos local (Profesor_Asignado en la planilla / DB)
+    // Obtener profesor asignado y profesores reales desde la base de datos (planilla / DB)
     val localMember = remember { readLocalMemberProfile() }
-    val assignedProfName: String = localMember?.assignedTrainer?.ifBlank { "Prof. Gabriel Fernández" } ?: "Prof. Gabriel Fernández"
+    var remoteProfessorsNames by remember { mutableStateOf<List<String>>(emptyList()) }
 
-    val professorsList: List<String> = remember(assignedProfName) {
-        val list = mutableListOf(assignedProfName)
-        if (!list.contains("Prof. Laura Benítez")) list.add("Prof. Laura Benítez")
+    LaunchedEffect(Unit) {
+        try {
+            val gymUrl = localMember?.gymApiUrl.orEmpty().ifBlank { "https://script.google.com/macros/s/AKfycbzXYYMu43-ATeyxQmwdF3CuRYXi7KbpChyTQEBFIsWh7SCHv2XugxsWen61oBeDdzw/exec" }
+            val gymName = localMember?.gymName.orEmpty().ifBlank { "Gym 47" }
+            val gymIdVal = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val ssId = localMember?.spreadsheetId.orEmpty()
+            val paramChar = if (gymUrl.contains("?")) "&" else "?"
+            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+            val url = "$gymUrl${paramChar}type=professors&gymId=$gymIdVal$ssParam"
+            val client = apiClient ?: GymKtorApiClient
+            val responseText = client.getData(url)
+            if (responseText.isNotBlank() && responseText.contains("success")) {
+                val jsonElement = client.jsonInstance.parseToJsonElement(responseText)
+                val jsonObject = jsonElement as? JsonObject
+                val dataArray = jsonObject?.get("data") as? JsonArray
+                if (dataArray != null && dataArray.size > 1) {
+                    val list = mutableListOf<String>()
+                    for (i in 1 until dataArray.size) {
+                        val row = dataArray[i] as? JsonArray
+                        if (row != null && row.size > 2) {
+                            val fn = row[1].jsonPrimitive.content.trim()
+                            val ln = row[2].jsonPrimitive.content.trim()
+                            val fullName = "$fn $ln".trim()
+                            if (fullName.isNotBlank() && fullName != "null") {
+                                list.add(fullName)
+                            }
+                        }
+                    }
+                    if (list.isNotEmpty()) {
+                        remoteProfessorsNames = list
+                    }
+                }
+            }
+        } catch (_: Throwable) {}
+    }
+
+    val professorsList: List<String> = remember(localMember, remoteProfessorsNames) {
+        val list = mutableListOf<String>()
+        val assigned = localMember?.assignedTrainer?.trim().orEmpty()
+        if (assigned.isNotBlank() && !assigned.equals("Sin asignar", true) && !assigned.equals("N/A", true) && assigned != "null") {
+            list.add(assigned)
+        }
+        remoteProfessorsNames.forEach { if (!list.contains(it)) list.add(it) }
+        if (list.isEmpty()) {
+            list.add(localMember?.firstName?.let { "Prof. $it" } ?: "Profesor Asignado")
+        }
         list.distinct()
     }
 
