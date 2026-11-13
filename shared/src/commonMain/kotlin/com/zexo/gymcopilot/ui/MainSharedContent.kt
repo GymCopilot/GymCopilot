@@ -685,4 +685,37 @@ fun RoleNavigationBar(
                     .clip(RoundedCornerShape(6.dp))
                     .clickable { onTabSelected(index) },
                 contentAlignment = Alignment.Center
-            )
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Box(contentAlignment = Alignment.TopEnd) {
+                        Icon(
+                            painter = iconPainter,
+                            contentDescription = label,
+                            tint = if (isSelected) PrimaryTurquoise else TextGray,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        if (label == "Chat" && unreadChatCount > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .size(9.dp)
+                                    .offset(x = 2.dp, y = (-2).dp)
+                                    .background(Color.Red, CircleShape)
+                                    .border(1.dp, Color(0xFF00151C), CircleShape)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = label,
+                        fontSize = 8.sp,
+                        color = if (isSelected) PrimaryTurquoise else TextGray,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+    }
+}
