@@ -1,10 +1,12 @@
-const CACHE_NAME = 'gymcopilot-v8';
+const CACHE_NAME = 'gymcopilot-v10';
 const ASSETS = [
     './',
     './index.html',
     './manifest.json',
     './icon-192.png',
-    './icon-512.png'
+    './icon-512.png',
+    './skiko.js',
+    './shared.js'
 ];
 
 self.addEventListener('install', (event) => {
@@ -31,7 +33,45 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-    event.respondWith(
-        fetch(event.request).catch(() => caches.match(event.request))
-    );
+    const url = new URL(event.request.url);
+
+    // For Google Script API requests / dynamic data: Network first, fallback to Cache
+    if (url.hostname.includes('script.google.com') || url.pathname.includes('exec')) {
+        event.respondWith(
+            fetch(event.request)
+                .then((response) => {
+                    if (response && response.status === 200) {
+                        const responseClone = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(event.request, responseClone);
+                        });
+                    }
+                    return response;
+                })
+                .catch(() => {
+                    return caches.match(event.request).then((cachedResponse) => {
+                        return cachedResponse || new Response(JSON.stringify({ status: "success", data: [], offline: true }), {
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                    });
+                })
+        );
+    } else {
+        // For static assets: Cache first, fallback to Network
+        event.respondWith(
+            caches.match(event.request)
+                .then((cachedResponse) => {
+                    return cachedResponse || fetch(event.request).then((response) => {
+                        if (response && response.status === 200) {
+                            const responseClone = response.clone();
+                            caches.open(CACHE_NAME).then((cache) => {
+                                cache.put(event.request, responseClone);
+                            });
+                        }
+                        return response;
+                    });
+                })
+                .catch(() => caches.match('./index.html'))
+        );
+    }
 });
