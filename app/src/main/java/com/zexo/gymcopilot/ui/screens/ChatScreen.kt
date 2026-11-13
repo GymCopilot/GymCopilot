@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.sp
 import com.google.gson.JsonArray
 import com.zexo.gymcopilot.ChatMessage
 import com.zexo.gymcopilot.DataStoreManager
+import com.zexo.gymcopilot.Professor
 import com.zexo.gymcopilot.R
 import com.zexo.gymcopilot.network.ChatSyncRequest
 import com.zexo.gymcopilot.network.NetworkModule
@@ -110,8 +111,10 @@ fun ChatScreen(
 
     val currentMember = remember(members, userEmail) { members.find { it.email.equals(userEmail, true) } }
     val myProfessor = remember(currentMember, professors) {
-        if (currentMember?.assignedTrainer.isNullOrBlank()) null
-        else professors.find { it.fullName.equals(currentMember?.assignedTrainer, true) }
+        val trainerName = currentMember?.assignedTrainer?.trim()
+        if (trainerName.isNullOrBlank() || trainerName.equals("Sin asignar", true) || trainerName.equals("N/A", true)) null
+        else professors.find { it.fullName.equals(trainerName, true) || it.email.equals(trainerName, true) } 
+            ?: Professor(id = "fallback_prof", firstName = trainerName, lastName = "", email = trainerName, specialty = "Entrenador Asignado")
     }
 
     val otherInfo = remember(currentRecipient, members, professors) {
@@ -424,8 +427,6 @@ fun ChatScreen(
                     IconButton(onClick = onBack) { Image(painter = painterResource(id = R.drawable.back), contentDescription = "Back", modifier = Modifier.size(30.dp), colorFilter = ColorFilter.tint(PrimaryTurquoise)) }
                 },
                 actions = {
-                    IconButton(onClick = { refreshTrigger++ }) { Icon(Icons.Default.Sync, null, tint = if (isSyncing) PrimaryTurquoise else TextGray, modifier = if (isSyncing) Modifier.rotate(rotation) else Modifier) }
-                    
                     val currentRole = userRole?.lowercase() ?: ""
                     if (currentRole == "admin") {
                         IconButton(onClick = { showDeleteDialog = true }) { Icon(Icons.Default.Delete, null, tint = PrimaryTurquoise) }
