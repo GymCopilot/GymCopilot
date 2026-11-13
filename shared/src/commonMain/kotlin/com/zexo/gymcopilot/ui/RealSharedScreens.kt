@@ -28,6 +28,10 @@ import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.model.*
 import com.zexo.gymcopilot.LockConfig
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import com.zexo.gymcopilot.utils.readLocalStorageFlag
+import com.zexo.gymcopilot.utils.saveLocalStorageFlag
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -389,6 +393,18 @@ fun RealPublicStoreView(apiClient: GymKtorApiClient = GymKtorApiClient, onTabSel
     }
 
     LaunchedEffect(Unit) {
+        // 1. Carga instantánea sin lag desde caché local en localStorage
+        try {
+            val cachedJson = readLocalStorageFlag("gymcopilot_cache_products")
+            if (!cachedJson.isNullOrBlank()) {
+                val cachedList = Json.decodeFromString<List<Product>>(cachedJson)
+                if (cachedList.isNotEmpty()) {
+                    productsList = cachedList
+                }
+            }
+        } catch (_: Throwable) {}
+
+        // 2. Sincronización silenciosa en segundo plano con la base de datos
         try {
             val localProfile = com.zexo.gymcopilot.utils.readLocalMemberProfile()
             val gymUrl = localProfile?.gymApiUrl.orEmpty().ifBlank { LockConfig.activeApiUrl }
@@ -434,6 +450,9 @@ fun RealPublicStoreView(apiClient: GymKtorApiClient = GymKtorApiClient, onTabSel
                     }
                     if (remoteProducts.isNotEmpty()) {
                         productsList = remoteProducts
+                        try {
+                            saveLocalStorageFlag("gymcopilot_cache_products", Json.encodeToString(remoteProducts))
+                        } catch (_: Throwable) {}
                     }
                 }
             }
