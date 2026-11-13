@@ -140,7 +140,9 @@ fun SubscriptionPlansScreen(
                 onDismiss = { showAddDialog = false },
                 onConfirm = { name, price, days, desc, totalClasses ->
                     scope.launch {
+                        val planId = "plan_" + UUID.randomUUID().toString()
                         val newList = plans + SubscriptionPlan(
+                            id = planId,
                             name = name, 
                             price = price, 
                             durationDays = days, 

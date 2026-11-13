@@ -54,6 +54,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
+import com.zexo.gymcopilot.utils.readLocalMemberProfile
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -109,12 +110,18 @@ fun ChatScreen(
         label = "rotation"
     )
 
-    val currentMember = remember(members, userEmail) { members.find { it.email.equals(userEmail, true) } }
-    val myProfessor = remember(currentMember, professors) {
-        val trainerName = currentMember?.assignedTrainer?.trim()
-        if (trainerName.isNullOrBlank() || trainerName.equals("Sin asignar", true) || trainerName.equals("N/A", true)) null
-        else professors.find { it.fullName.equals(trainerName, true) || it.email.equals(trainerName, true) } 
-            ?: Professor(id = "fallback_prof", firstName = trainerName, lastName = "", email = trainerName, specialty = "Entrenador Asignado")
+    val effectiveEmail = remember(userEmail, linkedMemberEmail) { userEmail.ifBlank { linkedMemberEmail.orEmpty() } }
+    val currentMember = remember(members, effectiveEmail) { members.find { it.email.equals(effectiveEmail, ignoreCase = true) } }
+    val localProfile = remember { readLocalMemberProfile() }
+    val assignedTrainerName = remember(currentMember, localProfile) {
+        currentMember?.assignedTrainer?.takeIf { it.isNotBlank() && !it.equals("Sin asignar", true) && !it.equals("N/A", true) }
+            ?: localProfile?.assignedTrainer?.takeIf { it.isNotBlank() && !it.equals("Sin asignar", true) && !it.equals("N/A", true) }
+            ?: ""
+    }
+    val myProfessor = remember(assignedTrainerName, professors) {
+        if (assignedTrainerName.isBlank()) null
+        else professors.find { it.fullName.equals(assignedTrainerName, true) || it.email.equals(assignedTrainerName, true) } 
+            ?: Professor(id = "fallback_prof", firstName = assignedTrainerName, lastName = "", email = assignedTrainerName, specialty = "Entrenador Asignado")
     }
 
     val otherInfo = remember(currentRecipient, members, professors) {
@@ -335,7 +342,7 @@ fun ChatScreen(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
-                                .clickable(enabled = userRole?.lowercase() == "member") { showSelector = true }
+                                .clickable { showSelector = true }
                                 .padding(end = 16.dp)
                         ) {
                             // Mostrar imagen según destinatario
@@ -381,9 +388,8 @@ fun ChatScreen(
                                         maxLines = 1, 
                                         overflow = TextOverflow.Ellipsis
                                     )
-                                    if (userRole?.lowercase() == "member") {
-                                        Icon(Icons.Default.ArrowDropDown, null, tint = TextGray, modifier = Modifier.size(20.dp))
-                                    }
+                                    Spacer(Modifier.width(4.dp))
+                                    Icon(Icons.Default.ArrowDropDown, null, tint = TextGray, modifier = Modifier.size(18.dp))
                                 }
                                 otherInfo.third?.let { role -> Text(text = role, color = PrimaryTurquoise, fontSize = 11.sp) } 
                             } 

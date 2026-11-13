@@ -34,6 +34,7 @@ import com.zexo.gymcopilot.model.Routine
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
 import com.zexo.gymcopilot.utils.getCurrentTimeMillis
 import com.zexo.gymcopilot.utils.playAudioSound
+import com.zexo.gymcopilot.LockConfig
 import com.zexo.gymcopilot.utils.readLocalMemberProfile
 import com.zexo.gymcopilot.utils.readLocalStorageFlag
 import com.zexo.gymcopilot.utils.saveLocalStorageFlag
@@ -84,7 +85,7 @@ fun FullRoutinesSection(
 
         try {
             val localProfile = readLocalMemberProfile()
-            val gymUrl = localProfile?.gymApiUrl.orEmpty().ifBlank { "https://script.google.com/macros/s/AKfycbzXYYMu43-ATeyxQmwdF3CuRYXi7KbpChyTQEBFIsWh7SCHv2XugxsWen61oBeDdzw/exec" }
+            val gymUrl = localProfile?.gymApiUrl.orEmpty().ifBlank { LockConfig.activeApiUrl }
             val gymName = localProfile?.gymName.orEmpty().ifBlank { "Gym 47" }
             val gymIdVal = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
             val myEmail = localProfile?.email.orEmpty().lowercase().trim()

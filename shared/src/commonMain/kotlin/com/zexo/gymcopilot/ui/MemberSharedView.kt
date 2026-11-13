@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -33,6 +32,7 @@ import com.zexo.gymcopilot.shared.network.GymKtorApiClient
 import com.zexo.gymcopilot.shared.network.MemberSyncRequest
 import com.zexo.gymcopilot.utils.LocalMemberData
 import com.zexo.gymcopilot.utils.decodeBase64ToBitmap
+import com.zexo.gymcopilot.LockConfig
 import com.zexo.gymcopilot.utils.formatEpochDate
 import com.zexo.gymcopilot.utils.getCurrentTimeMillis
 import com.zexo.gymcopilot.utils.generateQrBitmap
@@ -76,7 +76,7 @@ fun MemberDashboardSharedScreen(
     var activeHeight by remember { mutableStateOf("") }
     var activePhotoUri by remember { mutableStateOf<String?>(null) }
     var activeGymName by remember { mutableStateOf(gymName) }
-    var activeGymUrl by remember { mutableStateOf("https://script.google.com/macros/s/AKfycbzXYYMu43-ATeyxQmwdF3CuRYXi7KbpChyTQEBFIsWh7SCHv2XugxsWen61oBeDdzw/exec") }
+    var activeGymUrl by remember { mutableStateOf(LockConfig.activeApiUrl) }
     var activeMembershipStatus by remember { mutableStateOf("ACTIVO") }
     var activeNextRenewalDate by remember { mutableLongStateOf(0L) }
     var activePlanName by remember { mutableStateOf("Plan Mensual") }
@@ -748,14 +748,7 @@ fun MemberDashboardSharedScreen(
                                     }
                                 }
 
-                                IconButton(
-                                    onClick = { onTabSelected(4) }, // Redirige al chat del profesor
-                                    modifier = Modifier
-                                        .size(42.dp)
-                                        .background(profColor.copy(alpha = 0.2f), CircleShape)
-                                ) {
-                                    Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = "Chat", tint = profColor, modifier = Modifier.size(20.dp))
-                                }
+
                             }
                         }
                     }

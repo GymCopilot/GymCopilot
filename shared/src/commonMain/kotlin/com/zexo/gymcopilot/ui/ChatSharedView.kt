@@ -30,6 +30,7 @@ import com.zexo.gymcopilot.model.ChatMessage
 import com.zexo.gymcopilot.shared.network.ChatSyncRequest
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
 import com.zexo.gymcopilot.utils.decodeBase64ToBitmap
+import com.zexo.gymcopilot.LockConfig
 import com.zexo.gymcopilot.utils.readLocalMemberProfile
 import gymcopilot.shared.generated.resources.*
 import kotlinx.coroutines.delay
@@ -51,7 +52,7 @@ fun ChatSharedScreen(
     var messages by remember { mutableStateOf(listOf<ChatMessage>()) }
 
     var activeGymName by remember { mutableStateOf("Gym 26") }
-    var activeGymUrl by remember { mutableStateOf("https://script.google.com/macros/s/AKfycbzXYYMu43-ATeyxQmwdF3CuRYXi7KbpChyTQEBFIsWh7SCHv2XugxsWen61oBeDdzw/exec") }
+    var activeGymUrl by remember { mutableStateOf(LockConfig.activeApiUrl) }
     var userEmail by remember { mutableStateOf("socio@gymcopilot.com") }
     var assignedTrainer by remember { mutableStateOf("") }
     var serverGymLogoUri by remember { mutableStateOf<String?>(null) }

@@ -1,5 +1,7 @@
 package com.zexo.gymcopilot.ui
 
+import com.zexo.gymcopilot.LockConfig
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -540,7 +542,7 @@ fun MemberDetailSharedScreen(
     var assignedTrainer by remember { mutableStateOf(member.assignedTrainer) }
     var notes by remember { mutableStateOf(member.notes) }
 
-    val defaultApiUrl = "https://script.google.com/macros/s/AKfycbzXYYMu43-ATeyxQmwdF3CuRYXi7KbpChyTQEBFIsWh7SCHv2XugxsWen61oBeDdzw/exec"
+    val defaultApiUrl = LockConfig.activeApiUrl
     val qrToken = "MEMBERLINK|${member.firstName}|${member.lastName}|${member.email}|$defaultApiUrl|Gym 19"
 
     Box(

@@ -86,7 +86,7 @@ class WiFiMonitor(private val context: Context) {
 
             // Creamos la petición de trabajo con 10 segundos de retraso inicial para pruebas
             val workRequest = OneTimeWorkRequestBuilder<WiFiAttendanceWorker>()
-                .setInitialDelay(10, TimeUnit.SECONDS)
+                .setInitialDelay(901, TimeUnit.SECONDS)
                 .setConstraints(constraints)
                 .addTag("WiFiAttendanceWork")
                 .build()

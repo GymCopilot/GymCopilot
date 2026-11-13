@@ -1,6 +1,7 @@
 package com.zexo.gymcopilot.utils
 
 import kotlinx.browser.localStorage
+import com.zexo.gymcopilot.LockConfig
 
 actual fun saveLocalMemberProfile(data: LocalMemberData) {
     try {
@@ -32,7 +33,7 @@ actual fun readLocalMemberProfile(): LocalMemberData? {
         val height = localStorage.getItem("gymcopilot_member_height") ?: ""
         val photo = localStorage.getItem("gymcopilot_member_photo")
         val gymName = localStorage.getItem("gymcopilot_gym_name") ?: "Gym 19"
-        val gymUrl = localStorage.getItem("gymcopilot_gym_url") ?: "https://script.google.com/macros/s/AKfycbzXYYMu43-ATeyxQmwdF3CuRYXi7KbpChyTQEBFIsWh7SCHv2XugxsWen61oBeDdzw/exec"
+        val gymUrl = localStorage.getItem("gymcopilot_gym_url") ?: LockConfig.activeApiUrl
         val spreadsheetId = localStorage.getItem("gymcopilot_gym_ssid") ?: ""
         val membershipStatus = localStorage.getItem("gymcopilot_member_status") ?: "ACTIVO"
         val nextRenewalDate = localStorage.getItem("gymcopilot_member_renewal")?.toLongOrNull() ?: 0L

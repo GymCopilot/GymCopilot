@@ -202,12 +202,14 @@ function processAction(action, data, e) {
 
   if (action === "update_plans") {
     var sheet = getOrCreateSheet(ss, "Planes");
-    var plans = (typeof data.plans === "string") ? JSON.parse(data.plans) : (data.plans || []);
+    var rawPlans = data.plans || (e && e.parameter ? e.parameter.plans : null);
+    var plans = (typeof rawPlans === "string") ? JSON.parse(rawPlans) : (rawPlans || []);
     sheet.clearContents();
     sheet.appendRow(["ID", "Nombre", "Precio", "Duracion_Dias", "Descripcion", "Actualizado"]);
     plans.forEach(function(p) {
-      sheet.appendRow([p.id, p.name, p.price, p.durationDays, p.description || "", new Date()]);
+      sheet.appendRow([p.id || ("plan_" + Date.now()), p.name || "", p.price || 0, p.durationDays || p.duration_days || 30, p.description || "", new Date()]);
     });
+    SpreadsheetApp.flush();
     return createJsonResponse({ "status": "success" });
   }
 

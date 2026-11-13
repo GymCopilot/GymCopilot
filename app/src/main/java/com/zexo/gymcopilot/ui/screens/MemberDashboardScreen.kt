@@ -1,6 +1,7 @@
 package com.zexo.gymcopilot.ui.screens
 
 import android.graphics.BitmapFactory
+import android.util.Base64
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -92,6 +93,17 @@ fun MemberDashboardScreen(
     val myProfessor = remember(currentMember, professors) {
         if (currentMember?.assignedTrainer.isNullOrBlank()) null
         else professors.find { it.fullName.equals(currentMember.assignedTrainer, ignoreCase = true) }
+    }
+
+    val myProfessorPhotoModel = remember(myProfessor) {
+        val uri = myProfessor?.photoUri
+        if (uri?.startsWith("data:image") == true) {
+            try {
+                val base64String = uri.substringAfter("base64,")
+                val imageBytes = Base64.decode(base64String, Base64.DEFAULT)
+                BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+            } catch (e: Exception) { uri }
+        } else uri
     }
 
     val myID = remember(userName, userEmail, userRole) {
@@ -420,8 +432,7 @@ fun MemberDashboardScreen(
                         Surface(
                             modifier = Modifier
                                 .size(48.dp)
-                                .clip(containerShape)
-                                .clickable { onChatClick(myProfessor.email) },
+                                .clip(containerShape),
                             color = accentColor.copy(alpha = 0.1f),
                             shape = containerShape,
                             border = androidx.compose.foundation.BorderStroke(1.dp, accentColor.copy(alpha = 0.3f))
@@ -429,7 +440,7 @@ fun MemberDashboardScreen(
                             Box(contentAlignment = Alignment.Center) {
                                 if (!myProfessor.photoUri.isNullOrBlank()) {
                                     AsyncImage(
-                                        model = myProfessor.photoUri,
+                                        model = myProfessorPhotoModel,
                                         contentDescription = myProfessor.fullName,
                                         modifier = Modifier.fillMaxSize(),
                                         contentScale = ContentScale.Crop

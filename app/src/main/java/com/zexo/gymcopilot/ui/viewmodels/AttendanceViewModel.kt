@@ -28,46 +28,53 @@ class AttendanceViewModel(private val repository: AttendanceRepository) : ViewMo
             _state.value = CheckInState.Loading
             
             try {
-                Log.d("AttendanceViewModel", "QR Scanned: $qrContent")
+                val clean = qrContent.trim()
+                Log.d("AttendanceViewModel", "QR Scanned: $clean")
+
+                val isValid = clean.startsWith("PROFLINK|") ||
+                        clean.startsWith("MEMBERLINK|") ||
+                        clean.startsWith("MEMBER_LINK:") ||
+                        clean.startsWith("ATTENDANCE:") ||
+                        clean.startsWith("gym_id:") ||
+                        try {
+                            val json = JSONObject(clean)
+                            json.has("gym_id") || json.has("id") || json.has("action") || json.has("gym_api_url")
+                        } catch (e: Exception) {
+                            false
+                        }
+
+                if (!isValid) {
+                    _state.value = CheckInState.Error("Debe escanear el código QR oficial del gimnasio")
+                    return@launch
+                }
                 
                 // 1. Vinculación de Perfiles (Links)
-                if (qrContent.startsWith("PROFLINK|") || qrContent.startsWith("MEMBERLINK|")) {
-                    processLinkQr(qrContent)
+                if (clean.startsWith("PROFLINK|") || clean.startsWith("MEMBERLINK|") || clean.startsWith("MEMBER_LINK:")) {
+                    processLinkQr(clean)
                     return@launch
                 }
 
                 // 2. Proceso de Asistencia (Check-in)
                 var gymId = ""
                 var emailOverride: String? = null
-                var isIntegration = false
 
-                if (qrContent.startsWith("ATTENDANCE:")) {
-                    val parts = qrContent.split(":")
+                if (clean.startsWith("ATTENDANCE:")) {
+                    val parts = clean.split(":")
                     if (parts.size >= 3) {
                         gymId = parts[1]
                         emailOverride = parts[2]
                     } else if (parts.size >= 2) {
                         emailOverride = parts[1]
                     }
+                } else if (clean.startsWith("gym_id:")) {
+                    gymId = clean.removePrefix("gym_id:").trim()
                 } else {
                     try {
-                        val json = JSONObject(qrContent)
+                        val json = JSONObject(clean)
                         gymId = json.optString("gym_id", json.optString("id", ""))
                         emailOverride = if (json.has("email")) json.optString("email") else if (json.has("memberEmail")) json.optString("memberEmail") else null
-                        
-                        val networkUrl = json.optString("gym_api_url", "")
-                        val gymName = json.optString("gym_name", "")
-                        
-                        if (networkUrl.isNotBlank() || gymName.isNotBlank()) {
-                            repository.setupGymFromAdminQr(gymId, gymName, networkUrl)
-                            isIntegration = true
-                        }
                     } catch (e: Exception) {
-                        if (qrContent.contains("@")) {
-                            emailOverride = qrContent.trim()
-                        } else {
-                            gymId = qrContent.trim()
-                        }
+                        gymId = "Gym_Default"
                     }
                 }
                 
@@ -77,8 +84,7 @@ class AttendanceViewModel(private val repository: AttendanceRepository) : ViewMo
 
                 result.fold(
                     onSuccess = { 
-                        val successMsg = if (isIntegration) "¡Gimnasio vinculado y asistencia registrada!" else "¡Asistencia registrada!"
-                        _state.value = CheckInState.Success(successMsg) 
+                        _state.value = CheckInState.Success("¡Asistencia registrada!") 
                     },
                     onFailure = { 
                         _state.value = CheckInState.Error(it.message ?: "Error de conexión con la planilla") 

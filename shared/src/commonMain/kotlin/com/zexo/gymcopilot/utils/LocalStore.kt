@@ -1,5 +1,7 @@
 package com.zexo.gymcopilot.utils
 
+import com.zexo.gymcopilot.LockConfig
+
 data class LocalMemberData(
     val firstName: String,
     val lastName: String,
@@ -10,7 +12,7 @@ data class LocalMemberData(
     val height: String = "",
     val photoUri: String? = null,
     val gymName: String = "Gym 19",
-    val gymApiUrl: String = "https://script.google.com/macros/s/AKfycbzXYYMu43-ATeyxQmwdF3CuRYXi7KbpChyTQEBFIsWh7SCHv2XugxsWen61oBeDdzw/exec",
+    val gymApiUrl: String = LockConfig.activeApiUrl,
     val spreadsheetId: String = "",
     val membershipStatus: String = "DEUDOR",
     val nextRenewalDate: Long = 0L,

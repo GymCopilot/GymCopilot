@@ -44,6 +44,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
+import kotlinx.coroutines.flow.first
+import org.json.JSONObject
 import com.zexo.gymcopilot.DataStoreManager
 import com.zexo.gymcopilot.R
 import com.zexo.gymcopilot.ui.theme.LocalButtonBackgroundColor
@@ -220,7 +222,8 @@ fun AppSettingsScreen(
                             shape = buttonShape,
                             onClick = {
                                 scope.launch {
-                                    val pdfFile = generateGymQrPdf(context, gymName, gymAddress, gymPhone)
+                                    val gymApiUrl = dataStoreManager.getGymApiUrl().first()
+                                    val pdfFile = generateGymQrPdf(context, gymName, gymAddress, gymPhone, gymApiUrl)
                                     withContext(Dispatchers.Main) {
                                         if (pdfFile != null) {
                                             shareFile(context, pdfFile)
@@ -444,10 +447,16 @@ private suspend fun generateGymQrPdf(
     context: android.content.Context,
     name: String,
     address: String,
-    phone: String
+    phone: String,
+    gymApiUrl: String
 ): File? = withContext(Dispatchers.IO) {
     try {
-        val qrContent = "gym_id:${name.replace(" ", "_")}"
+        val json = JSONObject()
+        json.put("gym_id", name.ifBlank { "Gym_Copilot" }.replace(" ", "_"))
+        json.put("gym_name", name)
+        json.put("gym_api_url", gymApiUrl)
+        json.put("action", "check_in")
+        val qrContent = json.toString()
         val writer = QRCodeWriter()
         val bitMatrix = writer.encode(qrContent, BarcodeFormat.QR_CODE, 512, 512)
         val width = bitMatrix.width

@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.*
 import com.zexo.gymcopilot.model.*
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
 import com.zexo.gymcopilot.utils.getCurrentTimeMillis
+import com.zexo.gymcopilot.LockConfig
 import com.zexo.gymcopilot.utils.readLocalMemberProfile
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonArray
@@ -466,7 +467,7 @@ fun FullClassesScheduleSection() {
     LaunchedEffect(Unit) {
         try {
             val localProfile = readLocalMemberProfile()
-            val gymUrl = localProfile?.gymApiUrl.orEmpty().ifBlank { "https://script.google.com/macros/s/AKfycbzXYYMu43-ATeyxQmwdF3CuRYXi7KbpChyTQEBFIsWh7SCHv2XugxsWen61oBeDdzw/exec" }
+            val gymUrl = localProfile?.gymApiUrl.orEmpty().ifBlank { LockConfig.activeApiUrl }
             gymName = localProfile?.gymName.orEmpty().ifBlank { "Gym 47" }
             val gymIdVal = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
             val ssId = localProfile?.spreadsheetId.orEmpty()

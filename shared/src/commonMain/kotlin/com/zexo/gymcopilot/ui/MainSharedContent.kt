@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
 import com.zexo.gymcopilot.utils.decodeBase64ToBitmap
+import com.zexo.gymcopilot.LockConfig
 import com.zexo.gymcopilot.utils.getCurrentTimeMillis
 import com.zexo.gymcopilot.utils.isIOSDevice
 import com.zexo.gymcopilot.utils.isStandaloneMode
@@ -111,7 +112,7 @@ fun SharedGymCopilotApp(
 ) {
     val skipSplash = readLocalStorageFlag("gymcopilot_skip_splash") == "true"
     var screenState by remember { mutableStateOf(if (skipSplash) AppScreenState.MAIN_APP else AppScreenState.SPLASH) }
-    var currentRole by remember { mutableStateOf(initialRole.lowercase()) }
+    var currentRole by remember { mutableStateOf(if (LockConfig.IS_ROLE_LOCK_ENABLED == 1) "member" else initialRole.lowercase()) }
     var activeGymName by remember { mutableStateOf(gymName) }
     var showInstallBanner by remember { mutableStateOf(false) }
     var showInstructionsDialog by remember { mutableStateOf(false) }
@@ -144,12 +145,14 @@ fun SharedGymCopilotApp(
                 AppScreenState.SPLASH -> {
                     SplashScreenView(
                         gymName = activeGymName,
+                        gymLogoUri = gymLogoUri,
                         onTimeout = { screenState = AppScreenState.LOGIN }
                     )
                 }
                 AppScreenState.LOGIN -> {
                     LoginScreenView(
                         gymName = activeGymName,
+                        gymLogoUri = gymLogoUri,
                         onRoleSelected = { selectedRole ->
                             currentRole = selectedRole
                             screenState = AppScreenState.MAIN_APP
@@ -262,9 +265,13 @@ fun SharedGymCopilotApp(
 @Composable
 fun SplashScreenView(
     gymName: String,
+    gymLogoUri: String? = null,
     onTimeout: () -> Unit
 ) {
     val currentOnTimeout by rememberUpdatedState(onTimeout)
+    val logoBm = remember(gymLogoUri) {
+        if (!gymLogoUri.isNullOrBlank()) decodeBase64ToBitmap(gymLogoUri) else null
+    }
 
     LaunchedEffect(Unit) {
         delay(1200)
@@ -283,16 +290,28 @@ fun SplashScreenView(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.padding(32.dp)
         ) {
-            Surface(
-                color = PrimaryTurquoise.copy(alpha = 0.15f),
-                shape = RoundedCornerShape(24.dp)
+            Box(
+                modifier = Modifier
+                    .size(110.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .border(BorderStroke(2.dp, PrimaryTurquoise), RoundedCornerShape(20.dp)),
+                contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    painter = painterResource(Res.drawable.ic_home),
-                    contentDescription = "GymCopilot",
-                    tint = PrimaryTurquoise,
-                    modifier = Modifier.padding(24.dp).size(64.dp)
-                )
+                if (logoBm != null) {
+                    Image(
+                        bitmap = logoBm,
+                        contentDescription = "Gym Logo",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize().padding(8.dp)
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(Res.drawable.ic_home),
+                        contentDescription = "GymCopilot",
+                        tint = PrimaryTurquoise,
+                        modifier = Modifier.size(54.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -344,8 +363,13 @@ fun SplashScreenView(
 @Composable
 fun LoginScreenView(
     gymName: String,
+    gymLogoUri: String? = null,
     onRoleSelected: (String) -> Unit
 ) {
+    val logoBm = remember(gymLogoUri) {
+        if (!gymLogoUri.isNullOrBlank()) decodeBase64ToBitmap(gymLogoUri) else null
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -359,16 +383,28 @@ fun LoginScreenView(
             contentPadding = PaddingValues(vertical = 40.dp)
         ) {
             item {
-                Surface(
-                    color = PrimaryTurquoise.copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(24.dp)
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .border(BorderStroke(2.dp, PrimaryTurquoise), RoundedCornerShape(20.dp)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        painter = painterResource(Res.drawable.admin_panel_settings),
-                        contentDescription = "Logo",
-                        tint = PrimaryTurquoise,
-                        modifier = Modifier.padding(20.dp).size(64.dp)
-                    )
+                    if (logoBm != null) {
+                        Image(
+                            bitmap = logoBm,
+                            contentDescription = "Logo",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.fillMaxSize().padding(8.dp)
+                        )
+                    } else {
+                        Icon(
+                            painter = painterResource(Res.drawable.admin_panel_settings),
+                            contentDescription = "Logo",
+                            tint = PrimaryTurquoise,
+                            modifier = Modifier.size(48.dp)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -400,24 +436,28 @@ fun LoginScreenView(
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            item {
-                RoleCard(
-                    title = "Administrador",
-                    description = "Gestiona tu gimnasio, socios y planes",
-                    iconPainter = painterResource(Res.drawable.admin_panel_settings),
-                    accentColor = PrimaryTurquoise,
-                    onClick = { onRoleSelected("admin") }
-                )
-            }
+            val isRoleLocked = LockConfig.IS_ROLE_LOCK_ENABLED == 1
 
-            item {
-                RoleCard(
-                    title = "Profesor",
-                    description = "Acceso al panel de entrenamiento",
-                    iconPainter = painterResource(Res.drawable.assistant),
-                    accentColor = PrimaryTurquoise,
-                    onClick = { onRoleSelected("profesor") }
-                )
+            if (!isRoleLocked) {
+                item {
+                    RoleCard(
+                        title = "Administrador",
+                        description = "Gestiona tu gimnasio, socios y planes",
+                        iconPainter = painterResource(Res.drawable.admin_panel_settings),
+                        accentColor = PrimaryTurquoise,
+                        onClick = { onRoleSelected("admin") }
+                    )
+                }
+
+                item {
+                    RoleCard(
+                        title = "Profesor",
+                        description = "Acceso al panel de entrenamiento",
+                        iconPainter = painterResource(Res.drawable.assistant),
+                        accentColor = PrimaryTurquoise,
+                        onClick = { onRoleSelected("profesor") }
+                    )
+                }
             }
 
             item {
@@ -446,7 +486,7 @@ fun MainAppView(
 
     LaunchedEffect(gymName, userRole) {
         val localData = readLocalMemberProfile()
-        val gymUrl = localData?.gymApiUrl.orEmpty().ifBlank { "https://script.google.com/macros/s/AKfycbzXYYMu43-ATeyxQmwdF3CuRYXi7KbpChyTQEBFIsWh7SCHv2XugxsWen61oBeDdzw/exec" }
+        val gymUrl = localData?.gymApiUrl.orEmpty().ifBlank { LockConfig.activeApiUrl }
         val myEmail = localData?.email.orEmpty().lowercase().trim()
         val gymIdVal = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
         val ssId = localData?.spreadsheetId.orEmpty()
@@ -571,10 +611,11 @@ fun HeaderBar(
                 )
             }
 
+            val isRoleLocked = LockConfig.IS_ROLE_LOCK_ENABLED == 1
             Surface(
                 color = PrimaryTurquoise.copy(alpha = 0.15f),
                 shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.clickable { onRoleClick() }
+                modifier = Modifier.clickable(enabled = !isRoleLocked) { onRoleClick() }
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -644,37 +685,4 @@ fun RoleNavigationBar(
                     .clip(RoundedCornerShape(6.dp))
                     .clickable { onTabSelected(index) },
                 contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Box(contentAlignment = Alignment.TopEnd) {
-                        Icon(
-                            painter = iconPainter,
-                            contentDescription = label,
-                            tint = if (isSelected) PrimaryTurquoise else TextGray,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        if (label == "Chat" && unreadChatCount > 0) {
-                            Box(
-                                modifier = Modifier
-                                    .size(9.dp)
-                                    .offset(x = 2.dp, y = (-2).dp)
-                                    .background(Color.Red, CircleShape)
-                                    .border(1.dp, Color(0xFF00151C), CircleShape)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = label,
-                        fontSize = 8.sp,
-                        color = if (isSelected) PrimaryTurquoise else TextGray,
-                        maxLines = 1
-                    )
-                }
-            }
-        }
-    }
-}
+            )
