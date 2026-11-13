@@ -142,7 +142,7 @@ fun RoutineDashboardScreen(
     val isProfessor = userRole?.lowercase() == "professor" || userRole?.lowercase() == "admin"
     val totalCount = if (isProfessor) savedRoutines.count { !it.id.contains("::") } else filteredRoutines.size
     val completedCount = savedRoutines.count { it.status == "Completada" }
-    val assignedCount = if (isProfessor) savedRoutines.count { it.type == "Asignada" && !it.id.contains("::") } else filteredRoutines.count { it.type == "Asignada" }
+    val assignedCount = savedRoutines.sumOf { it.assignedMemberEmails.size }
 
     if (showCategorySheet) {
         ModalBottomSheet(
@@ -858,8 +858,10 @@ fun LazyItemScope.ExpandableRoutineItem(
                                 )
                             }
 
-                            IconButton(onClick = { onAssign() }, modifier = Modifier.size(36.dp)) {
-                                Icon(imageVector = Icons.Default.PersonAdd, contentDescription = "Asignar", tint = accentColor, modifier = Modifier.size(24.dp))
+                            if (showProfessorActions) {
+                                IconButton(onClick = { onAssign() }, modifier = Modifier.size(36.dp)) {
+                                    Icon(imageVector = Icons.Default.PersonAdd, contentDescription = "Asignar", tint = accentColor, modifier = Modifier.size(24.dp))
+                                }
                             }
 
                             IconButton(onClick = { onEdit() }, modifier = Modifier.size(36.dp)) {
