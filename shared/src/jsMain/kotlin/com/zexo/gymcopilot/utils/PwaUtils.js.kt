@@ -42,9 +42,9 @@ actual fun triggerRoutinePdfExport(
 ) {
     try {
         val firstRoutine = routines.firstOrNull() ?: Routine(id = "", name = "", description = "", level = "", objective = "", exercises = emptyList(), days = emptyList())
-        val titleText = customTitle.ifBlank { firstRoutine.name.ifBlank { "RUTINA 3 DÍAS – FORTALECIMIENTO Y REHABILITACIÓN" } }
-        val objectiveText = customObjective.ifBlank { firstRoutine.objective.ifBlank { "TRATAMIENTO RODILLAS EN VALGO Y HERNIA DE DISCO" } }
-        val subObjText = customSubObjective.ifBlank { firstRoutine.description.ifBlank { "FUERZA FUNCIONAL - ESTABILIDAD - MOVILIDAD - PROTECCIÓN ARTICULAR - SALUD DE LA COLUMNA" } }
+        val titleText = customTitle.ifBlank { firstRoutine.name.ifBlank { "RUTINA DE ENTRENAMIENTO" } }
+        val objectiveText = customObjective.ifBlank { firstRoutine.objective.ifBlank { "Mejora de condición física y rendimiento" } }
+        val subObjText = customSubObjective.ifBlank { firstRoutine.description.ifBlank { "Programa Enfocado - $template" } }
 
         val localProfile = readLocalMemberProfile()
         val userName = listOf(localProfile?.firstName, localProfile?.lastName).filter { !it.isNullOrBlank() }.joinToString(" ").ifBlank { "Alumno / Socio" }
@@ -54,55 +54,65 @@ actual fun triggerRoutinePdfExport(
         val gymInstagram = "@tugimnasio"
         val gymSlogan = "DISCIPLINA HOY, RESULTADOS SIEMPRE."
 
-        val primaryColor = when (template) {
-            "Ejecutiva" -> "#0F172A"
-            "Moderna" -> "#00838F"
-            "Minimalista" -> "#222222"
-            "Profesional", "Alfa Balcarce" -> "#2E7D32"
-            else -> "#1A365D" // Clásica
+        val (primaryColor, accentColor, headerStyle) = when (template) {
+            "Ejecutiva" -> Triple("#0F172A", "#334155", "executive")
+            "Moderna" -> Triple("#00838F", "#00ACC1", "modern")
+            "Minimalista" -> Triple("#222222", "#666666", "minimal")
+            "Profesional", "Alfa Balcarce" -> Triple("#2E7D32", "#43A047", "pro")
+            else -> Triple("#1A365D", "#2B6CB0", "classic") // Clásica
         }
 
         val htmlContent = buildString {
             append("<!DOCTYPE html><html><head><meta charset='utf-8'><title>$titleText - $gymName</title>")
             append("<style>")
             append("body { font-family: Arial, sans-serif; color: #111; margin: 0; padding: 15px; background: #fff; }")
-            append(".classic-sheet { width: 100%; max-width: 750px; margin: 0 auto; border: 1.5px solid #4A5568; padding: 15px; box-sizing: border-box; background: #fff; }")
+            append(".sheet { width: 100%; max-width: 750px; margin: 0 auto; border: 1.5px solid $primaryColor; padding: 15px; box-sizing: border-box; background: #fff; }")
 
-            // Header
-            append(".header-box { border: 1.5px solid #4A5568; padding: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }")
-            append(".logo-area { width: 90px; height: 80px; background: $primaryColor; color: white; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; }")
+            // Template specific CSS
+            if (headerStyle == "executive") {
+                append(".header-box { background: $primaryColor; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-radius: 4px; }")
+                append(".logo-area { width: 100px; height: 70px; background: white; color: $primaryColor; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; border-radius: 4px; }")
+            } else if (headerStyle == "modern") {
+                append(".header-box { border-bottom: 3px solid $primaryColor; padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }")
+                append(".logo-area { width: 85px; height: 75px; background: $accentColor; color: white; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: bold; border-radius: 12px; }")
+            } else if (headerStyle == "minimal") {
+                append(".header-box { border-bottom: 1px solid #222; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }")
+                append(".logo-area { width: 80px; height: 70px; border: 1px solid #222; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; }")
+            } else if (headerStyle == "pro") {
+                append(".header-box { border: 2px solid $primaryColor; padding: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; background: #f0fdf4; }")
+                append(".logo-area { width: 95px; height: 85px; background: $primaryColor; color: white; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; }")
+            } else {
+                // Classic
+                append(".header-box { border: 1.5px solid #4A5568; padding: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }")
+                append(".logo-area { width: 90px; height: 80px; background: $primaryColor; color: white; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; }")
+            }
+
             append(".header-info { flex: 1; margin-left: 15px; }")
-            append(".gym-name { font-size: 26px; font-weight: bold; color: $primaryColor; text-transform: uppercase; }")
-            append(".gym-loc { font-size: 10px; color: #555; text-transform: uppercase; margin-top: 3px; }")
+            append(".gym-name { font-size: ${if (headerStyle == "pro") "28px" else "24px"}; font-weight: bold; color: ${if (headerStyle == "executive") "white" else primaryColor}; text-transform: uppercase; }")
+            append(".gym-loc { font-size: 10px; color: ${if (headerStyle == "executive") "#cbd5e1" else "#555"}; text-transform: uppercase; margin-top: 3px; }")
             append(".header-title-area { text-align: right; }")
-            append(".rutina-title { font-size: 13px; font-weight: bold; color: #000; }")
-            append(".rutina-sub { font-size: 10px; color: #555; margin-top: 2px; }")
+            append(".rutina-title { font-size: 12px; font-weight: bold; color: ${if (headerStyle == "executive") "white" else "#000"}; }")
+            append(".rutina-sub { font-size: 9px; color: ${if (headerStyle == "executive") "#cbd5e1" else "#555"}; margin-top: 2px; }")
 
-            // Focus box
-            append(".focus-box { border: 0.5px solid #4A5568; background: #f8fafc; text-align: center; padding: 6px; font-size: 8px; font-weight: bold; color: #333; margin-bottom: 8px; text-transform: uppercase; }")
-
-            // Member info box
+            append(".focus-box { border: 0.5px solid $primaryColor; background: #f8fafc; text-align: center; padding: 6px; font-size: 8px; font-weight: bold; color: #333; margin-bottom: 8px; text-transform: uppercase; }")
             append(".member-box { border: 0.5px solid #CBD5E1; padding: 6px 10px; display: flex; justify-content: space-between; font-size: 9px; font-weight: bold; margin-bottom: 12px; background: #fff; }")
 
-            // Day table
             append(".day-header { background: $primaryColor; color: white; padding: 6px 10px; font-size: 10px; font-weight: bold; display: flex; justify-content: space-between; margin-top: 10px; }")
             append("table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }")
             append("th, td { border: 0.5px solid #CBD5E1; padding: 6px 8px; font-size: 9px; text-align: left; }")
             append("th { background: #F7FAFC; color: #000; font-weight: bold; }")
             append("tr:nth-child(even) { background: #F8FAFC; }")
 
-            // Footer section (3 columns)
             append(".footer-section { display: flex; gap: 8px; margin-top: 15px; }")
-            append(".footer-col { flex: 1; border: 0.5px solid #4A5568; font-size: 8px; }")
+            append(".footer-col { flex: 1; border: 0.5px solid $primaryColor; font-size: 8px; }")
             append(".footer-col-title { background: $primaryColor; color: white; padding: 4px 6px; font-weight: bold; font-size: 8px; text-align: center; }")
             append(".footer-col-body { padding: 6px; color: #333; }")
 
-            // Bottom institutional footer
             append(".bottom-footer { border: 0.5px solid #CBD5E1; padding: 8px 10px; margin-top: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 8px; color: #555; }")
-            append("@media print { body { padding: 0; background: #fff; } .classic-sheet { border: none; box-shadow: none; max-width: none; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }")
+            append("@media print { body { padding: 0; background: #fff; } .sheet { border: none; box-shadow: none; max-width: none; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }")
             append("</style></head><body>")
 
-            append("<div class='classic-sheet'>")
+            append("<div class='sheet'>")
 
             // Header
             append("<div class='header-box'>")
@@ -118,7 +128,7 @@ actual fun triggerRoutinePdfExport(
             append("</div>")
 
             // Focus
-            append("<div class='focus-box'>PROGRAMA ENFOCADO EN: $subObjText</div>")
+            append("<div class='focus-box'>PROGRAMA ENFOCADO EN: $subObjText (Plantilla: $template)</div>")
 
             // Member Info
             append("<div class='member-box'>")
@@ -184,7 +194,7 @@ actual fun triggerRoutinePdfExport(
             append("<span>$gymSlogan</span>")
             append("</div>")
 
-            append("</div>") // End classic-sheet
+            append("</div>") // End sheet
             append("</body></html>")
         }
 
