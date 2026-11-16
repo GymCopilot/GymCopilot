@@ -77,13 +77,16 @@ class AccessDoorManager(
     }
 
     private fun executeTuyaOpenApiRelease(
-        clientId: String,
-        clientSecret: String,
-        deviceId: String,
+        clientIdRaw: String,
+        clientSecretRaw: String,
+        deviceIdRaw: String,
         region: String,
         pulseSeconds: Int
     ): Result<String> {
         return try {
+            val clientId = clientIdRaw.trim()
+            val clientSecret = clientSecretRaw.trim()
+            val deviceId = deviceIdRaw.trim()
             val baseUrl = getTuyaBaseUrl(region)
 
             // 1. Obtener Token de Acceso Cloud API
@@ -92,11 +95,21 @@ class AccessDoorManager(
             val signToken = calculateTuyaSign(clientId, clientSecret, "GET", tokenPath, tToken, "", "")
             val tokenUrl = "$baseUrl$tokenPath"
 
-            val tokenResponseText = tuyaGet(tokenUrl, clientId, signToken, tToken, "")
+            var tokenResponseText = tuyaGet(tokenUrl, clientId, signToken, tToken, "")
             Log.d("AccessDoorManager", "Respuesta Token Tuya: $tokenResponseText")
 
-            val tokenJson = JSONObject(tokenResponseText)
-            val success = tokenJson.optBoolean("success", false)
+            var tokenJson = JSONObject(tokenResponseText)
+            var success = tokenJson.optBoolean("success", false)
+
+            if (!success && tokenJson.optString("msg", "").contains("sign invalid", ignoreCase = true)) {
+                // Fallback: Firma simple legacy (HMAC-SHA256 de ClientID + t)
+                val legacySign = hmacSha256(clientSecret, clientId + tToken).uppercase()
+                tokenResponseText = tuyaGet(tokenUrl, clientId, legacySign, tToken, "")
+                Log.d("AccessDoorManager", "Respuesta Token Tuya (Legacy Sign): $tokenResponseText")
+                tokenJson = JSONObject(tokenResponseText)
+                success = tokenJson.optBoolean("success", false)
+            }
+
             if (!success) {
                 val msg = tokenJson.optString("msg", tokenJson.optString("message", "Error al obtener token de Tuya"))
                 return Result.failure(Exception("Auth Cloud ($region): $msg"))
