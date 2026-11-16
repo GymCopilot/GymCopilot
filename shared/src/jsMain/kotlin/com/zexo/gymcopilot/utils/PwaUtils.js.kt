@@ -28,15 +28,3 @@ actual fun isIOSDevice(): Boolean {
 }
 
 actual fun isWebTarget(): Boolean = true
-
-actual fun printRoutinesWeb(routinesJson: String, title: String, objective: String, subObjective: String) {
-    try {
-        val printFunc = js("window.printGymCopilotRoutines")
-        if (printFunc != null) {
-            printFunc(routinesJson, title, objective, subObjective)
-        }
-    } catch (e: Throwable) {
-        println("Error printing routines on web: ${e.message}")
-    }
-}
-

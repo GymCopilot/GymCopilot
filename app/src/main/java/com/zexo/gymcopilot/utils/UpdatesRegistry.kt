@@ -14,12 +14,12 @@ package com.zexo.gymcopilot.utils
  */
 object UpdatesRegistry {
     const val LATEST_UPDATES = """
+• Impresión y Configuración de Rutinas en Web: Se incorporaron los botones de configuración de impresión (título, objetivo, sub-objetivo) y exportación/selección múltiple de PDF en el perfil de la Web App.
 • Alertas de Membresía: Se activó la cuenta regresiva en el estado de membresía. Recibirás avisos visuales (Verde, Amarillo, Rojo) cuando falten 3 días o menos para el vencimiento de tu plan.
 • Mejora en Temporizador: El contador de series ahora se incrementa inmediatamente al iniciar una nueva serie, reflejando mejor el progreso del entrenamiento.
 • Identidad Visual Dinámica: La pantalla de inicio ahora se adapta automáticamente al logotipo y nombre de tu gimnasio configurados en el panel de Apariencia.
 • Arranque Personalizado: Se optimizó el inicio de la aplicación para eliminar cualquier rastro de la marca genérica, ofreciendo una experiencia 100% propia desde el primer segundo.
 • Integración de Herramientas IA: Ahora puedes usar asistentes de inteligencia artificial para crear o limpiar el logotipo de tu gimnasio directamente desde la sección de Apariencia.
 • Sistema de Novedades: Se implementó este historial de "Últimas mejoras" para mantenerte siempre informado sobre las nuevas capacidades de la aplicación.
-• Optimización de Panel Admin: Reordenamiento estratégico de las funciones de configuración para un acceso más rápido a las herramientas clave.
     """
 }

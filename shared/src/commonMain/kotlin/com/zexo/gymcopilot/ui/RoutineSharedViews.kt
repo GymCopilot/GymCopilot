@@ -36,7 +36,6 @@ import com.zexo.gymcopilot.shared.network.GymKtorApiClient
 import com.zexo.gymcopilot.utils.getCurrentTimeMillis
 import com.zexo.gymcopilot.utils.playAudioSound
 import com.zexo.gymcopilot.LockConfig
-import com.zexo.gymcopilot.utils.printRoutinesWeb
 import com.zexo.gymcopilot.utils.readLocalMemberProfile
 import com.zexo.gymcopilot.utils.readLocalStorageFlag
 import com.zexo.gymcopilot.utils.saveLocalStorageFlag
@@ -68,26 +67,12 @@ fun FullRoutinesSection(
 
     var selectedPdfRoutineIds by remember { mutableStateOf(setOf<String>()) }
     var showPrintConfigDialog by remember { mutableStateOf(false) }
+    var routineToConfigurePrint by remember { mutableStateOf<Routine?>(null) }
     var customPrintTitle by remember { mutableStateOf("") }
     var customPrintObjective by remember { mutableStateOf("") }
     var customPrintSubObjective by remember { mutableStateOf("") }
-    var routineToConfigurePrint by remember { mutableStateOf<Routine?>(null) }
 
     val userRoutines = remember { mutableStateListOf<Routine>() }
-
-    fun handleExportPdf(routinesToExport: List<Routine>) {
-        if (routinesToExport.isEmpty()) return
-        try {
-            val jsonStr = Json.encodeToString(routinesToExport)
-            printRoutinesWeb(
-                jsonStr,
-                customPrintTitle,
-                customPrintObjective,
-                customPrintSubObjective
-            )
-        } catch (_: Exception) {}
-    }
-
 
     fun persistRoutines() {
         try {
@@ -405,7 +390,9 @@ fun FullRoutinesSection(
                                 } else {
                                     userRoutines.toList()
                                 }
-                                handleExportPdf(routinesToExport)
+                                if (routinesToExport.isNotEmpty()) {
+                                    // Export / print routines in web app
+                                }
                             },
                             modifier = Modifier.size(36.dp)
                         ) {
@@ -443,6 +430,13 @@ fun FullRoutinesSection(
                         RoutineSharedCard(
                             routine = routine,
                             isPdfSelected = isPdfSel,
+                            onExportPdf = {
+                                selectedPdfRoutineIds = if (isPdfSel) {
+                                    selectedPdfRoutineIds - routine.id
+                                } else {
+                                    selectedPdfRoutineIds + routine.id
+                                }
+                            },
                             onClick = { selectedRoutine = routine },
                             onDelete = {
                                 userRoutines.remove(routine)
@@ -464,28 +458,17 @@ fun FullRoutinesSection(
                             },
                             onEdit = {
                                 editingRoutineId = routine.id
-                            },
-                            onExportPdf = {
-                                selectedPdfRoutineIds = if (isPdfSel) {
-                                    selectedPdfRoutineIds - routine.id
-                                } else {
-                                    selectedPdfRoutineIds + routine.id
-                                }
                             }
                         )
                     }
-
                 }
             }
         }
     }
 
-    if (showTimerModal) {
-        SharedTimerDialog(onDismiss = { showTimerModal = false })
-    }
-
     if (showPrintConfigDialog && routineToConfigurePrint != null) {
         RoutinePrintConfigDialog(
+            accentColor = PrimaryTurquoise,
             initialTitle = customPrintTitle,
             initialObjective = customPrintObjective,
             initialSubObjective = customPrintSubObjective,
@@ -497,6 +480,10 @@ fun FullRoutinesSection(
                 showPrintConfigDialog = false
             }
         )
+    }
+
+    if (showTimerModal) {
+        SharedTimerDialog(onDismiss = { showTimerModal = false })
     }
 
     if (showCategoryDialog) {
@@ -528,87 +515,6 @@ fun FullRoutinesSection(
         )
     }
 }
-
-@Composable
-fun RoutinePrintConfigDialog(
-    initialTitle: String = "",
-    initialObjective: String = "",
-    initialSubObjective: String = "",
-    onDismiss: () -> Unit,
-    onConfirm: (title: String, objective: String, subObjective: String) -> Unit
-) {
-    var title by remember { mutableStateOf(initialTitle) }
-    var objective by remember { mutableStateOf(initialObjective) }
-    var subObjective by remember { mutableStateOf(initialSubObjective) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Configurar Datos de Impresión", fontWeight = FontWeight.Bold, color = TextWhite) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text("Título de la rutina (Encabezado)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PrimaryTurquoise,
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
-                        focusedTextColor = TextWhite,
-                        unfocusedTextColor = TextWhite,
-                        focusedLabelColor = PrimaryTurquoise,
-                        unfocusedLabelColor = TextGray
-                    )
-                )
-                OutlinedTextField(
-                    value = objective,
-                    onValueChange = { objective = it },
-                    label = { Text("Objetivo de la rutina") },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PrimaryTurquoise,
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
-                        focusedTextColor = TextWhite,
-                        unfocusedTextColor = TextWhite,
-                        focusedLabelColor = PrimaryTurquoise,
-                        unfocusedLabelColor = TextGray
-                    )
-                )
-                OutlinedTextField(
-                    value = subObjective,
-                    onValueChange = { subObjective = it },
-                    label = { Text("Sub objetivo / Programa enfocado") },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PrimaryTurquoise,
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
-                        focusedTextColor = TextWhite,
-                        unfocusedTextColor = TextWhite,
-                        focusedLabelColor = PrimaryTurquoise,
-                        unfocusedLabelColor = TextGray
-                    )
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = { onConfirm(title, objective, subObjective) },
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text("ACEPTAR", color = Color.Black, fontWeight = FontWeight.Bold)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("CANCELAR", color = TextGray)
-            }
-        },
-        containerColor = Color(0xFF1B252D),
-        shape = RoundedCornerShape(16.dp)
-    )
-}
-
 
 @Composable
 fun StatBoxShared(label: String, value: String, icon: ImageVector, color: Color, modifier: Modifier = Modifier) {
@@ -669,12 +575,12 @@ fun QuickActionSharedItem(
 fun RoutineSharedCard(
     routine: Routine,
     isPdfSelected: Boolean = false,
+    onExportPdf: () -> Unit = {},
     onClick: () -> Unit,
     onDelete: () -> Unit,
     onToggleFavorite: () -> Unit,
     onNotesChange: (String) -> Unit,
-    onEdit: () -> Unit,
-    onExportPdf: () -> Unit = {}
+    onEdit: () -> Unit
 ) {
     var isExpanded by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -773,12 +679,17 @@ fun RoutineSharedCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Icon(
-                        painter = painterResource(Res.drawable.download_pdf),
-                        contentDescription = "Descargar PDF",
-                        tint = if (isPdfSelected) Color(0xFF4CAF50) else PrimaryTurquoise,
-                        modifier = Modifier.size(20.dp).clickable { onExportPdf() }
-                    )
+                    IconButton(
+                        onClick = onExportPdf,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(Res.drawable.download_pdf),
+                            contentDescription = "Imprimir PDF",
+                            tint = if (isPdfSelected) Color(0xFF4CAF50) else PrimaryTurquoise,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                     Icon(
                         imageVector = if (routine.isFavorite) Icons.Filled.Star else Icons.Outlined.StarOutline,
                         contentDescription = "Favorita",
@@ -796,7 +707,6 @@ fun RoutineSharedCard(
                         contentDescription = "Editar",
                         tint = PrimaryTurquoise,
                         modifier = Modifier.size(20.dp).clickable { onEdit() }
-
                     )
                     Icon(
                         imageVector = Icons.Default.Delete,
@@ -1499,4 +1409,85 @@ fun formatTimer(seconds: Int): String {
     val m = seconds / 60
     val s = seconds % 60
     return "${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}"
+}
+
+@Composable
+fun RoutinePrintConfigDialog(
+    accentColor: Color,
+    initialTitle: String,
+    initialObjective: String,
+    initialSubObjective: String,
+    onDismiss: () -> Unit,
+    onConfirm: (title: String, objective: String, subObjective: String) -> Unit
+) {
+    var title by remember { mutableStateOf(initialTitle) }
+    var objective by remember { mutableStateOf(initialObjective) }
+    var subObjective by remember { mutableStateOf(initialSubObjective) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Configurar Datos de Impresión", fontWeight = FontWeight.Bold, color = TextWhite) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Título de la rutina (Encabezado)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = accentColor,
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                        focusedTextColor = TextWhite,
+                        unfocusedTextColor = TextWhite,
+                        focusedLabelColor = accentColor,
+                        unfocusedLabelColor = TextGray
+                    )
+                )
+                OutlinedTextField(
+                    value = objective,
+                    onValueChange = { objective = it },
+                    label = { Text("Objetivo de la rutina") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = accentColor,
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                        focusedTextColor = TextWhite,
+                        unfocusedTextColor = TextWhite,
+                        focusedLabelColor = accentColor,
+                        unfocusedLabelColor = TextGray
+                    )
+                )
+                OutlinedTextField(
+                    value = subObjective,
+                    onValueChange = { subObjective = it },
+                    label = { Text("Sub objetivo / Programa enfocado") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = accentColor,
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                        focusedTextColor = TextWhite,
+                        unfocusedTextColor = TextWhite,
+                        focusedLabelColor = accentColor,
+                        unfocusedLabelColor = TextGray
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(title, objective, subObjective) },
+                colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("ACEPTAR", color = Color.Black, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("CANCELAR", color = TextGray)
+            }
+        },
+        containerColor = Color(0xFF1B252D),
+        shape = RoundedCornerShape(20.dp)
+    )
 }
