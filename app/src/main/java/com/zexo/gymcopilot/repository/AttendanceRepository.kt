@@ -22,6 +22,7 @@ class AttendanceRepository(
 ) {
     private var lastLocalLogoUpdateTimestamp: Long = 0L
     private val sheetDateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
+    val accessDoorManager by lazy { AccessDoorManager(dataStoreManager) }
 
     private fun isToday(timestamp: Long): Boolean {
         val cal1 = Calendar.getInstance()
@@ -313,6 +314,7 @@ class AttendanceRepository(
             try {
                 GymKtorApiClient.getData(requestUrl)
                 updateLocalUserAttendance(finalEmail, timestamp)
+                try { accessDoorManager.triggerDoorRelease() } catch (_: Exception) {}
                 Result.success(Unit)
             } catch (eKtor: Exception) {
                 val dynamicService = NetworkModule.getApiService(gymUrl)
@@ -320,6 +322,7 @@ class AttendanceRepository(
 
                 if (response.isSuccessful || response.code() == 302) {
                     updateLocalUserAttendance(finalEmail, timestamp)
+                    try { accessDoorManager.triggerDoorRelease() } catch (_: Exception) {}
                     Result.success(Unit)
                 }
                 else Result.failure(Exception("Error servidor: ${response.code()}"))

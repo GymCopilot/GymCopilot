@@ -93,6 +93,14 @@ class DataStoreManager(private val context: Context) {
         val GYM_API_URL = stringPreferencesKey("GYM_API_URL")
         val GYM_SCRIPT_ID = stringPreferencesKey("GYM_SCRIPT_ID")
 
+        val TUYA_ENABLED = booleanPreferencesKey("TUYA_ENABLED")
+        val TUYA_CLIENT_ID = stringPreferencesKey("TUYA_CLIENT_ID")
+        val TUYA_CLIENT_SECRET = stringPreferencesKey("TUYA_CLIENT_SECRET")
+        val TUYA_DEVICE_ID = stringPreferencesKey("TUYA_DEVICE_ID")
+        val TUYA_REGION = stringPreferencesKey("TUYA_REGION")
+        val TUYA_WEBHOOK_URL = stringPreferencesKey("TUYA_WEBHOOK_URL")
+        val TUYA_PULSE_SECONDS = intPreferencesKey("TUYA_PULSE_SECONDS")
+
         val GYM_IS_OPEN = booleanPreferencesKey("GYM_IS_OPEN")
         val CLASS_IN_SESSION_MANUAL = booleanPreferencesKey("CLASS_IN_SESSION_MANUAL")
         val CLASS_OVERRIDE_UNTIL = longPreferencesKey("CLASS_OVERRIDE_UNTIL")
@@ -267,6 +275,27 @@ class DataStoreManager(private val context: Context) {
             it.remove(stringPreferencesKey("CAT_NAME_$categoryId"))
         }
     }
+
+    suspend fun setTuyaEnabled(enabled: Boolean) { dataStore.edit { it[TUYA_ENABLED] = enabled } }
+    fun getTuyaEnabled(): Flow<Boolean> = dataStore.data.map { it[TUYA_ENABLED] ?: false }
+
+    suspend fun setTuyaClientId(clientId: String) { dataStore.edit { it[TUYA_CLIENT_ID] = clientId } }
+    fun getTuyaClientId(): Flow<String> = dataStore.data.map { it[TUYA_CLIENT_ID] ?: "" }
+
+    suspend fun setTuyaClientSecret(secret: String) { dataStore.edit { it[TUYA_CLIENT_SECRET] = secret } }
+    fun getTuyaClientSecret(): Flow<String> = dataStore.data.map { it[TUYA_CLIENT_SECRET] ?: "" }
+
+    suspend fun setTuyaDeviceId(deviceId: String) { dataStore.edit { it[TUYA_DEVICE_ID] = deviceId } }
+    fun getTuyaDeviceId(): Flow<String> = dataStore.data.map { it[TUYA_DEVICE_ID] ?: "" }
+
+    suspend fun setTuyaRegion(region: String) { dataStore.edit { it[TUYA_REGION] = region } }
+    fun getTuyaRegion(): Flow<String> = dataStore.data.map { it[TUYA_REGION] ?: "us" }
+
+    suspend fun setTuyaWebhookUrl(url: String) { dataStore.edit { it[TUYA_WEBHOOK_URL] = url } }
+    fun getTuyaWebhookUrl(): Flow<String> = dataStore.data.map { it[TUYA_WEBHOOK_URL] ?: "" }
+
+    suspend fun setTuyaPulseSeconds(seconds: Int) { dataStore.edit { it[TUYA_PULSE_SECONDS] = seconds } }
+    fun getTuyaPulseSeconds(): Flow<Int> = dataStore.data.map { it[TUYA_PULSE_SECONDS] ?: 3 }
     
     fun getProducts(): Flow<List<Product>> = dataStore.data.map { preferences ->
         val productsJson = preferences[STORE_PRODUCTS] ?: "[]"

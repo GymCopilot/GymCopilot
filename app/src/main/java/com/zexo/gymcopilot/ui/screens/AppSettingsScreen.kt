@@ -88,7 +88,8 @@ fun AppSettingsScreen(
     onManageProfessorsClick: () -> Unit,
     onAppearanceClick: () -> Unit,
     onHelpClick: () -> Unit,
-    onContactClick: () -> Unit
+    onContactClick: () -> Unit,
+    onAccessDoorConfigClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val dataStoreManager = remember { DataStoreManager(context) }
@@ -133,6 +134,7 @@ fun AppSettingsScreen(
                 "manage_profs" to "Gestionar Profesores", "manage_profs_desc" to "Ver, editar o eliminar docentes",
                 "desig" to "Designación", "desig_desc" to "Cómo llamar a los integrantes",
                 "skin" to "Skin", "skin_desc" to "Personalizar apariencia",
+                "door" to "Apertura de Puerta", "door_desc" to "Switch Smart / Cerradura Magnética",
                 "skin_tour" to "¡Aquí es donde ocurre la magia! Toca en 'Skin' para personalizar los colores, el logo y el estilo visual de tu gimnasio.",
                 "assistant" to "Ayuda", "assistant_desc" to "Instrucciones y guía del asistente",
                 "door_system" to "Puerta de acceso",
@@ -148,6 +150,7 @@ fun AppSettingsScreen(
                 "manage_profs" to "Manage Professors", "manage_profs_desc" to "View, edit or delete teachers",
                 "desig" to "Designation", "desig_desc" to "How to call the members",
                 "skin" to "Skin", "skin_desc" to "Customize appearance",
+                "door" to "Door Opening", "door_desc" to "Smart Switch / Magnetic Lock",
                 "skin_tour" to "This is where the magic happens! Tap on 'Skin' to customize the colors, logo, and visual style of your gym.",
                 "assistant" to "Assistant", "assistant_desc" to "Instructions and assistant guide",
                 "door_system" to "Door Access",
@@ -303,6 +306,18 @@ fun AppSettingsScreen(
                             cardColor = PrimaryTurquoise,
                             shape = buttonShape,
                             onClick = { showPdfTemplateDialog = true }
+                        )
+                    }
+
+                    item {
+                        SettingsCard(
+                            title = t["door"] ?: "Door Opening",
+                            description = t["door_desc"] ?: "",
+                            icon = Icons.Default.LockOpen,
+                            accentColor = accentColor,
+                            cardColor = Color(0xFF00BCD4), // Turquoise / Cyan
+                            shape = buttonShape,
+                            onClick = onAccessDoorConfigClick
                         )
                     }
 

@@ -82,6 +82,7 @@ sealed class Screen(val route: String) {
     object Currency : Screen("currency")
     object GymConfig : Screen("gym_config")
     object NetworkConfig : Screen("network_config")
+    object AccessDoorConfig : Screen("access_door_config")
     object SubscriptionPlans : Screen("subscription_plans")
     object Help : Screen("help")
     object ProfessorHelp : Screen("professor_help")
@@ -390,6 +391,16 @@ fun GymNavGraph(
                 onSettingsClick = onAdminSettings
             )
         }
+        composable(Screen.AccessDoorConfig.route) {
+            AccessDoorConfigScreen(
+                onBack = { navController.popBackStack() },
+                onHomeClick = onAdminHome,
+                onStoreClick = onAdminStore,
+                onMembersClick = { onAdminMembers(null) },
+                onProfessorsClick = onAdminProfessors,
+                onSettingsClick = onAdminSettings
+            )
+        }
         composable(Screen.AppSettings.route) {
             AppSettingsScreen(
                 attendanceRepository = attendanceRepository,
@@ -404,7 +415,8 @@ fun GymNavGraph(
                 onManageProfessorsClick = { navController.navigate(Screen.ManageProfessors.createRoute(true)) },
                 onAppearanceClick = { navController.navigate(Screen.Appearance.route) },
                 onHelpClick = { navController.navigate(Screen.Help.route) },
-                onContactClick = { navController.navigate(Screen.Contact.route) }
+                onContactClick = { navController.navigate(Screen.Contact.route) },
+                onAccessDoorConfigClick = { navController.navigate(Screen.AccessDoorConfig.route) }
             )
         }
         composable(
