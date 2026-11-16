@@ -2,7 +2,6 @@ package com.zexo.gymcopilot.utils
 
 import com.zexo.gymcopilot.model.Routine
 import kotlinx.browser.window
-import kotlinx.browser.document
 
 actual fun isStandaloneMode(): Boolean {
     return try {
@@ -42,66 +41,150 @@ actual fun triggerRoutinePdfExport(
     gymName: String
 ) {
     try {
-        val titleText = customTitle.ifBlank { routines.firstOrNull()?.name ?: "Rutina de Entrenamiento" }
-        val objectiveText = customObjective.ifBlank { routines.firstOrNull()?.description ?: "Mejora de condición física y rendimiento" }
-        val subObjText = customSubObjective.ifBlank { "Programa Enfocado - $template" }
+        val firstRoutine = routines.firstOrNull() ?: Routine(id = "", name = "", description = "", level = "", objective = "", exercises = emptyList(), days = emptyList())
+        val titleText = customTitle.ifBlank { firstRoutine.name.ifBlank { "RUTINA 3 DÍAS – FORTALECIMIENTO Y REHABILITACIÓN" } }
+        val objectiveText = customObjective.ifBlank { firstRoutine.objective.ifBlank { "TRATAMIENTO RODILLAS EN VALGO Y HERNIA DE DISCO" } }
+        val subObjText = customSubObjective.ifBlank { firstRoutine.description.ifBlank { "FUERZA FUNCIONAL - ESTABILIDAD - MOVILIDAD - PROTECCIÓN ARTICULAR - SALUD DE LA COLUMNA" } }
+
+        val localProfile = readLocalMemberProfile()
+        val userName = listOf(localProfile?.firstName, localProfile?.lastName).filter { !it.isNullOrBlank() }.joinToString(" ").ifBlank { "Alumno / Socio" }
+        val currentDate = "Hoy"
+        val gymAddress = localProfile?.address.orEmpty().ifBlank { "Calle 13 entre 16 y 14, Chaves N° 564" }
+        val gymCity = "Balcarce, Buenos Aires"
+        val gymInstagram = "@tugimnasio"
+        val gymSlogan = "DISCIPLINA HOY, RESULTADOS SIEMPRE."
 
         val primaryColor = when (template) {
             "Ejecutiva" -> "#0F172A"
             "Moderna" -> "#00838F"
             "Minimalista" -> "#222222"
             "Profesional", "Alfa Balcarce" -> "#2E7D32"
-            else -> "#1A365D"
+            else -> "#1A365D" // Clásica
         }
 
         val htmlContent = buildString {
             append("<!DOCTYPE html><html><head><meta charset='utf-8'><title>$titleText - $gymName</title>")
             append("<style>")
-            append("body { font-family: 'Segoe UI', Arial, sans-serif; color: #222; margin: 20px; background: #f8fafc; }")
-            append(".page { background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; max-width: 800px; margin-left: auto; margin-right: auto; }")
-            append(".header { text-align: center; border-bottom: 3px solid $primaryColor; padding-bottom: 15px; margin-bottom: 20px; }")
-            append(".gym-title { font-size: 26px; font-weight: 800; color: $primaryColor; letter-spacing: 1px; }")
-            append(".routine-title { font-size: 22px; font-weight: 700; margin-top: 6px; color: #00838F; }")
-            append(".meta { font-size: 13px; color: #555; margin-top: 8px; background: #f1f5f9; padding: 8px 12px; border-radius: 6px; display: inline-block; }")
-            append("table { width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 20px; }")
-            append("th, td { border: 1px solid #cbd5e1; padding: 10px 12px; font-size: 13px; text-align: left; }")
-            append("th { background-color: $primaryColor; color: white; font-weight: 600; }")
-            append("tr:nth-child(even) { background-color: #f8fafc; }")
-            append(".notes-box { margin-top: 15px; padding: 10px; background: #fdf6b2; border-left: 4px solid #eab308; font-size: 12px; border-radius: 4px; }")
-            append(".footer { margin-top: 30px; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 12px; }")
-            append("@media print { body { background: #fff; } .page { box-shadow: none; padding: 0; margin: 0; max-width: none; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }")
+            append("body { font-family: Arial, sans-serif; color: #111; margin: 0; padding: 15px; background: #fff; }")
+            append(".classic-sheet { width: 100%; max-width: 750px; margin: 0 auto; border: 1.5px solid #4A5568; padding: 15px; box-sizing: border-box; background: #fff; }")
+
+            // Header
+            append(".header-box { border: 1.5px solid #4A5568; padding: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }")
+            append(".logo-area { width: 90px; height: 80px; background: $primaryColor; color: white; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; }")
+            append(".header-info { flex: 1; margin-left: 15px; }")
+            append(".gym-name { font-size: 26px; font-weight: bold; color: $primaryColor; text-transform: uppercase; }")
+            append(".gym-loc { font-size: 10px; color: #555; text-transform: uppercase; margin-top: 3px; }")
+            append(".header-title-area { text-align: right; }")
+            append(".rutina-title { font-size: 13px; font-weight: bold; color: #000; }")
+            append(".rutina-sub { font-size: 10px; color: #555; margin-top: 2px; }")
+
+            // Focus box
+            append(".focus-box { border: 0.5px solid #4A5568; background: #f8fafc; text-align: center; padding: 6px; font-size: 8px; font-weight: bold; color: #333; margin-bottom: 8px; text-transform: uppercase; }")
+
+            // Member info box
+            append(".member-box { border: 0.5px solid #CBD5E1; padding: 6px 10px; display: flex; justify-content: space-between; font-size: 9px; font-weight: bold; margin-bottom: 12px; background: #fff; }")
+
+            // Day table
+            append(".day-header { background: $primaryColor; color: white; padding: 6px 10px; font-size: 10px; font-weight: bold; display: flex; justify-content: space-between; margin-top: 10px; }")
+            append("table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }")
+            append("th, td { border: 0.5px solid #CBD5E1; padding: 6px 8px; font-size: 9px; text-align: left; }")
+            append("th { background: #F7FAFC; color: #000; font-weight: bold; }")
+            append("tr:nth-child(even) { background: #F8FAFC; }")
+
+            // Footer section (3 columns)
+            append(".footer-section { display: flex; gap: 8px; margin-top: 15px; }")
+            append(".footer-col { flex: 1; border: 0.5px solid #4A5568; font-size: 8px; }")
+            append(".footer-col-title { background: $primaryColor; color: white; padding: 4px 6px; font-weight: bold; font-size: 8px; text-align: center; }")
+            append(".footer-col-body { padding: 6px; color: #333; }")
+
+            // Bottom institutional footer
+            append(".bottom-footer { border: 0.5px solid #CBD5E1; padding: 8px 10px; margin-top: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 8px; color: #555; }")
+            append("@media print { body { padding: 0; background: #fff; } .classic-sheet { border: none; box-shadow: none; max-width: none; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }")
             append("</style></head><body>")
 
-            routines.forEach { routine ->
-                append("<div class='page'>")
-                append("<div class='header'>")
-                append("<div class='gym-title'>${gymName.uppercase()}</div>")
-                append("<div class='routine-title'>${routine.name.ifBlank { titleText }}</div>")
-                append("<div class='meta'><strong>Objetivo:</strong> $objectiveText &nbsp;|&nbsp; <strong>Programa:</strong> $subObjText &nbsp;|&nbsp; <strong>Duración:</strong> ${routine.duration}</div>")
-                append("</div>")
+            append("<div class='classic-sheet'>")
 
-                append("<table><thead><tr><th>#</th><th>Ejercicio</th><th>Series</th><th>Reps</th><th>Peso</th><th>Descanso</th><th>Notas Técnicas</th></tr></thead><tbody>")
-                routine.exercises.forEachIndexed { idx, ex ->
+            // Header
+            append("<div class='header-box'>")
+            append("<div class='logo-area'>TG</div>")
+            append("<div class='header-info'>")
+            append("<div class='gym-name'>$gymName</div>")
+            append("<div class='gym-loc'>$gymAddress · $gymCity</div>")
+            append("</div>")
+            append("<div class='header-title-area'>")
+            append("<div class='rutina-title'>${titleText.take(45)}</div>")
+            append("<div class='rutina-sub'>${objectiveText.take(55)}</div>")
+            append("</div>")
+            append("</div>")
+
+            // Focus
+            append("<div class='focus-box'>PROGRAMA ENFOCADO EN: $subObjText</div>")
+
+            // Member Info
+            append("<div class='member-box'>")
+            append("<span>NOMBRE: $userName</span>")
+            append("<span>FECHA: $currentDate</span>")
+            append("<span>OBJETIVO: $objectiveText</span>")
+            append("<span>NIVEL: ${firstRoutine.level.ifBlank { "General" }}</span>")
+            append("</div>")
+
+            // Routines / Days
+            routines.forEachIndexed { rIdx, r ->
+                val dayName = if (r.days.isNotEmpty()) r.days.joinToString(", ").uppercase() else r.name.uppercase()
+                append("<div class='day-header'><span>DÍA ${rIdx + 1} — $dayName</span><span>${r.description.ifBlank { "ENFOQUE: TREN INFERIOR" }.uppercase()}</span></div>")
+                append("<table><thead><tr><th style='width: 30px;'>#</th><th>EJERCICIO</th><th style='width: 50px;'>SERIES</th><th style='width: 60px;'>REPS</th><th>NOTAS TÉCNICAS</th></tr></thead><tbody>")
+                r.exercises.forEachIndexed { idx, ex ->
                     append("<tr>")
                     append("<td><strong>${idx + 1}</strong></td>")
                     append("<td><strong>${ex.name}</strong></td>")
                     append("<td>${ex.series}</td>")
                     append("<td>${ex.reps}</td>")
-                    append("<td>${ex.weight}</td>")
-                    append("<td>${ex.rest}</td>")
-                    append("<td>${ex.notes}</td>")
+                    append("<td>${ex.notes.ifBlank { "Controla la postura y técnica." }}</td>")
                     append("</tr>")
                 }
                 append("</tbody></table>")
-
-                if (routine.notes.isNotBlank()) {
-                    append("<div class='notes-box'><strong>Observaciones Generales:</strong> ${routine.notes}</div>")
-                }
-
-                append("<div class='footer'>Generado por GymCopilot • Plantilla: $template • www.gymcopilot.com</div>")
-                append("</div>")
             }
 
+            // Footer 3 columns
+            append("<div class='footer-section'>")
+
+            // Col 1: Indicaciones
+            append("<div class='footer-col'>")
+            append("<div class='footer-col-title'>INDICACIONES GENERALES</div>")
+            append("<div class='footer-col-body'>")
+            append("✓ Realizar entrada en calor de 10 min.<br>")
+            append("✓ Priorizar técnica antes que peso.<br>")
+            append("✓ Aumentar cargas progresivamente.<br>")
+            append("✓ Mantener buena hidratación.<br>")
+            append("✓ Consultar con profesional ante dudas.")
+            append("</div></div>")
+
+            // Col 2: Registro de Progreso
+            append("<div class='footer-col'>")
+            append("<div class='footer-col-title'>REGISTRO DE PROGRESO</div>")
+            append("<div class='footer-col-body' style='padding: 2px;'>")
+            append("<table style='margin:0; font-size:7px;'><tr><th>FECHA</th><th>DOLOR (0-10)</th><th>REND.</th></tr>")
+            repeat(3) {
+                append("<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>")
+            }
+            append("</table></div></div>")
+
+            // Col 3: Notas
+            append("<div class='footer-col'>")
+            append("<div class='footer-col-title'>NOTAS</div>")
+            append("<div class='footer-col-body'>${firstRoutine.notes.ifBlank { "Consultar cualquier duda con tu profesor." }}</div>")
+            append("</div>")
+
+            append("</div>") // End footer-section
+
+            // Bottom institutional footer
+            append("<div class='bottom-footer'>")
+            append("<span>$gymAddress · $gymCity</span>")
+            append("<strong style='color: $primaryColor;'>$gymInstagram</strong>")
+            append("<span>$gymSlogan</span>")
+            append("</div>")
+
+            append("</div>") // End classic-sheet
             append("</body></html>")
         }
 
