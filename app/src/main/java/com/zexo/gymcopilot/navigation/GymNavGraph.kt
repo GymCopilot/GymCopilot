@@ -392,6 +392,7 @@ fun GymNavGraph(
         }
         composable(Screen.AppSettings.route) {
             AppSettingsScreen(
+                attendanceRepository = attendanceRepository,
                 onBack = { navController.popBackStack() },
                 onHomeClick = onAdminHome,
                 onStoreClick = onAdminStore,

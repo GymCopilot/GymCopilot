@@ -18,17 +18,17 @@ object LockConfig {
      * 0: Muestra todos los roles en la Web.
      * 1: Muestra únicamente el perfil del alumno (socio) en la Web (durante desarrollo).
      */
-    const val WEB_ROLE_LOCK_ENABLED = 1
+    const val WEB_ROLE_LOCK_ENABLED = 0
 
     /**
      * Define el entorno operativo de la aplicación.
      * 0: Entorno de Pruebas (Staging).
      * 1: Entorno de Trabajo (Producción).
      */
-    const val APP_ENVIRONMENT = 1
+    const val APP_ENVIRONMENT = 0
 
-    private const val TEST_API_URL = "https://script.google.com/macros/s/AKfycbx_dcSbPWVqvV48_hCp0L2u5KQ3AWqtfi0e5_wwwD0Fjtbf9FbmKRzZCPCSYw4pvtkz/exec"
-    private const val PRODUCTION_API_URL = "https://script.google.com/macros/s/AKfycbzXYYMu43-ATeyxQmwdF3CuRYXi7KbpChyTQEBFIsWh7SCHv2XugxsWen61oBeDdzw/exec"
+    private const val TEST_API_URL = "https://script.google.com/macros/s/AKfycbyn85W_HL8njFGFxhQJQM7yh-nxDuFef8aBYqWDNd48bzIcT_FGyZSHye2b9W5ui7HW/exec"
+    private const val PRODUCTION_API_URL = "https://script.google.com/macros/s/AKfycbyn85W_HL8njFGFxhQJQM7yh-nxDuFef8aBYqWDNd48bzIcT_FGyZSHye2b9W5ui7HW/exec"
 
     /**
      * Devuelve la URL activa según el entorno configurado (0 = Pruebas, 1 = Trabajo).

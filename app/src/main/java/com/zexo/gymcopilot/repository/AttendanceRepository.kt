@@ -156,6 +156,70 @@ class AttendanceRepository(
         } catch (e: Exception) { Result.failure(e) }
     }
 
+    suspend fun openDoor(puertaId: String): Result<Unit> {
+        return try {
+            val gymUrl = dataStoreManager.getGymApiUrl().first()
+            if (gymUrl.isBlank()) return Result.failure(Exception("URL no configurada"))
+
+            val userRole = dataStoreManager.getUserRole().first()
+            val email: String? = when {
+                userRole == "professor" -> {
+                    val profId = dataStoreManager.getLinkedProfessorId().first()
+                    val profs = dataStoreManager.getProfessors().first()
+                    val currentProf = profs.find { it.id == profId }
+                    currentProf?.email ?: dataStoreManager.getUserEmail().first()
+                }
+                else -> {
+                    val userEmail = dataStoreManager.getUserEmail().first()
+                    if (userEmail.isBlank()) dataStoreManager.getLinkedMemberEmail().first() else userEmail
+                }
+            }
+
+            val alumnoId = email?.lowercase(Locale.getDefault())?.trim() ?: dataStoreManager.getUserEmail().first().ifBlank { "unknown_user" }
+            val ssId = dataStoreManager.getGymSpreadsheetId().first()
+            val timestamp = System.currentTimeMillis()
+            val request = DoorOpenRequest(
+                action = "abrir_puerta",
+                alumnoId = alumnoId,
+                puertaId = puertaId,
+                spreadsheetId = ssId,
+                timestamp = timestamp
+            )
+
+            val paramChar = if (gymUrl.contains("?")) "&" else "?"
+            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+            val requestUrl = "$gymUrl${paramChar}action=abrir_puerta&alumnoId=${URLEncoder.encode(alumnoId, "UTF-8")}&puertaId=${URLEncoder.encode(puertaId, "UTF-8")}&timestamp=$timestamp$ssParam"
+
+            try {
+                val responseText = GymKtorApiClient.postData(requestUrl, request)
+                if (responseText.isNotBlank() && !responseText.contains("error", ignoreCase = true)) {
+                    updateLocalUserAttendance(alumnoId, timestamp)
+                    Result.success(Unit)
+                } else {
+                    val dynamicService = NetworkModule.getApiService(gymUrl)
+                    val response = dynamicService.postDoorOpen(requestUrl, null, request)
+                    if (response.isSuccessful || response.code() == 302) {
+                        updateLocalUserAttendance(alumnoId, timestamp)
+                        Result.success(Unit)
+                    } else {
+                        Result.failure(Exception("Error al abrir puerta: ${response.code()}"))
+                    }
+                }
+            } catch (e: Exception) {
+                val dynamicService = NetworkModule.getApiService(gymUrl)
+                val response = dynamicService.postDoorOpen(requestUrl, null, request)
+                if (response.isSuccessful || response.code() == 302) {
+                    updateLocalUserAttendance(alumnoId, timestamp)
+                    Result.success(Unit)
+                } else {
+                    Result.failure(Exception("Error de conexión: ${e.message}"))
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun syncMemberRoutine(
         professorId: String,
         memberEmail: String,
@@ -552,7 +616,10 @@ class AttendanceRepository(
         buttonStyle: Int? = null,
         broadcastMessage: String? = null,
         classInSession: Boolean? = null,
-        gymIsOpen: Boolean? = null
+        gymIsOpen: Boolean? = null,
+        pdfTemplate: String? = null,
+        slogan: String? = null,
+        instagram: String? = null
     ): Result<Unit> {
         return try {
             if (logoUri != null) lastLocalLogoUpdateTimestamp = System.currentTimeMillis()
@@ -560,12 +627,21 @@ class AttendanceRepository(
             if (gymUrl.isBlank()) return Result.failure(Exception("URL no configurada"))
             
             val finalName = name ?: dataStoreManager.getGymName().first()
-            val finalLogo = logoUri ?: dataStoreManager.getGymLogoUri().first()
+            val rawLocalLogo = dataStoreManager.getGymLogoUri().first()
+            val finalLogo = if (logoUri != null) {
+                logoUri
+            } else if (!rawLocalLogo.isNullOrBlank() && (rawLocalLogo.startsWith("data:image") || rawLocalLogo.startsWith("http"))) {
+                rawLocalLogo
+            } else {
+                null
+            }
             val finalPhone = phone ?: dataStoreManager.getGymPhone().first()
             val finalAddress = address ?: dataStoreManager.getGymAddress().first()
             val finalCity = city ?: dataStoreManager.getGymCity().first()
             val finalZip = zip ?: dataStoreManager.getGymPostalCode().first()
             val finalCountry = country ?: dataStoreManager.getGymCountry().first()
+            val finalSlogan = slogan ?: dataStoreManager.getGymSlogan().first()
+            val finalInstagram = instagram ?: dataStoreManager.getGymInstagram().first()
             val finalColor = accentColor ?: dataStoreManager.getButtonColor().first()
             val finalBgColor = backgroundColor ?: dataStoreManager.getBackgroundColor().first()
             val finalButtonBgColor = buttonBackgroundColor ?: dataStoreManager.getButtonBackgroundColor().first()
@@ -575,6 +651,7 @@ class AttendanceRepository(
             val finalMessage = broadcastMessage ?: dataStoreManager.getBroadcastMessage().first()
             val finalClass = classInSession ?: dataStoreManager.getClassInSessionManual().first()
             val finalGymOpen = gymIsOpen ?: dataStoreManager.getGymIsOpen().first()
+            val finalPdfTemplate = pdfTemplate ?: dataStoreManager.getRoutinePdfTemplate().first()
             
             val ssid1 = dataStoreManager.getGymWifiSsid().first()
             val ssid2 = dataStoreManager.getGymWifiSsid2().first()
@@ -605,6 +682,7 @@ class AttendanceRepository(
                 wifiSsid = ssid1,
                 wifiSsid2 = ssid2,
                 wifiSsid3 = ssid3,
+                pdfTemplate = finalPdfTemplate,
                 gymId = gymId,
                 email = userEmail,
                 spreadsheetId = ssId
@@ -618,10 +696,11 @@ class AttendanceRepository(
             val encCountry = java.net.URLEncoder.encode(finalCountry, "UTF-8")
             val encMsg = java.net.URLEncoder.encode(finalMessage, "UTF-8")
             val encEmail = java.net.URLEncoder.encode(userEmail, "UTF-8")
+            val encPdfTemplate = URLEncoder.encode(finalPdfTemplate, "UTF-8")
 
             val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
             val paramChar = if (gymUrl.contains("?")) "&" else "?"
-            val requestUrl = "$gymUrl${paramChar}action=update_gym_info&gymId=$gymId&email=$encEmail&name=$encName&phone=$encPhone&address=$encAddress&city=$encCity&zip=$encZip&country=$encCountry&accentColor=$finalColor&backgroundColor=$finalBgColor&buttonBackgroundColor=$finalButtonBgColor&bottomNavBackgroundColor=$finalBottomNavBgColor&buttonStyle=$finalStyle&showLogoBorder=$finalShowBorder&classInSession=$finalClass&broadcastMessage=$encMsg&gymIsOpen=$finalGymOpen$ssParam"
+            val requestUrl = "$gymUrl${paramChar}action=update_gym_info&gymId=$gymId&email=$encEmail&name=$encName&phone=$encPhone&address=$encAddress&city=$encCity&zip=$encZip&country=$encCountry&accentColor=$finalColor&backgroundColor=$finalBgColor&buttonBackgroundColor=$finalButtonBgColor&bottomNavBackgroundColor=$finalBottomNavBgColor&buttonStyle=$finalStyle&showLogoBorder=$finalShowBorder&classInSession=$finalClass&broadcastMessage=$encMsg&gymIsOpen=$finalGymOpen&pdfTemplate=$encPdfTemplate$ssParam"
 
             try {
                 val responseText = GymKtorApiClient.postData(requestUrl, request)
@@ -756,6 +835,12 @@ class AttendanceRepository(
             if (remoteSsid1.isNotBlank() && remoteSsid1 != "null") dataStoreManager.setGymWifiSsid(remoteSsid1)
             if (remoteSsid2.isNotBlank() && remoteSsid2 != "null") dataStoreManager.setGymWifiSsid2(remoteSsid2)
             if (remoteSsid3.isNotBlank() && remoteSsid3 != "null") dataStoreManager.setGymWifiSsid3(remoteSsid3)
+
+            val remotePdfTemplate = if (configRow!!.size() > 20) configRow!![20].asString else ""
+            val validTemplates = listOf("Clásica", "Moderna", "Minimalista", "Ejecutiva", "Profesional")
+            if (!remotePdfTemplate.isBlank() && remotePdfTemplate != "null" && remotePdfTemplate in validTemplates) {
+                dataStoreManager.setRoutinePdfTemplate(remotePdfTemplate)
+            }
             
             val colorInt = colorStr.toIntOrNull()
             if (colorInt != null) {

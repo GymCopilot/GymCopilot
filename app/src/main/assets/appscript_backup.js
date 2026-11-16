@@ -155,7 +155,15 @@ function processAction(action, data, e) {
     var existingRow = (existingValues.length > 1 && String(existingValues[1][0]).toUpperCase() === "GYM_CONFIG") ? existingValues[1] : [];
 
     var newName = (data.name !== undefined && data.name !== null && data.name !== "") ? data.name : (existingRow[1] || "");
-    var newLogo = (data.logoUri !== undefined && data.logoUri !== null && data.logoUri !== "") ? data.logoUri : (existingRow[2] || "");
+    var incomingLogo = data.logoUri;
+    var existingLogo = existingRow[2] || "";
+    var newLogo = existingLogo;
+    if (incomingLogo !== undefined && incomingLogo !== null && incomingLogo !== "") {
+      var incStr = String(incomingLogo).trim();
+      if (incStr !== "null" && incStr.indexOf("file://") !== 0 && incStr.indexOf("content://") !== 0) {
+        newLogo = incStr;
+      }
+    }
     var newPhone = (data.phone !== undefined && data.phone !== null && data.phone !== "") ? data.phone : (existingRow[3] || "");
     var newAddress = (data.address !== undefined && data.address !== null && data.address !== "") ? data.address : (existingRow[4] || "");
     var newCity = (data.city !== undefined && data.city !== null && data.city !== "") ? data.city : (existingRow[5] || "");
@@ -173,6 +181,7 @@ function processAction(action, data, e) {
     var newSsid3 = (data.wifiSsid3 !== undefined && data.wifiSsid3 !== null) ? data.wifiSsid3 : (existingRow[17] || "");
     var newButtonBgColor = (data.buttonBackgroundColor !== undefined && data.buttonBackgroundColor !== null && data.buttonBackgroundColor !== "") ? data.buttonBackgroundColor : (existingRow[18] !== undefined ? existingRow[18] : "");
     var newBottomNavBgColor = (data.bottomNavBackgroundColor !== undefined && data.bottomNavBackgroundColor !== null && data.bottomNavBackgroundColor !== "") ? data.bottomNavBackgroundColor : (existingRow[19] !== undefined ? existingRow[19] : "");
+    var newPdfTemplate = (data.pdfTemplate !== undefined && data.pdfTemplate !== null && data.pdfTemplate !== "") ? data.pdfTemplate : (existingRow[20] !== undefined ? existingRow[20] : "Clásica");
 
     updateRow(sheet, "GYM_CONFIG", 0, [
       "GYM_CONFIG",
@@ -195,6 +204,7 @@ function processAction(action, data, e) {
       newSsid3,
       newButtonBgColor,
       newBottomNavBgColor,
+      newPdfTemplate,
       new Date()
     ]);
     return createJsonResponse({ "status": "success" });
@@ -290,6 +300,26 @@ function processAction(action, data, e) {
   if (action === "check_in") {
     getOrCreateSheet(ss, "Asistencia").appendRow([new Date(), data.gymId, data.memberEmail, data.timestamp]);
     return createJsonResponse({ "status": "success" });
+  }
+
+  if (action === "abrir_puerta") {
+    // 1. Asistencia automática al abrir la puerta
+    try {
+      var gymId = data.gymId || "Gym_Default";
+      var memberEmail = data.alumnoId || data.memberEmail || "desconocido";
+      var timestamp = data.timestamp || new Date().getTime();
+      getOrCreateSheet(ss, "Asistencia").appendRow([new Date(), gymId, memberEmail, timestamp]);
+    } catch (eAsis) {}
+
+    // 2. Apertura física del relé con Tuya Cloud
+    try {
+      var puertaId = data.puertaId || "eb40d0a2a38db6ac95gdt2";
+      if (typeof abrirPuertaGimnasio === "function") {
+        abrirPuertaGimnasio(puertaId, "prej3qspsecguyufuq7d", "TU_CLIENT_SECRET");
+      }
+    } catch (eTuya) {}
+
+    return createJsonResponse({ "status": "success", "message": "Puerta abierta y asistencia registrada" });
   }
 
   if (action === "update_professor" || action === "update_profile") {
@@ -687,6 +717,7 @@ function executeCreateGym(data) {
       "",
       "",
       "",
+      "Clásica",
       new Date()
     ]);
   } catch (eConfig) {}
@@ -870,7 +901,7 @@ function getOrCreateSheet(ss, name) {
       "Chats":      ["Gimnasio", "Remitente", "Destinatario", "Mensaje", "Timestamp", "Fecha_Servidor"],
       "Rutinas":    ["Fecha", "Email_Alumno", "ID_Profesor", "Estado", "Rutina"],
       "Tienda":     ["ID", "Nombre", "Precio", "Categoría", "Imagen", "Descripción", "Contacto_Metodo", "Contacto_Tel", "Banner_Tipo", "Banner_Texto", "Actualizado"],
-      "Configuracion": ["ID", "Nombre", "Logo", "Telefono", "Direccion", "Ciudad", "CP", "Pais", "Color", "BgColor", "ButtonStyle", "MostrarBordeLogo", "ClaseActiva", "Mensaje", "GimnasioAbierto", "WifiSSID1", "WifiSSID2", "WifiSSID3", "ButtonBgColor", "BottomNavBgColor", "Actualizado"],
+      "Configuracion": ["ID", "Nombre", "Logo", "Telefono", "Direccion", "Ciudad", "CP", "Pais", "Color", "BgColor", "ButtonStyle", "MostrarBordeLogo", "ClaseActiva", "Mensaje", "GimnasioAbierto", "WifiSSID1", "WifiSSID2", "WifiSSID3", "ButtonBgColor", "BottomNavBgColor", "PdfTemplate", "Actualizado"],
       "Planes":     ["ID", "Nombre", "Precio", "Duracion_Dias", "Descripcion", "Actualizado"]
     };
     if (headers[name]) sheet.appendRow(headers[name]);
@@ -937,13 +968,49 @@ function fixRoutineSheetStructure(sheet) {
 }
 
 function fixConfigSheetStructure(sheet) {
-  var expectedHeaders = ["ID", "Nombre", "Logo", "Telefono", "Direccion", "Ciudad", "CP", "Pais", "Color", "BgColor", "ButtonStyle", "MostrarBordeLogo", "ClaseActiva", "Mensaje", "GimnasioAbierto", "WifiSSID1", "WifiSSID2", "WifiSSID3", "ButtonBgColor", "BottomNavBgColor", "Actualizado"];
-  sheet.getRange(1, 1, 1, expectedHeaders.length).setValues([expectedHeaders]);
+  var expectedHeaders = ["ID", "Nombre", "Logo", "Telefono", "Direccion", "Ciudad", "CP", "Pais", "Color", "BgColor", "ButtonStyle", "MostrarBordeLogo", "ClaseActiva", "Mensaje", "GimnasioAbierto", "WifiSSID1", "WifiSSID2", "WifiSSID3", "ButtonBgColor", "BottomNavBgColor", "PdfTemplate", "Actualizado"];
+
+  var lastCol = sheet.getLastColumn();
+  if (lastCol > 0) {
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    var hasPdfTemplate = false;
+    for (var i = 0; i < headers.length; i++) {
+      if (String(headers[i]).trim() === "PdfTemplate") {
+        hasPdfTemplate = true;
+        break;
+      }
+    }
+
+    if (!hasPdfTemplate) {
+      var actualizadoIdx = -1;
+      for (var i = 0; i < headers.length; i++) {
+        if (String(headers[i]).trim().toLowerCase() === "actualizado") {
+          actualizadoIdx = i + 1;
+          break;
+        }
+      }
+
+      if (actualizadoIdx !== -1) {
+        sheet.insertColumnBefore(actualizadoIdx);
+        sheet.getRange(1, actualizadoIdx).setValue("PdfTemplate");
+        var lastRow = sheet.getLastRow();
+        if (lastRow > 1) {
+          sheet.getRange(2, actualizadoIdx, lastRow - 1, 1).setValue("Clásica");
+        }
+        SpreadsheetApp.flush();
+      } else {
+        sheet.getRange(1, 1, 1, expectedHeaders.length).setValues([expectedHeaders]);
+      }
+    }
+  } else {
+    sheet.getRange(1, 1, 1, expectedHeaders.length).setValues([expectedHeaders]);
+  }
+
   var values = sheet.getDataRange().getValues();
   if (values.length > 1) {
     for (var j = values.length - 1; j >= 1; j--) {
       var idVal = String(values[j][0]).toUpperCase();
-      if (idVal !== "GYM_CONFIG" && values.length > 2) {
+      if (idVal !== "GYM_CONFIG") {
         sheet.deleteRow(j + 1);
       }
     }

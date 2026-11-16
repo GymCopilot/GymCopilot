@@ -147,7 +147,7 @@ fun SettingsSharedScreen(
                 item {
                     SettingsSharedCard(
                         title = "Contacto",
-                        subtitle = "Soporte y canales de comunicación",
+                        subtitle = "Soporte y comunicación",
                         iconPainter = painterResource(Res.drawable.support_agent),
                         iconBg = Color(0xFF3B1B29),
                         iconTint = Color(0xFFEC407A),

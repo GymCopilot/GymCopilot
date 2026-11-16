@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.zexo.gymcopilot.LockConfig
 import com.zexo.gymcopilot.model.Exercise
 import com.zexo.gymcopilot.model.Routine
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
@@ -527,7 +528,7 @@ fun RoutineCreationSharedScreen(
 
     LaunchedEffect(Unit) {
         try {
-            val gymUrl = localMember?.gymApiUrl.orEmpty().ifBlank { "https://script.google.com/macros/s/AKfycbzXYYMu43-ATeyxQmwdF3CuRYXi7KbpChyTQEBFIsWh7SCHv2XugxsWen61oBeDdzw/exec" }
+            val gymUrl = localMember?.gymApiUrl.orEmpty().ifBlank { LockConfig.activeApiUrl }
             val gymName = localMember?.gymName.orEmpty().ifBlank { "Gym 47" }
             val gymIdVal = gymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
             val ssId = localMember?.spreadsheetId.orEmpty()

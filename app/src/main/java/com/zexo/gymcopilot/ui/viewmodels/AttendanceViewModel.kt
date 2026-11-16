@@ -36,9 +36,15 @@ class AttendanceViewModel(private val repository: AttendanceRepository) : ViewMo
                         clean.startsWith("MEMBER_LINK:") ||
                         clean.startsWith("ATTENDANCE:") ||
                         clean.startsWith("gym_id:") ||
+                        clean.startsWith("DOORLINK|") ||
+                        clean.startsWith("DOOR|") ||
+                        clean.startsWith("PUERTA|") ||
+                        clean.startsWith("DOOR:") ||
+                        clean.startsWith("PUERTA:") ||
+                        clean.startsWith("abrir_puerta") ||
                         try {
                             val json = JSONObject(clean)
-                            json.has("gym_id") || json.has("id") || json.has("action") || json.has("gym_api_url")
+                            json.has("gym_id") || json.has("id") || json.has("action") || json.has("gym_api_url") || json.has("puertaId") || json.has("doorId")
                         } catch (e: Exception) {
                             false
                         }
@@ -51,6 +57,48 @@ class AttendanceViewModel(private val repository: AttendanceRepository) : ViewMo
                 // 1. Vinculación de Perfiles (Links)
                 if (clean.startsWith("PROFLINK|") || clean.startsWith("MEMBERLINK|") || clean.startsWith("MEMBER_LINK:")) {
                     processLinkQr(clean)
+                    return@launch
+                }
+
+                // 1.5. Apertura de Puerta (Door Opening)
+                val isDoorQr = clean.startsWith("DOORLINK|") ||
+                        clean.startsWith("DOOR|") ||
+                        clean.startsWith("PUERTA|") ||
+                        clean.startsWith("DOOR:") ||
+                        clean.startsWith("PUERTA:") ||
+                        clean.startsWith("abrir_puerta") ||
+                        try {
+                            val json = JSONObject(clean)
+                            json.optString("action") == "abrir_puerta" || json.has("puertaId") || json.has("doorId")
+                        } catch (e: Exception) { false }
+
+                if (isDoorQr) {
+                    val puertaId = when {
+                        clean.startsWith("DOORLINK|") || clean.startsWith("DOOR|") || clean.startsWith("PUERTA|") -> {
+                            clean.split("|").getOrNull(1)?.takeIf { it.isNotBlank() } ?: "puerta_1"
+                        }
+                        clean.startsWith("DOOR:") || clean.startsWith("PUERTA:") || clean.startsWith("abrir_puerta:") -> {
+                            clean.split(":").getOrNull(1)?.takeIf { it.isNotBlank() } ?: "puerta_1"
+                        }
+                        else -> {
+                            try {
+                                val json = JSONObject(clean)
+                                json.optString("puertaId", json.optString("doorId", json.optString("device_id", "puerta_1")))
+                            } catch (e: Exception) {
+                                "puerta_1"
+                            }
+                        }
+                    }.ifBlank { "puerta_1" }
+
+                    val doorResult = repository.openDoor(puertaId)
+                    doorResult.fold(
+                        onSuccess = {
+                            _state.value = CheckInState.Success("¡Puerta abierta con éxito!")
+                        },
+                        onFailure = {
+                            _state.value = CheckInState.Error(it.message ?: "Error al abrir la puerta")
+                        }
+                    )
                     return@launch
                 }
 

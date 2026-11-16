@@ -337,10 +337,10 @@ fun AppearanceSharedScreen(
                     }
                 }
 
-                // 6. CONTACTO
+                // 6. DATOS DEL GIMNASIO
                 item {
                     AccordionCard(
-                        title = "Contacto",
+                        title = "Datos del Gimnasio",
                         iconPainter = painterResource(Res.drawable.handshake),
                         isExpanded = expandedSection == "contact",
                         onToggle = { expandedSection = if (expandedSection == "contact") null else "contact" }

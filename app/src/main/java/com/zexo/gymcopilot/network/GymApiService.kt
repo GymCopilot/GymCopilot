@@ -13,6 +13,14 @@ data class CheckInRequest(
     val spreadsheetId: String? = null
 )
 
+data class DoorOpenRequest(
+    val action: String = "abrir_puerta",
+    val alumnoId: String,
+    val puertaId: String,
+    val spreadsheetId: String? = null,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
 data class ScheduleSyncRequest(
     val action: String = "update_schedule",
     val gymId: String,
@@ -136,6 +144,7 @@ data class GymSyncRequest(
     val wifiSsid: String? = null,
     val wifiSsid2: String? = null,
     val wifiSsid3: String? = null,
+    val pdfTemplate: String? = null,
     val gymId: String? = null,
     val email: String? = null,
     val timestamp: Long = System.currentTimeMillis(),
@@ -155,6 +164,13 @@ interface GymApiService {
         @Url url: String,
         @Header("Authorization") token: String?,
         @Body request: CheckInRequest
+    ): Response<Unit>
+
+    @POST
+    suspend fun postDoorOpen(
+        @Url url: String,
+        @Header("Authorization") token: String?,
+        @Body request: DoorOpenRequest
     ): Response<Unit>
 
     @POST

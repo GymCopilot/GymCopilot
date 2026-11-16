@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,6 +36,7 @@ import com.zexo.gymcopilot.shared.network.GymKtorApiClient
 import com.zexo.gymcopilot.utils.getCurrentTimeMillis
 import com.zexo.gymcopilot.utils.playAudioSound
 import com.zexo.gymcopilot.LockConfig
+import com.zexo.gymcopilot.utils.printRoutinesWeb
 import com.zexo.gymcopilot.utils.readLocalMemberProfile
 import com.zexo.gymcopilot.utils.readLocalStorageFlag
 import com.zexo.gymcopilot.utils.saveLocalStorageFlag
@@ -64,7 +66,28 @@ fun FullRoutinesSection(
     var showCategoryDialog by remember { mutableStateOf(false) }
     var showCreationScreen by remember { mutableStateOf(false) }
 
+    var selectedPdfRoutineIds by remember { mutableStateOf(setOf<String>()) }
+    var showPrintConfigDialog by remember { mutableStateOf(false) }
+    var customPrintTitle by remember { mutableStateOf("") }
+    var customPrintObjective by remember { mutableStateOf("") }
+    var customPrintSubObjective by remember { mutableStateOf("") }
+    var routineToConfigurePrint by remember { mutableStateOf<Routine?>(null) }
+
     val userRoutines = remember { mutableStateListOf<Routine>() }
+
+    fun handleExportPdf(routinesToExport: List<Routine>) {
+        if (routinesToExport.isEmpty()) return
+        try {
+            val jsonStr = Json.encodeToString(routinesToExport)
+            printRoutinesWeb(
+                jsonStr,
+                customPrintTitle,
+                customPrintObjective,
+                customPrintSubObjective
+            )
+        } catch (_: Exception) {}
+    }
+
 
     fun persistRoutines() {
         try {
@@ -77,7 +100,12 @@ fun FullRoutinesSection(
         try {
             val savedJson = readLocalStorageFlag("gymcopilot_user_routines")
             if (!savedJson.isNullOrBlank()) {
-                val parsed = Json.decodeFromString<List<Routine>>(savedJson)
+                val parsed = try {
+                    Json.decodeFromString<List<Routine>>(savedJson)
+                } catch (e: Exception) {
+                    saveLocalStorageFlag("gymcopilot_user_routines", "[]")
+                    emptyList()
+                }
                 userRoutines.clear()
                 userRoutines.addAll(parsed)
             }
@@ -311,13 +339,85 @@ fun FullRoutinesSection(
 
             // Mis Rutinas section header
             item {
-                Text(
-                    text = "Mis rutinas",
-                    color = TextWhite,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Mis rutinas",
+                        color = TextWhite,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        if (selectedPdfRoutineIds.isNotEmpty()) {
+                            Surface(
+                                color = Color(0xFF4CAF50).copy(alpha = 0.2f),
+                                shape = CircleShape,
+                                border = BorderStroke(1.dp, Color(0xFF4CAF50))
+                            ) {
+                                Text(
+                                    text = "${selectedPdfRoutineIds.size} sel.",
+                                    color = Color(0xFF4CAF50),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = {
+                                val targetRoutine = if (selectedPdfRoutineIds.isNotEmpty()) {
+                                    userRoutines.firstOrNull { it.id in selectedPdfRoutineIds }
+                                } else {
+                                    userRoutines.firstOrNull()
+                                }
+                                if (targetRoutine != null) {
+                                    routineToConfigurePrint = targetRoutine
+                                    customPrintTitle = ""
+                                    customPrintObjective = ""
+                                    customPrintSubObjective = ""
+                                    showPrintConfigDialog = true
+                                }
+                            },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(Res.drawable.text_ad_icon),
+                                contentDescription = "Configurar datos de impresión",
+                                tint = PrimaryTurquoise,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = {
+                                val routinesToExport = if (selectedPdfRoutineIds.isNotEmpty()) {
+                                    userRoutines.filter { it.id in selectedPdfRoutineIds }
+                                } else {
+                                    userRoutines.toList()
+                                }
+                                handleExportPdf(routinesToExport)
+                            },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(Res.drawable.download_pdf),
+                                contentDescription = "Imprimir Rutinas en PDF",
+                                tint = if (selectedPdfRoutineIds.isNotEmpty()) Color(0xFF4CAF50) else PrimaryTurquoise,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
             }
 
             // Routine Cards List
@@ -338,9 +438,11 @@ fun FullRoutinesSection(
                 }
             } else {
                 items(filteredRoutines) { routine ->
+                    val isPdfSel = routine.id in selectedPdfRoutineIds
                     Box(modifier = Modifier.padding(horizontal = 20.dp)) {
                         RoutineSharedCard(
                             routine = routine,
+                            isPdfSelected = isPdfSel,
                             onClick = { selectedRoutine = routine },
                             onDelete = {
                                 userRoutines.remove(routine)
@@ -362,9 +464,17 @@ fun FullRoutinesSection(
                             },
                             onEdit = {
                                 editingRoutineId = routine.id
+                            },
+                            onExportPdf = {
+                                selectedPdfRoutineIds = if (isPdfSel) {
+                                    selectedPdfRoutineIds - routine.id
+                                } else {
+                                    selectedPdfRoutineIds + routine.id
+                                }
                             }
                         )
                     }
+
                 }
             }
         }
@@ -372,6 +482,21 @@ fun FullRoutinesSection(
 
     if (showTimerModal) {
         SharedTimerDialog(onDismiss = { showTimerModal = false })
+    }
+
+    if (showPrintConfigDialog && routineToConfigurePrint != null) {
+        RoutinePrintConfigDialog(
+            initialTitle = customPrintTitle,
+            initialObjective = customPrintObjective,
+            initialSubObjective = customPrintSubObjective,
+            onDismiss = { showPrintConfigDialog = false },
+            onConfirm = { t, o, s ->
+                customPrintTitle = t
+                customPrintObjective = o
+                customPrintSubObjective = s
+                showPrintConfigDialog = false
+            }
+        )
     }
 
     if (showCategoryDialog) {
@@ -403,6 +528,87 @@ fun FullRoutinesSection(
         )
     }
 }
+
+@Composable
+fun RoutinePrintConfigDialog(
+    initialTitle: String = "",
+    initialObjective: String = "",
+    initialSubObjective: String = "",
+    onDismiss: () -> Unit,
+    onConfirm: (title: String, objective: String, subObjective: String) -> Unit
+) {
+    var title by remember { mutableStateOf(initialTitle) }
+    var objective by remember { mutableStateOf(initialObjective) }
+    var subObjective by remember { mutableStateOf(initialSubObjective) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Configurar Datos de Impresión", fontWeight = FontWeight.Bold, color = TextWhite) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Título de la rutina (Encabezado)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PrimaryTurquoise,
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                        focusedTextColor = TextWhite,
+                        unfocusedTextColor = TextWhite,
+                        focusedLabelColor = PrimaryTurquoise,
+                        unfocusedLabelColor = TextGray
+                    )
+                )
+                OutlinedTextField(
+                    value = objective,
+                    onValueChange = { objective = it },
+                    label = { Text("Objetivo de la rutina") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PrimaryTurquoise,
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                        focusedTextColor = TextWhite,
+                        unfocusedTextColor = TextWhite,
+                        focusedLabelColor = PrimaryTurquoise,
+                        unfocusedLabelColor = TextGray
+                    )
+                )
+                OutlinedTextField(
+                    value = subObjective,
+                    onValueChange = { subObjective = it },
+                    label = { Text("Sub objetivo / Programa enfocado") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PrimaryTurquoise,
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                        focusedTextColor = TextWhite,
+                        unfocusedTextColor = TextWhite,
+                        focusedLabelColor = PrimaryTurquoise,
+                        unfocusedLabelColor = TextGray
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(title, objective, subObjective) },
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("ACEPTAR", color = Color.Black, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("CANCELAR", color = TextGray)
+            }
+        },
+        containerColor = Color(0xFF1B252D),
+        shape = RoundedCornerShape(16.dp)
+    )
+}
+
 
 @Composable
 fun StatBoxShared(label: String, value: String, icon: ImageVector, color: Color, modifier: Modifier = Modifier) {
@@ -462,15 +668,24 @@ fun QuickActionSharedItem(
 @Composable
 fun RoutineSharedCard(
     routine: Routine,
+    isPdfSelected: Boolean = false,
     onClick: () -> Unit,
     onDelete: () -> Unit,
     onToggleFavorite: () -> Unit,
     onNotesChange: (String) -> Unit,
-    onEdit: () -> Unit
+    onEdit: () -> Unit,
+    onExportPdf: () -> Unit = {}
 ) {
     var isExpanded by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
-    var notesText by remember(routine.notes) { mutableStateOf(routine.notes) }
+    var notesValue by remember { mutableStateOf(TextFieldValue(routine.notes)) }
+    val currentOnNotesChange by rememberUpdatedState(onNotesChange)
+    LaunchedEffect(notesValue.text) {
+        if (notesValue.text != routine.notes) {
+            delay(500)
+            currentOnNotesChange(notesValue.text)
+        }
+    }
 
     if (showDeleteConfirm) {
         AlertDialog(
@@ -559,6 +774,12 @@ fun RoutineSharedCard(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Icon(
+                        painter = painterResource(Res.drawable.download_pdf),
+                        contentDescription = "Descargar PDF",
+                        tint = if (isPdfSelected) Color(0xFF4CAF50) else PrimaryTurquoise,
+                        modifier = Modifier.size(20.dp).clickable { onExportPdf() }
+                    )
+                    Icon(
                         imageVector = if (routine.isFavorite) Icons.Filled.Star else Icons.Outlined.StarOutline,
                         contentDescription = "Favorita",
                         tint = if (routine.isFavorite) Color(0xFFFFD700) else TextGray,
@@ -575,6 +796,7 @@ fun RoutineSharedCard(
                         contentDescription = "Editar",
                         tint = PrimaryTurquoise,
                         modifier = Modifier.size(20.dp).clickable { onEdit() }
+
                     )
                     Icon(
                         imageVector = Icons.Default.Delete,
@@ -617,10 +839,9 @@ fun RoutineSharedCard(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 OutlinedTextField(
-                    value = notesText,
+                    value = notesValue,
                     onValueChange = {
-                        notesText = it
-                        onNotesChange(it)
+                        notesValue = it
                     },
                     placeholder = { Text("Anotaciones generales de la rutina...", color = TextGray, fontSize = 12.sp) },
                     minLines = 3,

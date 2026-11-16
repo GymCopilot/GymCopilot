@@ -50,6 +50,7 @@ import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import com.zexo.gymcopilot.DataStoreManager
 import com.zexo.gymcopilot.R
+import com.zexo.gymcopilot.network.NetworkModule
 import com.zexo.gymcopilot.repository.AttendanceRepository
 import com.zexo.gymcopilot.ui.theme.LocalButtonBackgroundColor
 import com.zexo.gymcopilot.ui.theme.PrimaryTurquoise
@@ -105,6 +106,10 @@ fun AppearanceScreen(
     var cityState by remember { mutableStateOf("") }
     var zipState by remember { mutableStateOf("") }
     var countryState by remember { mutableStateOf("") }
+    var sloganState by remember { mutableStateOf("") }
+    var instagramState by remember { mutableStateOf("") }
+    var facebookState by remember { mutableStateOf("") }
+    var tiktokState by remember { mutableStateOf("") }
     var isDataLoaded by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -114,6 +119,10 @@ fun AppearanceScreen(
         val initialCity = dataStoreManager.getGymCity().first()
         val initialZip = dataStoreManager.getGymPostalCode().first()
         val initialCountry = dataStoreManager.getGymCountry().first()
+        val initialSlogan = dataStoreManager.getGymSlogan().first()
+        val initialInstagram = dataStoreManager.getGymInstagram().first()
+        val initialFacebook = dataStoreManager.getGymFacebook().first()
+        val initialTikTok = dataStoreManager.getGymTikTok().first()
 
         nameState = initialName
         phoneState = initialPhone
@@ -121,16 +130,23 @@ fun AppearanceScreen(
         cityState = initialCity
         zipState = initialZip
         countryState = initialCountry
+        sloganState = initialSlogan
+        instagramState = initialInstagram
+        facebookState = initialFacebook
+        tiktokState = initialTikTok
         isDataLoaded = true
     }
 
     val gymLogoUri by dataStoreManager.getGymLogoUri().collectAsState(initial = null)
     val gymApiUrl by dataStoreManager.getGymApiUrl().collectAsState(initial = "")
+    val repo = remember(gymApiUrl, attendanceRepository) {
+        attendanceRepository ?: AttendanceRepository(NetworkModule.getApiService(gymApiUrl), dataStoreManager)
+    }
     val gymNameFont by dataStoreManager.getGymNameFont().collectAsState(initial = "Default")
     val savedBtnColor by dataStoreManager.getButtonColor().collectAsState(initial = null)
     val accentColor = if (savedBtnColor != null) Color(savedBtnColor!!) else PrimaryTurquoise
     val savedBtnBgColor by dataStoreManager.getButtonBackgroundColor().collectAsState(initial = null)
-    val buttonBgColor = if (savedBtnBgColor != null && savedBtnBgColor != 0) Color(savedBtnBgColor!!) else PrimaryTurquoise
+    val buttonBgColor = if (savedBtnBgColor != null && savedBtnBgColor != 0) Color(savedBtnBgColor!!) else Color(0xFF00222E)
     val savedBottomNavBgColor by dataStoreManager.getBottomNavBackgroundColor().collectAsState(initial = null)
     val bottomNavBgColor = if (savedBottomNavBgColor != null && savedBottomNavBgColor != 0) Color(savedBottomNavBgColor!!) else Color(0xFF00151C)
     val buttonStyle by dataStoreManager.getButtonStyle().collectAsState(initial = 1)
@@ -148,7 +164,7 @@ fun AppearanceScreen(
                     // Sync to cloud using Base64
                     val base64 = getBase64FromUri(context, it)
                     if (base64 != null) {
-                        attendanceRepository?.syncGymInfo(logoUri = "data:image/png;base64,$base64")
+                        repo.syncGymInfo(logoUri = "data:image/png;base64,$base64")
                     }
                 }
             }
@@ -238,7 +254,7 @@ fun AppearanceScreen(
                                 scope.launch {
                                     val newVal = !showLogoBorder
                                     dataStoreManager.setShowLogoBorder(newVal)
-                                    attendanceRepository?.syncGymInfo()
+                                    repo.syncGymInfo()
                                 }
                             },
                             onClick = { logoLauncher.launch("image/*") },
@@ -256,7 +272,7 @@ fun AppearanceScreen(
                                         dataStoreManager.setGymLogoUri(adjustedUri.toString())
                                         val base64 = getBase64FromUri(context, adjustedUri)
                                         if (base64 != null) {
-                                            attendanceRepository?.syncGymInfo(logoUri = "data:image/png;base64,$base64")
+                                            repo.syncGymInfo(logoUri = "data:image/png;base64,$base64")
                                         }
                                     }
                                 }
@@ -285,12 +301,12 @@ fun AppearanceScreen(
                             ColorSelectorGrid(t, mainColors, grayScale, rainbowColors, accentColor = accentColor, onReset = {
                                 scope.launch {
                                     dataStoreManager.resetBackgroundColor()
-                                    attendanceRepository?.syncGymInfo(backgroundColor = 0) // Usamos 0 como señal de reset
+                                    repo.syncGymInfo(backgroundColor = 0) // Usamos 0 como señal de reset
                                 }
                             }) { color ->
                                 scope.launch {
                                     dataStoreManager.setBackgroundColor(color.toArgb())
-                                    attendanceRepository?.syncGymInfo(backgroundColor = color.toArgb())
+                                    repo.syncGymInfo(backgroundColor = color.toArgb())
                                 }
                             }
                         }
@@ -304,12 +320,12 @@ fun AppearanceScreen(
                                 scope.launch {
                                     val defaultBg = Color(0xFF00222E).toArgb()
                                     dataStoreManager.setButtonBackgroundColor(defaultBg)
-                                    attendanceRepository?.syncGymInfo(buttonBackgroundColor = defaultBg)
+                                    repo.syncGymInfo(buttonBackgroundColor = defaultBg)
                                 }
                             }) { color ->
                                 scope.launch {
                                     dataStoreManager.setButtonBackgroundColor(color.toArgb())
-                                    attendanceRepository?.syncGymInfo(buttonBackgroundColor = color.toArgb())
+                                    repo.syncGymInfo(buttonBackgroundColor = color.toArgb())
                                 }
                             }
 
@@ -319,12 +335,12 @@ fun AppearanceScreen(
                                 scope.launch {
                                     val defaultColor = PrimaryTurquoise.toArgb()
                                     dataStoreManager.setButtonColor(defaultColor)
-                                    attendanceRepository?.syncGymInfo(accentColor = defaultColor)
+                                    repo.syncGymInfo(accentColor = defaultColor)
                                 }
                             }) { color ->
                                 scope.launch {
                                     dataStoreManager.setButtonColor(color.toArgb())
-                                    attendanceRepository?.syncGymInfo(accentColor = color.toArgb())
+                                    repo.syncGymInfo(accentColor = color.toArgb())
                                 }
                             }
 
@@ -370,13 +386,13 @@ fun AppearanceScreen(
                                 onReset = {
                                     scope.launch {
                                         dataStoreManager.resetBottomNavBackgroundColor()
-                                        attendanceRepository?.syncGymInfo(bottomNavBackgroundColor = 0)
+                                        repo.syncGymInfo(bottomNavBackgroundColor = 0)
                                     }
                                 }
                             ) { color ->
                                 scope.launch {
                                     dataStoreManager.setBottomNavBackgroundColor(color.toArgb())
-                                    attendanceRepository?.syncGymInfo(bottomNavBackgroundColor = color.toArgb())
+                                    repo.syncGymInfo(bottomNavBackgroundColor = color.toArgb())
                                 }
                             }
                         }
@@ -389,25 +405,25 @@ fun AppearanceScreen(
                                 ButtonStyleOption(0, t["st_straight"] ?: "Straight", getButtonStyleShape(0), buttonStyle, accentColor, buttonBgColor) {
                                     scope.launch {
                                         dataStoreManager.setButtonStyle(0)
-                                        attendanceRepository?.syncGymInfo(buttonStyle = 0)
+                                        repo.syncGymInfo(buttonStyle = 0)
                                     }
                                 }
                                 ButtonStyleOption(1, t["st_rounded"] ?: "Rounded", getButtonStyleShape(1), buttonStyle, accentColor, buttonBgColor) {
                                     scope.launch {
                                         dataStoreManager.setButtonStyle(1)
-                                        attendanceRepository?.syncGymInfo(buttonStyle = 1)
+                                        repo.syncGymInfo(buttonStyle = 1)
                                     }
                                 }
                                 ButtonStyleOption(2, t["st_more"] ?: "More", getButtonStyleShape(2), buttonStyle, accentColor, buttonBgColor) {
                                     scope.launch {
                                         dataStoreManager.setButtonStyle(2)
-                                        attendanceRepository?.syncGymInfo(buttonStyle = 2)
+                                        repo.syncGymInfo(buttonStyle = 2)
                                     }
                                 }
                                 ButtonStyleOption(3, t["st_total"] ?: "Total", getButtonStyleShape(3), buttonStyle, accentColor, buttonBgColor) {
                                     scope.launch {
                                         dataStoreManager.setButtonStyle(3)
-                                        attendanceRepository?.syncGymInfo(buttonStyle = 3)
+                                        repo.syncGymInfo(buttonStyle = 3)
                                     }
                                 }
                             }
@@ -454,7 +470,7 @@ fun AppearanceScreen(
                                     nameState = it
                                     scope.launch {
                                         dataStoreManager.setGymName(it)
-                                        attendanceRepository?.syncGymInfo(name = it)
+                                        repo.syncGymInfo(name = it)
                                     }
                                 }, label = t["gym_name"] ?: "Name", accentColor = accentColor, shape = containerShape)
                             } else {
@@ -472,44 +488,70 @@ fun AppearanceScreen(
                     }
                 }
                 item {
-                    ExpandableAppearanceSection(title = if (appLanguage == "Español") "Contacto" else "Contact", icon = Icons.Default.LocationOn, isExpanded = expandedSection == "contact", onToggle = { expandedSection = if (expandedSection == "contact") null else "contact" }, accentColor = accentColor, buttonBgColor = buttonBgColor, shape = containerShape) {
+                    ExpandableAppearanceSection(title = if (appLanguage == "Español") "Datos del Gimnasio" else "Gym Details", icon = Icons.Default.LocationOn, isExpanded = expandedSection == "contact", onToggle = { expandedSection = if (expandedSection == "contact") null else "contact" }, accentColor = accentColor, buttonBgColor = buttonBgColor, shape = containerShape) {
                         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                             if (isDataLoaded) {
                                 AppearanceTextField(phoneState, {
                                     phoneState = it
                                     scope.launch {
                                         dataStoreManager.setGymPhone(it)
-                                        attendanceRepository?.syncGymInfo(phone = it)
+                                        repo.syncGymInfo(phone = it)
                                     }
-                                }, t["phone"] ?: "Phone", accentColor, shape = containerShape)
+                                }, t["phone"] ?: "Teléfono", accentColor, shape = containerShape)
                                 AppearanceTextField(addressState, {
                                     addressState = it
                                     scope.launch {
                                         dataStoreManager.setGymAddress(it)
-                                        attendanceRepository?.syncGymInfo(address = it)
+                                        repo.syncGymInfo(address = it)
                                     }
-                                }, t["address"] ?: "Address", accentColor, shape = containerShape)
+                                }, t["address"] ?: "Dirección", accentColor, shape = containerShape)
                                 AppearanceTextField(cityState, {
                                     cityState = it
                                     scope.launch {
                                         dataStoreManager.setGymCity(it)
-                                        attendanceRepository?.syncGymInfo(city = it)
+                                        repo.syncGymInfo(city = it)
                                     }
-                                }, t["city"] ?: "City", accentColor, shape = containerShape)
+                                }, t["city"] ?: "Ciudad", accentColor, shape = containerShape)
                                 AppearanceTextField(zipState, {
                                     zipState = it
                                     scope.launch {
                                         dataStoreManager.setGymPostalCode(it)
-                                        attendanceRepository?.syncGymInfo(zip = it)
+                                        repo.syncGymInfo(zip = it)
                                     }
-                                }, t["zip"] ?: "Zip", accentColor, shape = containerShape)
+                                }, t["zip"] ?: "Código Postal", accentColor, shape = containerShape)
                                 AppearanceTextField(countryState, {
                                     countryState = it
                                     scope.launch {
                                         dataStoreManager.setGymCountry(it)
-                                        attendanceRepository?.syncGymInfo(country = it)
+                                        repo.syncGymInfo(country = it)
                                     }
-                                }, t["country"] ?: "Country", accentColor, shape = containerShape)
+                                }, t["country"] ?: "País", accentColor, shape = containerShape)
+                                AppearanceTextField(sloganState, {
+                                    sloganState = it
+                                    scope.launch {
+                                        dataStoreManager.setGymSlogan(it)
+                                        repo.syncGymInfo(slogan = it)
+                                    }
+                                }, if (appLanguage == "Español") "Eslogan" else "Slogan", accentColor, shape = containerShape)
+                                AppearanceTextField(instagramState, {
+                                    instagramState = it
+                                    scope.launch {
+                                        dataStoreManager.setGymInstagram(it)
+                                        repo.syncGymInfo(instagram = it)
+                                    }
+                                }, "Instagram (ej: @tugimnasio)", accentColor, shape = containerShape)
+                                AppearanceTextField(facebookState, {
+                                    facebookState = it
+                                    scope.launch {
+                                        dataStoreManager.setGymFacebook(it)
+                                    }
+                                }, "Facebook", accentColor, shape = containerShape)
+                                AppearanceTextField(tiktokState, {
+                                    tiktokState = it
+                                    scope.launch {
+                                        dataStoreManager.setGymTikTok(it)
+                                    }
+                                }, "TikTok", accentColor, shape = containerShape)
                             } else {
                                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = accentColor)
                             }

@@ -10,7 +10,7 @@ class GoogleCloudRepository(
     private val dataStoreManager: DataStoreManager
 ) {
     companion object {
-        var MASTER_BACKEND_URL = "https://script.google.com/macros/s/AKfycbwuPNzuzUp-gMs51zv1z0pYD49qzvhk2AXoaYxfU2nOFP4SFeq8Lic1VbX91eOVS3wW/exec"
+        var MASTER_BACKEND_URL = "https://script.google.com/macros/s/AKfycbyn85W_HL8njFGFxhQJQM7yh-nxDuFef8aBYqWDNd48bzIcT_FGyZSHye2b9W5ui7HW/exec"
     }
 
     suspend fun setupGymBackend(gymName: String, customUrl: String? = null): Result<String> {

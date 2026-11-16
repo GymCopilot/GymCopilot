@@ -45,12 +45,17 @@ class DataStoreManager(private val context: Context) {
         val GYM_CITY = stringPreferencesKey("GYM_CITY")
         val GYM_POSTAL_CODE = stringPreferencesKey("GYM_POSTAL_CODE")
         val GYM_COUNTRY = stringPreferencesKey("GYM_COUNTRY")
+        val GYM_SLOGAN = stringPreferencesKey("GYM_SLOGAN")
+        val GYM_INSTAGRAM = stringPreferencesKey("GYM_INSTAGRAM")
+        val GYM_FACEBOOK = stringPreferencesKey("GYM_FACEBOOK")
+        val GYM_TIKTOK = stringPreferencesKey("GYM_TIKTOK")
         val SHOW_LOGO_BORDER = booleanPreferencesKey("SHOW_LOGO_BORDER")
         val BUTTON_COLOR = intPreferencesKey("BUTTON_COLOR")
         val BUTTON_BACKGROUND_COLOR = intPreferencesKey("BUTTON_BACKGROUND_COLOR")
         val BUTTON_STYLE = intPreferencesKey("BUTTON_STYLE") 
         val BACKGROUND_COLOR = intPreferencesKey("BACKGROUND_COLOR")
         val BOTTOM_NAV_BACKGROUND_COLOR = intPreferencesKey("BOTTOM_NAV_BACKGROUND_COLOR")
+        val PDF_ROUTINE_TEMPLATE = stringPreferencesKey("PDF_ROUTINE_TEMPLATE")
         val STORE_CATEGORIES = stringSetPreferencesKey("STORE_CATEGORIES")
         val CUSTOM_CATEGORY_IDS = stringSetPreferencesKey("CUSTOM_CATEGORY_IDS")
         
@@ -123,10 +128,24 @@ class DataStoreManager(private val context: Context) {
         val GYM_WIFI_SSID3 = stringPreferencesKey("GYM_WIFI_SSID3")
         val LAST_WIFI_CHECKIN_DATE = stringPreferencesKey("LAST_WIFI_CHECKIN_DATE")
         val SKIP_SPLASH_SCREEN = booleanPreferencesKey("SKIP_SPLASH_SCREEN")
+        val DOOR_ACCESS_ENABLED = booleanPreferencesKey("DOOR_ACCESS_ENABLED")
+        val FREE_QR_MEMBERS = stringSetPreferencesKey("FREE_QR_MEMBERS")
     }
 
     fun getSkipSplashScreen(): Flow<Boolean> = dataStore.data.map { it[SKIP_SPLASH_SCREEN] ?: false }
     suspend fun setSkipSplashScreen(skip: Boolean) { dataStore.edit { it[SKIP_SPLASH_SCREEN] = skip } }
+
+    fun getDoorAccessEnabled(): Flow<Boolean> = dataStore.data.map { it[DOOR_ACCESS_ENABLED] ?: false }
+    suspend fun setDoorAccessEnabled(enabled: Boolean) { dataStore.edit { it[DOOR_ACCESS_ENABLED] = enabled } }
+
+    fun getFreeQrMembers(): Flow<Set<String>> = dataStore.data.map { it[FREE_QR_MEMBERS] ?: emptySet() }
+    suspend fun setMemberFreeQr(email: String, enabled: Boolean) {
+        dataStore.edit { preferences ->
+            val current = (preferences[FREE_QR_MEMBERS] ?: emptySet()).toMutableSet()
+            if (enabled) current.add(email.lowercase().trim()) else current.remove(email.lowercase().trim())
+            preferences[FREE_QR_MEMBERS] = current
+        }
+    }
 
     suspend fun setAuthToken(token: String) { dataStore.edit { it[AUTH_TOKEN] = token } }
     fun getAuthToken(): Flow<String?> = dataStore.data.map { it[AUTH_TOKEN] }
@@ -188,6 +207,18 @@ class DataStoreManager(private val context: Context) {
 
     suspend fun setGymCountry(country: String) { dataStore.edit { it[GYM_COUNTRY] = country } }
     fun getGymCountry(): Flow<String> = dataStore.data.map { it[GYM_COUNTRY] ?: "" }
+
+    suspend fun setGymSlogan(slogan: String) { dataStore.edit { it[GYM_SLOGAN] = slogan } }
+    fun getGymSlogan(): Flow<String> = dataStore.data.map { it[GYM_SLOGAN] ?: "DISCIPLINA HOY, RESULTADOS SIEMPRE." }
+
+    suspend fun setGymInstagram(instagram: String) { dataStore.edit { it[GYM_INSTAGRAM] = instagram } }
+    fun getGymInstagram(): Flow<String> = dataStore.data.map { it[GYM_INSTAGRAM] ?: "@tugimnasio" }
+
+    suspend fun setGymFacebook(facebook: String) { dataStore.edit { it[GYM_FACEBOOK] = facebook } }
+    fun getGymFacebook(): Flow<String> = dataStore.data.map { it[GYM_FACEBOOK] ?: "" }
+
+    suspend fun setGymTikTok(tiktok: String) { dataStore.edit { it[GYM_TIKTOK] = tiktok } }
+    fun getGymTikTok(): Flow<String> = dataStore.data.map { it[GYM_TIKTOK] ?: "" }
 
     suspend fun setShowLogoBorder(show: Boolean) { dataStore.edit { it[SHOW_LOGO_BORDER] = show } }
     fun getShowLogoBorder(): Flow<Boolean> = dataStore.data.map { it[SHOW_LOGO_BORDER] ?: true }
@@ -432,7 +463,14 @@ class DataStoreManager(private val context: Context) {
 
     fun getRoutines(): Flow<List<Routine>> = dataStore.data.map { preferences ->
         val routinesJson = preferences[GYM_ROUTINES] ?: "[]"
-        try { Json.decodeFromString<List<Routine>>(routinesJson) } catch (e: Exception) { emptyList() }
+        try {
+            Json.decodeFromString<List<Routine>>(routinesJson)
+        } catch (e: Exception) {
+            try {
+                dataStore.edit { it[GYM_ROUTINES] = "[]" }
+            } catch (_: Exception) {}
+            emptyList()
+        }
     }
 
     suspend fun addRoutine(routine: Routine) {
@@ -601,6 +639,9 @@ class DataStoreManager(private val context: Context) {
     suspend fun saveSubscriptionPlans(plans: List<SubscriptionPlan>) {
         dataStore.edit { it[SUBSCRIPTION_PLANS] = Json.encodeToString(plans) }
     }
+
+    fun getRoutinePdfTemplate(): Flow<String> = dataStore.data.map { it[PDF_ROUTINE_TEMPLATE] ?: "Clásica" }
+    suspend fun setRoutinePdfTemplate(template: String) { dataStore.edit { it[PDF_ROUTINE_TEMPLATE] = template } }
 
     suspend fun clearAllData() {
         dataStore.edit { preferences ->

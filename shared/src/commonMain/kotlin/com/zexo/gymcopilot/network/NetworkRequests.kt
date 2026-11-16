@@ -16,6 +16,15 @@ data class CheckInRequest(
 )
 
 @Serializable
+data class DoorOpenRequest(
+    val action: String = "abrir_puerta",
+    val alumnoId: String,
+    val puertaId: String,
+    val spreadsheetId: String? = null,
+    val timestamp: Long = 0L
+)
+
+@Serializable
 data class ScheduleSyncRequest(
     val action: String = "update_schedule",
     val gymId: String,
@@ -133,6 +142,7 @@ data class GymSyncRequest(
     val spreadsheetId: String? = null,
     val wifiSsid2: String? = null,
     val wifiSsid3: String? = null,
+    val pdfTemplate: String? = null,
     val timestamp: Long = 0L
 )
 
