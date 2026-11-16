@@ -376,7 +376,7 @@ fun FullRoutinesSection(
                             modifier = Modifier.size(36.dp)
                         ) {
                             Icon(
-                                painter = painterResource(Res.drawable.text_ad_icon),
+                                imageVector = Icons.Default.EditNote,
                                 contentDescription = "Configurar datos de impresión",
                                 tint = PrimaryTurquoise,
                                 modifier = Modifier.size(20.dp)
@@ -397,7 +397,7 @@ fun FullRoutinesSection(
                             modifier = Modifier.size(36.dp)
                         ) {
                             Icon(
-                                painter = painterResource(Res.drawable.download_pdf),
+                                imageVector = Icons.Default.PictureAsPdf,
                                 contentDescription = "Imprimir Rutinas en PDF",
                                 tint = if (selectedPdfRoutineIds.isNotEmpty()) Color(0xFF4CAF50) else PrimaryTurquoise,
                                 modifier = Modifier.size(20.dp)
@@ -684,7 +684,7 @@ fun RoutineSharedCard(
                         modifier = Modifier.size(28.dp)
                     ) {
                         Icon(
-                            painter = painterResource(Res.drawable.download_pdf),
+                            imageVector = Icons.Default.PictureAsPdf,
                             contentDescription = "Imprimir PDF",
                             tint = if (isPdfSelected) Color(0xFF4CAF50) else PrimaryTurquoise,
                             modifier = Modifier.size(18.dp)
