@@ -106,6 +106,29 @@ fun FullRoutinesSection(
             val ssId = localProfile?.spreadsheetId.orEmpty()
             val paramChar = if (gymUrl.contains("?")) "&" else "?"
             val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+
+            // Fetch gym config to sync remote PDF template
+            val configUrl = "$gymUrl${paramChar}type=config&gymId=$gymIdVal$ssParam"
+            val configResp = GymKtorApiClient.getData(configUrl)
+            if (configResp.isNotBlank() && configResp.contains("success")) {
+                val jsonObj = GymKtorApiClient.jsonInstance.parseToJsonElement(configResp) as? JsonObject
+                val dataArr = jsonObj?.get("data") as? JsonArray
+                if (dataArr != null) {
+                    for (i in 0 until dataArr.size) {
+                        val row = dataArr[i] as? JsonArray
+                        if (row != null && row.size > 0 && row[0].jsonPrimitive.content == "GYM_CONFIG") {
+                            if (row.size > 20) {
+                                val remotePdfTemplate = row[20].jsonPrimitive.content
+                                if (remotePdfTemplate.isNotBlank() && remotePdfTemplate != "null") {
+                                    saveLocalStorageFlag("gymcopilot_pdf_template", remotePdfTemplate)
+                                }
+                            }
+                            break
+                        }
+                    }
+                }
+            }
+
             val routinesUrl = "$gymUrl${paramChar}type=routines&gymId=$gymIdVal$ssParam"
 
             val responseText = GymKtorApiClient.getData(routinesUrl)
