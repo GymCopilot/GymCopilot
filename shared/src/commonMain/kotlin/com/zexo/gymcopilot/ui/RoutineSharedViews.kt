@@ -39,6 +39,7 @@ import com.zexo.gymcopilot.LockConfig
 import com.zexo.gymcopilot.utils.readLocalMemberProfile
 import com.zexo.gymcopilot.utils.readLocalStorageFlag
 import com.zexo.gymcopilot.utils.saveLocalStorageFlag
+import com.zexo.gymcopilot.utils.triggerRoutinePdfExport
 import gymcopilot.shared.generated.resources.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -391,7 +392,17 @@ fun FullRoutinesSection(
                                     userRoutines.toList()
                                 }
                                 if (routinesToExport.isNotEmpty()) {
-                                    // Export / print routines in web app
+                                    val template = readLocalStorageFlag("gymcopilot_pdf_template") ?: "Clásica"
+                                    val localProfile = readLocalMemberProfile()
+                                    val gymName = localProfile?.gymName.orEmpty().ifBlank { "Gym 26" }
+                                    triggerRoutinePdfExport(
+                                        routines = routinesToExport,
+                                        template = template,
+                                        customTitle = customPrintTitle,
+                                        customObjective = customPrintObjective,
+                                        customSubObjective = customPrintSubObjective,
+                                        gymName = gymName
+                                    )
                                 }
                             },
                             modifier = Modifier.size(36.dp)
