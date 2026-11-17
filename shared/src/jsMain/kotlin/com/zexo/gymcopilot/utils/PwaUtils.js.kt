@@ -135,7 +135,6 @@ private fun buildModernHtml(
     routines: List<Routine>, template: String, titleText: String, objectiveText: String, subObjText: String,
     userName: String, currentDate: String, gymAddress: String, gymCity: String, gymInstagram: String, gymSlogan: String, gymName: String
 ): String = buildString {
-    val primaryColor = "#333333"
     append("<!DOCTYPE html><html><head><meta charset='utf-8'><title>$titleText - $gymName</title>")
     append("<style>")
     append("body { font-family: Arial, sans-serif; color: #111; margin: 0; padding: 15px; background: #fff; }")
@@ -247,7 +246,6 @@ private fun buildMinimalistHtml(
     routines: List<Routine>, template: String, titleText: String, objectiveText: String, subObjText: String,
     userName: String, currentDate: String, gymAddress: String, gymCity: String, gymInstagram: String, gymSlogan: String, gymName: String
 ): String = buildString {
-    val primaryColor = "#222222"
     append("<!DOCTYPE html><html><head><meta charset='utf-8'><title>$titleText - $gymName</title>")
     append("<style>")
     append("body { font-family: Arial, sans-serif; color: #111; margin: 0; padding: 15px; background: #fff; }")
@@ -302,4 +300,54 @@ private fun buildMinimalistHtml(
 private fun buildProHtml(
     routines: List<Routine>, template: String, titleText: String, objectiveText: String, subObjText: String,
     userName: String, currentDate: String, gymAddress: String, gymCity: String, gymInstagram: String, gymSlogan: String, gymName: String
-): String = buildClassicHtml(routines, template, titleText, objectiveText, subObjText, userName, currentDate, gymAddress, gymCity, gymInstagram, gymSlogan, gymName)
+): String = buildString {
+    val primaryColor = "#1E1E1E"
+    append("<!DOCTYPE html><html><head><meta charset='utf-8'><title>$titleText - $gymName</title>")
+    append("<style>")
+    append("body { font-family: Arial, sans-serif; color: #111; margin: 0; padding: 15px; background: #fff; }")
+    append(".sheet { width: 100%; max-width: 750px; margin: 0 auto; border: 1.5px solid #1E293B; padding: 15px; box-sizing: border-box; background: #fff; }")
+    append(".header-box { background: #1E1E1E; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-radius: 4px; }")
+    append(".logo-area { width: 90px; height: 85px; background: #333; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 26px; font-weight: bold; border: 1.5px solid #E2E8F0; }")
+    append(".header-info { flex: 1; text-align: center; margin: 0 15px; }")
+    append(".gym-name { font-size: 26px; font-weight: bold; color: white; text-transform: uppercase; }")
+    append(".gym-city { font-size: 11px; color: #E2E8F0; font-weight: bold; margin-top: 4px; }")
+    append(".rutina-title { font-size: 13px; font-weight: bold; color: white; margin-top: 6px; }")
+    append(".rutina-sub { font-size: 10px; color: #E2E8F0; margin-top: 2px; }")
+    append(".right-box { width: 90px; height: 85px; border: 1.5px dashed #E2E8F0; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #E2E8F0; text-align: center; }")
+    append(".focus-box { background: #333333; color: white; text-align: center; padding: 6px; font-size: 8.5px; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; }")
+    append(".member-box { border: 1px solid #1E293B; padding: 6px 10px; display: flex; justify-content: space-between; font-size: 9px; font-weight: bold; margin-bottom: 12px; background: #fff; color: #1E1E1E; }")
+    append(".day-header { background: #2E7D32; color: white; padding: 6px 10px; font-size: 10px; font-weight: bold; display: flex; justify-content: space-between; margin-top: 10px; }")
+    append("table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }")
+    append("th, td { border: 0.5px solid #CBD5E1; padding: 6px 8px; font-size: 9px; text-align: left; }")
+    append("th { background: #E6F4EA; color: #000; font-weight: bold; }")
+    append("tr:nth-child(even) { background: #F8FAFC; }")
+    append(".footer-section { display: flex; gap: 8px; margin-top: 15px; }")
+    append(".footer-col { flex: 1; border: 0.8px solid #1E293B; font-size: 8px; }")
+    append(".footer-col-title { background: #2E7D32; color: white; padding: 4px 6px; font-weight: bold; font-size: 8px; text-align: center; }")
+    append(".footer-col-body { padding: 6px; color: #333; }")
+    append(".bottom-footer { border: 0.5px solid #CBD5E1; padding: 8px 10px; margin-top: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 8px; color: #555; }")
+    append("@media print { body { padding: 0; background: #fff; } .sheet { border: none; box-shadow: none; max-width: none; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }")
+    append("</style></head><body>")
+    append("<div class='sheet'>")
+    append("<div class='header-box'><div class='logo-area'>TG</div><div class='header-info'><div class='gym-name'>$gymName</div><div class='gym-city'>★ ${gymCity.uppercase()} ★</div><div class='rutina-title'>${titleText.take(45)}</div><div class='rutina-sub'>${objectiveText.take(55)}</div></div><div class='right-box'>ANATOMÍA H-PRO</div></div>")
+    append("<div class='focus-box'>PROGRAMA ENFOCADO EN: $subObjText</div>")
+    append("<div class='member-box'><span>NOMBRE: $userName</span><span>FECHA: $currentDate</span><span>OBJETIVO: $objectiveText</span><span>NIVEL: General</span></div>")
+    routines.forEachIndexed { rIdx, r ->
+        val dayName = if (r.days.isNotEmpty()) r.days.joinToString(", ").uppercase() else r.name.uppercase()
+        append("<div class='day-header'><span>DÍA ${rIdx + 1} — $dayName</span><span>${r.description.ifBlank { "ENFOQUE PROFESIONAL" }.uppercase()}</span></div>")
+        append("<table><thead><tr><th style='width: 30px;'>#</th><th>EJERCICIO</th><th style='width: 50px;'>SERIES</th><th style='width: 60px;'>REPS</th><th>NOTAS TÉCNICAS</th></tr></thead><tbody>")
+        r.exercises.forEachIndexed { idx, ex ->
+            append("<tr><td><strong>${idx + 1}</strong></td><td><strong>${ex.name}</strong></td><td>${ex.series}</td><td>${ex.reps}</td><td>${ex.notes.ifBlank { "Controla la postura y técnica." }}</td></tr>")
+        }
+        append("</tbody></table>")
+    }
+    append("<div class='footer-section'>")
+    append("<div class='footer-col'><div class='footer-col-title'>INDICACIONES GENERALES</div><div class='footer-col-body'>✓ Realizar entrada en calor de 10 min.<br>✓ Priorizar técnica antes que peso.<br>✓ Aumentar cargas progresivamente.<br>✓ Mantener buena hidratación.<br>✓ Consultar con profesional ante dudas.</div></div>")
+    append("<div class='footer-col'><div class='footer-col-title' style='background: #2E7D32;'>REGISTRO DE PROGRESO</div><div class='footer-col-body' style='padding: 2px;'><table style='margin:0; font-size:7px;'><tr><th style='background:#E6F4EA;'>FECHA</th><th style='background:#E6F4EA;'>DOLOR</th><th style='background:#E6F4EA;'>REND.</th></tr>")
+    repeat(3) { append("<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>") }
+    append("</table></div></div>")
+    append("<div class='footer-col'><div class='footer-col-title'>NOTAS</div><div class='footer-col-body'>${routines.firstOrNull()?.notes.orEmpty().ifBlank { "Consultar cualquier duda con tu profesor." }}</div></div>")
+    append("</div>")
+    append("<div class='bottom-footer'><span>$gymAddress · $gymCity</span><strong style='color: #2E7D32;'>$gymInstagram</strong><span>$gymSlogan</span></div>")
+    append("</div></body></html>")
+}
