@@ -29,6 +29,7 @@ import com.zexo.gymcopilot.utils.decodeBase64ToBitmap
 import com.zexo.gymcopilot.utils.launchImagePicker
 import com.zexo.gymcopilot.utils.readLocalStorageFlag
 import com.zexo.gymcopilot.utils.saveLocalStorageFlag
+import com.zexo.gymcopilot.utils.triggerPwaInstall
 import gymcopilot.shared.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
 
@@ -412,7 +413,7 @@ fun AppearanceSharedScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text("Crea un acceso directo o instala la aplicación en el inicio de tu dispositivo o navegador:", color = TextGray, fontSize = 13.sp)
                             Button(
-                                onClick = { },
+                                onClick = { triggerPwaInstall() },
                                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise),
                                 shape = RoundedCornerShape(12.dp)
                             ) {

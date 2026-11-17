@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.utils.decodeBase64ToBitmap
 import com.zexo.gymcopilot.utils.launchImagePicker
+import com.zexo.gymcopilot.utils.triggerPwaInstall
 import gymcopilot.shared.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
 
@@ -214,7 +215,7 @@ fun MemberProfileSharedScreen(
                         border = BorderStroke(1.dp, PrimaryTurquoise),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { }
+                            .clickable { triggerPwaInstall() }
                     ) {
                         Row(
                             modifier = Modifier
