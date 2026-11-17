@@ -49,7 +49,7 @@ import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun MemberDashboardSharedScreen(
-    gymName: String = "Gym 19",
+    gymName: String = "Nombre del Gimnasio",
     userEmail: String = "socio@gymcopilot.com",
     customLogoUri: String? = null,
     apiClient: GymKtorApiClient = GymKtorApiClient,
@@ -407,13 +407,13 @@ fun MemberDashboardSharedScreen(
 
                         Column {
                             Text(
-                                text = activeGymName.ifBlank { "Gym 19" },
+                                text = if (activeGymName.isBlank() || activeGymName == "Gym 19") "Nombre del Gimnasio" else activeGymName,
                                 color = TextWhite,
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Black
                             )
                             Text(
-                                text = if (activeFirstName.isNotBlank()) "$activeFirstName $activeLastName" else "Socio del Gimnasio",
+                                text = if (activeFirstName.isNotBlank()) "$activeFirstName $activeLastName".trim() else "Nombre del alumno",
                                 color = PrimaryTurquoise,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold

@@ -550,19 +550,22 @@ fun RoutineCreationSharedScreen(
                             val ln = if (row.size > 2) row[2].jsonPrimitive.content.trim() else ""
                             val email = if (row.size > 3) row[3].jsonPrimitive.content.trim() else ""
 
-                            val cleanFn = if (fn.length > 20 || fn.matches(Regex("^[0-9a-zA-Z_-]{18,}$"))) "" else fn
-                            val cleanLn = if (ln.length > 20 || ln.matches(Regex("^[0-9a-zA-Z_-]{18,}$"))) "" else ln
+                            val isIsoDateFn = fn.matches(Regex("""\d{4}-\d{2}-\d{2}T.*""")) || fn.contains(":")
+                            val isIsoDateLn = ln.matches(Regex("""\d{4}-\d{2}-\d{2}T.*""")) || ln.contains(":")
+
+                            val cleanFn = if (isIsoDateFn || fn.length > 20 || fn.matches(Regex("^[0-9a-zA-Z_-]{18,}$"))) "" else fn
+                            val cleanLn = if (isIsoDateLn || ln.length > 20 || ln.matches(Regex("^[0-9a-zA-Z_-]{18,}$"))) "" else ln
 
                             var fullName = "$cleanFn $cleanLn".trim()
                             if (fullName.isBlank() || fullName == "null") {
-                                if (email.isNotBlank() && email != "null") {
+                                if (email.isNotBlank() && email != "null" && !email.matches(Regex("""\d{4}-\d{2}-\d{2}T.*""")) && !email.contains(":")) {
                                     val userPart = email.substringBefore("@").replace(".", " ")
                                     fullName = userPart.split(" ").joinToString(" ") { p ->
                                         p.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
                                     }
                                 }
                             }
-                            if (fullName.isNotBlank() && fullName != "null") {
+                            if (fullName.isNotBlank() && fullName != "null" && !fullName.matches(Regex("""\d{4}-\d{2}-\d{2}T.*""")) && !fullName.contains(":")) {
                                 list.add(fullName)
                             }
                         }
@@ -975,11 +978,6 @@ fun RoutineCreationSharedScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Profesor asignado principal", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text("Obtenido de la base de datos", color = TextGray, fontSize = 11.sp)
-                            Spacer(modifier = Modifier.height(14.dp))
-
                             if (professorsList.isEmpty()) {
                                 Text("No hay profesores registrados", color = TextGray, fontSize = 12.sp)
                             } else {
