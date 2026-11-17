@@ -545,10 +545,23 @@ fun RoutineCreationSharedScreen(
                     val list = mutableListOf<String>()
                     for (i in 1 until dataArray.size) {
                         val row = dataArray[i] as? JsonArray
-                        if (row != null && row.size > 2) {
+                        if (row != null && row.size > 1) {
                             val fn = row[1].jsonPrimitive.content.trim()
-                            val ln = row[2].jsonPrimitive.content.trim()
-                            val fullName = "$fn $ln".trim()
+                            val ln = if (row.size > 2) row[2].jsonPrimitive.content.trim() else ""
+                            val email = if (row.size > 3) row[3].jsonPrimitive.content.trim() else ""
+
+                            val cleanFn = if (fn.length > 20 || fn.matches(Regex("^[0-9a-zA-Z_-]{18,}$"))) "" else fn
+                            val cleanLn = if (ln.length > 20 || ln.matches(Regex("^[0-9a-zA-Z_-]{18,}$"))) "" else ln
+
+                            var fullName = "$cleanFn $cleanLn".trim()
+                            if (fullName.isBlank() || fullName == "null") {
+                                if (email.isNotBlank() && email != "null") {
+                                    val userPart = email.substringBefore("@").replace(".", " ")
+                                    fullName = userPart.split(" ").joinToString(" ") { p ->
+                                        p.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+                                    }
+                                }
+                            }
                             if (fullName.isNotBlank() && fullName != "null") {
                                 list.add(fullName)
                             }

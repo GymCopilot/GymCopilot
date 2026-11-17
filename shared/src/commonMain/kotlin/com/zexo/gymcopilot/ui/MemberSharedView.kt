@@ -67,8 +67,8 @@ fun MemberDashboardSharedScreen(
     var showMemberProfileScreen by remember { mutableStateOf(false) }
 
     // DATOS DINÁMICOS DEL PERFIL DEL SOCIO Y GIMNASIO
-    var activeFirstName by remember { mutableStateOf("pe") }
-    var activeLastName by remember { mutableStateOf("lado") }
+    var activeFirstName by remember { mutableStateOf("") }
+    var activeLastName by remember { mutableStateOf("") }
     var activeEmail by remember { mutableStateOf(userEmail) }
     var activePhone by remember { mutableStateOf("") }
     var activeAddress by remember { mutableStateOf("") }
