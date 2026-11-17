@@ -20,8 +20,15 @@ actual fun isStandaloneMode(): Boolean {
 actual fun triggerPwaInstall(): Boolean {
     return try {
         val installFunc = js("window.triggerGymCopilotInstall")
-        if (installFunc != null) installFunc() as? Boolean ?: false else false
+        val triggered = if (installFunc != null) installFunc() as? Boolean ?: false else false
+        if (!triggered) {
+            js("alert('Para instalar la aplicación con el logo y nombre de tu gimnasio, abre el menú de tu navegador (tres puntos en Android o botón Compartir en iPhone/Safari) y selecciona \"Agregar a la pantalla de inicio\" o \"Instalar aplicación\".')")
+        }
+        triggered
     } catch (e: Throwable) {
+        try {
+            js("alert('Para instalar la aplicación con el logo y nombre de tu gimnasio, abre el menú de tu navegador (tres puntos en Android o botón Compartir en iPhone/Safari) y selecciona \"Agregar a la pantalla de inicio\" o \"Instalar aplicación\".')")
+        } catch (_: Throwable) {}
         false
     }
 }

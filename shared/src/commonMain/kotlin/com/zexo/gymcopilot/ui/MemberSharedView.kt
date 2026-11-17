@@ -400,8 +400,8 @@ fun MemberDashboardSharedScreen(
                                 )
                             } else {
                                 Icon(
-                                    painter = painterResource(Res.drawable.gymcopilot),
-                                    contentDescription = "Logo",
+                                    painter = painterResource(Res.drawable.add_photo),
+                                    contentDescription = "Agregar Logo",
                                     tint = PrimaryTurquoise,
                                     modifier = Modifier.size(54.dp)
                                 )
