@@ -11,7 +11,7 @@ object LockConfig {
      * 0: Desactivado.
      * 1: Activado.
      */
-    const val ANDROID_ROLE_LOCK_ENABLED = 0
+    const val ANDROID_ROLE_LOCK_ENABLED = 1
 
     /**
      * Bloqueo / Visibilidad de perfiles específico para la App Web.
@@ -25,7 +25,7 @@ object LockConfig {
      * 0: Entorno de Pruebas (Staging).
      * 1: Entorno de Trabajo (Producción).
      */
-    const val APP_ENVIRONMENT = 0
+    const val APP_ENVIRONMENT = 1
 
     private const val TEST_API_URL = "https://script.google.com/macros/s/AKfycbyn85W_HL8njFGFxhQJQM7yh-nxDuFef8aBYqWDNd48bzIcT_FGyZSHye2b9W5ui7HW/exec"
     private const val PRODUCTION_API_URL = "https://script.google.com/macros/s/AKfycbyn85W_HL8njFGFxhQJQM7yh-nxDuFef8aBYqWDNd48bzIcT_FGyZSHye2b9W5ui7HW/exec"

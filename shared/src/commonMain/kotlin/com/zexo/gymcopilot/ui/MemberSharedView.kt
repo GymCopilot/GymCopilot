@@ -447,6 +447,29 @@ fun MemberDashboardSharedScreen(
                 }
             }
 
+            if (LockConfig.APP_ENVIRONMENT == 0) {
+                item {
+                    Surface(
+                        color = Color(0xFFB71C1C).copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, Color(0xFFEF5350)),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFEF5350), modifier = Modifier.size(24.dp))
+                            Column {
+                                Text("⚠️ MODO PRUEBA (TEST) ACTIVO", color = Color(0xFFEF5350), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                Text("Conectado al entorno de desarrollo en Drive.", color = TextGray, fontSize = 11.sp)
+                            }
+                        }
+                    }
+                }
+            }
+
             // 2. BADGES DE ESTADÍSTICAS E INDICADORES
             item {
                 Row(
