@@ -269,7 +269,7 @@ fun AppSettingsScreen(
                             accentColor = accentColor,
                             cardColor = Color(0xFF4CAF50),
                             shape = buttonShape,
-                            onClick = { showDoorSystemDialog = true }
+                            onClick = onAccessDoorConfigClick
                         )
                     }
 
@@ -309,17 +309,7 @@ fun AppSettingsScreen(
                         )
                     }
 
-                    item {
-                        SettingsCard(
-                            title = t["door"] ?: "Door Opening",
-                            description = t["door_desc"] ?: "",
-                            icon = Icons.Default.LockOpen,
-                            accentColor = accentColor,
-                            cardColor = Color(0xFF00BCD4), // Turquoise / Cyan
-                            shape = buttonShape,
-                            onClick = onAccessDoorConfigClick
-                        )
-                    }
+
 
                     item {
                         SettingsCard(
@@ -693,19 +683,6 @@ fun AppSettingsScreen(
                         )
                         Spacer(Modifier.width(6.dp))
                         Text("QR Acceso", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    }
-
-                    Spacer(Modifier.width(8.dp))
-
-                    Button(
-                        onClick = { showDoorSystemDialog = false },
-                        colors = ButtonDefaults.buttonColors(containerColor = LocalButtonBackgroundColor.current),
-                        shape = buttonShape,
-                        modifier = Modifier.border(1.dp, accentColor, buttonShape),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
-                        val contentColor = if (LocalButtonBackgroundColor.current.luminance() > 0.5f) Color.Black else Color.White
-                        Text("CERRAR", color = contentColor, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
             }

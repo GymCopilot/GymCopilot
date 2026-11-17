@@ -76,6 +76,22 @@ actual fun triggerRoutinePdfExport(
     }
 }
 
+private fun commonA4Style(primaryColor: String): String = buildString {
+    append("@page { size: A4 portrait; margin: 0; }")
+    append("body { font-family: Arial, sans-serif; color: #111; margin: 0; padding: 0; background: #555; display: flex; justify-content: center; }")
+    append(".sheet { width: 210mm; min-height: 297mm; max-width: 210mm; margin: 0 auto; padding: 12mm; box-sizing: border-box; background: #fff; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 0 10px rgba(0,0,0,0.5); }")
+    append(".top-content { flex: 1; }")
+    append(".bottom-content { margin-top: auto; padding-top: 15px; }")
+    append(".footer-section { display: flex; gap: 8px; margin-top: 15px; }")
+    append(".footer-col { flex: 1; border: 0.8px solid $primaryColor; font-size: 8px; }")
+    append(".footer-col-title { background: $primaryColor; color: white; padding: 4px 6px; font-weight: bold; font-size: 8px; text-align: center; }")
+    append(".footer-col-body { padding: 6px; color: #333; }")
+    append("table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }")
+    append("th, td { border: 0.5px solid #CBD5E1; padding: 6px 8px; font-size: 9px; text-align: left; }")
+    append("tr:nth-child(even) { background: #F9F9F9; }")
+    append("@media print { body { background: #fff; padding: 0; } .sheet { border: none; box-shadow: none; width: 210mm; min-height: 297mm; max-width: none; padding: 12mm; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }")
+}
+
 private fun buildClassicHtml(
     routines: List<Routine>, template: String, titleText: String, objectiveText: String, subObjText: String,
     userName: String, currentDate: String, gymAddress: String, gymCity: String, gymInstagram: String, gymSlogan: String, gymName: String
@@ -83,8 +99,7 @@ private fun buildClassicHtml(
     val primaryColor = "#1A365D"
     append("<!DOCTYPE html><html><head><meta charset='utf-8'><title>$titleText - $gymName</title>")
     append("<style>")
-    append("body { font-family: Arial, sans-serif; color: #111; margin: 0; padding: 15px; background: #fff; }")
-    append(".sheet { width: 100%; max-width: 750px; margin: 0 auto; border: 1.5px solid $primaryColor; padding: 15px; box-sizing: border-box; background: #fff; }")
+    append(commonA4Style(primaryColor))
     append(".header-box { border: 1.5px solid #4A5568; padding: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }")
     append(".logo-area { width: 90px; height: 80px; background: $primaryColor; color: white; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; }")
     append(".header-info { flex: 1; margin-left: 15px; }")
@@ -96,18 +111,12 @@ private fun buildClassicHtml(
     append(".focus-box { border: 0.5px solid #4A5568; background: #f8fafc; text-align: center; padding: 6px; font-size: 8px; font-weight: bold; color: #333; margin-bottom: 8px; text-transform: uppercase; }")
     append(".member-box { border: 0.5px solid #CBD5E1; padding: 6px 10px; display: flex; justify-content: space-between; font-size: 9px; font-weight: bold; margin-bottom: 12px; background: #fff; }")
     append(".day-header { background: $primaryColor; color: white; padding: 6px 10px; font-size: 10px; font-weight: bold; display: flex; justify-content: space-between; margin-top: 10px; }")
-    append("table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }")
-    append("th, td { border: 0.5px solid #CBD5E1; padding: 6px 8px; font-size: 9px; text-align: left; }")
     append("th { background: #F7FAFC; color: #000; font-weight: bold; }")
-    append("tr:nth-child(even) { background: #F8FAFC; }")
-    append(".footer-section { display: flex; gap: 8px; margin-top: 15px; }")
-    append(".footer-col { flex: 1; border: 0.5px solid #4A5568; font-size: 8px; }")
-    append(".footer-col-title { background: $primaryColor; color: white; padding: 4px 6px; font-weight: bold; font-size: 8px; text-align: center; }")
-    append(".footer-col-body { padding: 6px; color: #333; }")
-    append(".bottom-footer { border: 0.5px solid #CBD5E1; padding: 8px 10px; margin-top: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 8px; color: #555; }")
-    append("@media print { body { padding: 0; background: #fff; } .sheet { border: none; box-shadow: none; max-width: none; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }")
+    append(".bottom-footer { border: 0.5px solid #CBD5E1; padding: 8px 10px; display: flex; justify-content: space-between; align-items: center; font-size: 8px; color: #555; }")
     append("</style></head><body>")
+
     append("<div class='sheet'>")
+    append("<div class='top-content'>")
     append("<div class='header-box'><div class='logo-area'>TG</div><div class='header-info'><div class='gym-name'>$gymName</div><div class='gym-loc'>$gymAddress · $gymCity</div></div><div class='header-title-area'><div class='rutina-title'>${titleText.take(45)}</div><div class='rutina-sub'>${objectiveText.take(55)}</div></div></div>")
     append("<div class='focus-box'>PROGRAMA ENFOCADO EN: $subObjText</div>")
     append("<div class='member-box'><span>NOMBRE: $userName</span><span>FECHA: $currentDate</span><span>OBJETIVO: $objectiveText</span><span>NIVEL: General</span></div>")
@@ -120,6 +129,9 @@ private fun buildClassicHtml(
         }
         append("</tbody></table>")
     }
+    append("</div>") // End top-content
+
+    append("<div class='bottom-content'>")
     append("<div class='footer-section'>")
     append("<div class='footer-col'><div class='footer-col-title'>INDICACIONES GENERALES</div><div class='footer-col-body'>✓ Realizar entrada en calor de 10 min.<br>✓ Priorizar técnica antes que peso.<br>✓ Aumentar cargas progresivamente.<br>✓ Mantener buena hidratación.<br>✓ Consultar con profesional ante dudas.</div></div>")
     append("<div class='footer-col'><div class='footer-col-title'>REGISTRO DE PROGRESO</div><div class='footer-col-body' style='padding: 2px;'><table style='margin:0; font-size:7px;'><tr><th>FECHA</th><th>DOLOR (0-10)</th><th>REND.</th></tr>")
@@ -128,6 +140,8 @@ private fun buildClassicHtml(
     append("<div class='footer-col'><div class='footer-col-title'>NOTAS</div><div class='footer-col-body'>${routines.firstOrNull()?.notes.orEmpty().ifBlank { "Consultar cualquier duda con tu profesor." }}</div></div>")
     append("</div>")
     append("<div class='bottom-footer'><span>$gymAddress · $gymCity</span><strong style='color: $primaryColor;'>$gymInstagram</strong><span>$gymSlogan</span></div>")
+    append("</div>") // End bottom-content
+
     append("</div></body></html>")
 }
 
@@ -135,10 +149,10 @@ private fun buildModernHtml(
     routines: List<Routine>, template: String, titleText: String, objectiveText: String, subObjText: String,
     userName: String, currentDate: String, gymAddress: String, gymCity: String, gymInstagram: String, gymSlogan: String, gymName: String
 ): String = buildString {
+    val primaryColor = "#333333"
     append("<!DOCTYPE html><html><head><meta charset='utf-8'><title>$titleText - $gymName</title>")
     append("<style>")
-    append("body { font-family: Arial, sans-serif; color: #111; margin: 0; padding: 15px; background: #fff; }")
-    append(".sheet { width: 100%; max-width: 750px; margin: 0 auto; border: 1.5px solid #333333; padding: 15px; box-sizing: border-box; background: #fff; }")
+    append(commonA4Style(primaryColor))
     append(".header-box { background: #333333; color: white; padding: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }")
     append(".logo-area { width: 95px; height: 75px; background: #E65100; color: white; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; }")
     append(".header-info { flex: 1; margin-left: 15px; }")
@@ -151,18 +165,13 @@ private fun buildModernHtml(
     append(".member-box { border: 0.8px solid #CBD5E1; padding: 6px 10px; display: flex; justify-content: space-between; font-size: 9px; font-weight: bold; margin-bottom: 12px; background: #fff; }")
     append(".day-header { background: #333333; color: white; padding: 6px 10px; font-size: 10px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }")
     append(".day-badge { background: #E65100; color: white; padding: 2px 8px; font-size: 8px; font-weight: bold; margin-right: 8px; }")
-    append("table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }")
-    append("th, td { border: 0.5px solid #CBD5E1; padding: 6px 8px; font-size: 9px; text-align: left; }")
     append("th { background: #ECEFF1; color: #000; font-weight: bold; }")
-    append("tr:nth-child(even) { background: #F9F9F9; }")
-    append(".footer-section { display: flex; gap: 8px; margin-top: 15px; }")
-    append(".footer-col { flex: 1; border: 0.8px solid #333333; font-size: 8px; }")
-    append(".footer-col-title { background: #333333; color: white; padding: 4px 6px; font-weight: bold; font-size: 8px; text-align: center; }")
-    append(".footer-col-body { padding: 6px; color: #333; }")
-    append(".bottom-footer { background: #333333; color: white; padding: 8px 10px; margin-top: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 8px; }")
-    append("@media print { body { padding: 0; background: #fff; } .sheet { border: none; box-shadow: none; max-width: none; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }")
+    append(".footer-col-title { background: #333333; }")
+    append(".bottom-footer { background: #333333; color: white; padding: 8px 10px; display: flex; justify-content: space-between; align-items: center; font-size: 8px; }")
     append("</style></head><body>")
+
     append("<div class='sheet'>")
+    append("<div class='top-content'>")
     append("<div class='header-box'><div class='logo-area'>TG</div><div class='header-info'><div class='gym-name'>$gymName</div><div class='gym-loc'>CENTRO DE ENTRENAMIENTO · $gymCity</div></div><div class='header-title-area'><div class='rutina-title'>${titleText.take(45)}</div><div class='rutina-sub'>${objectiveText.take(55)}</div></div></div>")
     append("<div class='focus-box'>PROGRAMA ENFOCADO EN: $subObjText</div>")
     append("<div class='member-box'><span>• NOMBRE: $userName</span><span>• FECHA: $currentDate</span><span>• OBJETIVO: $objectiveText</span><span>• NIVEL: General</span></div>")
@@ -176,6 +185,9 @@ private fun buildModernHtml(
         }
         append("</tbody></table>")
     }
+    append("</div>") // End top-content
+
+    append("<div class='bottom-content'>")
     append("<div class='footer-section'>")
     append("<div class='footer-col'><div class='footer-col-title'>INDICACIONES GENERALES</div><div class='footer-col-body'>• Realizar entrada en calor de 10 min.<br>• Priorizar técnica antes que peso.<br>• Aumentar cargas progresivamente.<br>• Mantener buena hidratación.<br>• Consultar con profesional ante dudas.</div></div>")
     append("<div class='footer-col'><div class='footer-col-title' style='background: #333333;'>REGISTRO DE PROGRESO</div><div class='footer-col-body' style='padding: 2px;'><table style='margin:0; font-size:7px;'><tr><th style='background:#333333; color:white;'>FECHA</th><th style='background:#333333; color:white;'>DOLOR</th><th style='background:#333333; color:white;'>REND.</th></tr>")
@@ -184,6 +196,8 @@ private fun buildModernHtml(
     append("<div class='footer-col'><div class='footer-col-title'>NOTAS</div><div class='footer-col-body'>${routines.firstOrNull()?.notes.orEmpty().ifBlank { "Consultar cualquier duda con tu profesor." }}</div></div>")
     append("</div>")
     append("<div class='bottom-footer'><span>$gymAddress · $gymCity</span><strong style='color: #80CBC4;'>$gymInstagram</strong><span>$gymSlogan</span></div>")
+    append("</div>") // End bottom-content
+
     append("</div></body></html>")
 }
 
@@ -194,8 +208,7 @@ private fun buildExecutiveHtml(
     val primaryColor = "#1B4D3E"
     append("<!DOCTYPE html><html><head><meta charset='utf-8'><title>$titleText - $gymName</title>")
     append("<style>")
-    append("body { font-family: Arial, sans-serif; color: #111; margin: 0; padding: 15px; background: #fff; }")
-    append(".sheet { width: 100%; max-width: 750px; margin: 0 auto; border: 1.5px solid #4B5563; padding: 15px; box-sizing: border-box; background: #fff; }")
+    append(commonA4Style(primaryColor))
     append(".header-box { border: 1.5px solid #4B5563; padding: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }")
     append(".logo-area { width: 100px; height: 75px; background: $primaryColor; color: white; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; }")
     append(".header-info { flex: 1; margin-left: 15px; }")
@@ -207,18 +220,12 @@ private fun buildExecutiveHtml(
     append(".focus-box { border: 1px solid #2E7D32; background: #E8F5E9; text-align: center; padding: 6px; font-size: 8px; font-weight: bold; color: #1B5E20; margin-bottom: 8px; text-transform: uppercase; }")
     append(".member-box { border: 1px solid #E0E0E0; padding: 6px 10px; display: flex; justify-content: space-between; font-size: 9px; font-weight: bold; margin-bottom: 12px; background: #fff; }")
     append(".day-header { background: $primaryColor; color: white; padding: 6px 10px; font-size: 10px; font-weight: bold; display: flex; justify-content: space-between; margin-top: 10px; }")
-    append("table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }")
-    append("th, td { border: 0.5px solid #E0E0E0; padding: 6px 8px; font-size: 9px; text-align: left; }")
     append("th { background: #E2E8F0; color: #000; font-weight: bold; }")
-    append("tr:nth-child(even) { background: #F9F9F9; }")
-    append(".footer-section { display: flex; gap: 8px; margin-top: 15px; }")
-    append(".footer-col { flex: 1; border: 0.8px solid #4B5563; font-size: 8px; }")
-    append(".footer-col-title { background: $primaryColor; color: white; padding: 4px 6px; font-weight: bold; font-size: 8px; text-align: center; }")
-    append(".footer-col-body { padding: 6px; color: #333; }")
     append(".bottom-footer { border: 0.5px solid #E0E0E0; padding: 8px 10px; margin-top: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 8px; color: #555; }")
-    append("@media print { body { padding: 0; background: #fff; } .sheet { border: none; box-shadow: none; max-width: none; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }")
     append("</style></head><body>")
+
     append("<div class='sheet'>")
+    append("<div class='top-content'>")
     append("<div class='header-box'><div class='logo-area'>TG</div><div class='header-info'><div class='gym-name'>$gymName</div><div class='gym-loc'>$gymAddress · $gymCity</div></div><div class='header-title-area'><div class='rutina-title'>${titleText.take(45)}</div><div class='rutina-sub'>${objectiveText.take(55)}</div></div></div>")
     append("<div class='focus-box'>PROGRAMA ENFOCADO EN: $subObjText</div>")
     append("<div class='member-box'><span>NOMBRE: $userName</span><span>FECHA: $currentDate</span><span>OBJETIVO: $objectiveText</span><span>NIVEL: General</span></div>")
@@ -231,6 +238,9 @@ private fun buildExecutiveHtml(
         }
         append("</tbody></table>")
     }
+    append("</div>") // End top-content
+
+    append("<div class='bottom-content'>")
     append("<div class='footer-section'>")
     append("<div class='footer-col'><div class='footer-col-title'>INDICACIONES GENERALES</div><div class='footer-col-body'>• Realizar entrada en calor de 10 min.<br>• Priorizar técnica antes que peso.<br>• Aumentar cargas progresivamente.<br>• Mantener buena hidratación.<br>• Consultar con profesional ante dudas.</div></div>")
     append("<div class='footer-col'><div class='footer-col-title'>REGISTRO DE PROGRESO</div><div class='footer-col-body' style='padding: 2px;'><table style='margin:0; font-size:7px;'><tr><th>FECHA</th><th>DOLOR</th><th>REND.</th></tr>")
@@ -239,6 +249,8 @@ private fun buildExecutiveHtml(
     append("<div class='footer-col'><div class='footer-col-title'>NOTAS</div><div class='footer-col-body'>${routines.firstOrNull()?.notes.orEmpty().ifBlank { "Consultar cualquier duda con tu profesor." }}</div></div>")
     append("</div>")
     append("<div class='bottom-footer'><span>$gymAddress · $gymCity</span><strong style='color: $primaryColor;'>$gymInstagram</strong><span>$gymSlogan</span></div>")
+    append("</div>") // End bottom-content
+
     append("</div></body></html>")
 }
 
@@ -246,10 +258,10 @@ private fun buildMinimalistHtml(
     routines: List<Routine>, template: String, titleText: String, objectiveText: String, subObjText: String,
     userName: String, currentDate: String, gymAddress: String, gymCity: String, gymInstagram: String, gymSlogan: String, gymName: String
 ): String = buildString {
+    val primaryColor = "#222222"
     append("<!DOCTYPE html><html><head><meta charset='utf-8'><title>$titleText - $gymName</title>")
     append("<style>")
-    append("body { font-family: Arial, sans-serif; color: #111; margin: 0; padding: 15px; background: #fff; }")
-    append(".sheet { width: 100%; max-width: 750px; margin: 0 auto; border: 1px solid #CBD5E1; padding: 15px; box-sizing: border-box; background: #fff; }")
+    append(commonA4Style(primaryColor))
     append(".header-box { border: 1px solid #CBD5E1; padding: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }")
     append(".logo-area { width: 80px; height: 70px; border: 1px solid #222; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; }")
     append(".header-info { flex: 1; margin-left: 15px; }")
@@ -261,18 +273,13 @@ private fun buildMinimalistHtml(
     append(".focus-box { border-top: 1px solid #222; border-bottom: 1px solid #222; text-align: center; padding: 6px; font-size: 8px; font-weight: bold; color: #222; margin-bottom: 8px; text-transform: uppercase; }")
     append(".member-box { padding: 4px 0; display: flex; justify-content: space-between; font-size: 9px; font-weight: bold; border-bottom: 1px solid #CBD5E1; margin-bottom: 10px; }")
     append(".day-header { background: #222; color: white; padding: 5px 10px; font-size: 9px; font-weight: bold; display: flex; justify-content: space-between; margin-top: 10px; }")
-    append("table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }")
-    append("th, td { border: 0.5px solid #CBD5E1; padding: 5px 7px; font-size: 9px; text-align: left; }")
     append("th { background: #F1F5F9; color: #000; font-weight: bold; }")
-    append("tr:nth-child(even) { background: #FAFAFA; }")
-    append(".footer-section { display: flex; gap: 8px; margin-top: 15px; }")
-    append(".footer-col { flex: 1; border: 0.5px solid #222; font-size: 8px; }")
-    append(".footer-col-title { background: #222; color: white; padding: 4px 6px; font-weight: bold; font-size: 8px; text-align: center; }")
-    append(".footer-col-body { padding: 6px; color: #333; }")
+    append(".footer-col-title { background: #222; }")
     append(".bottom-footer { border-top: 1px solid #CBD5E1; padding: 8px 10px; margin-top: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 8px; color: #555; }")
-    append("@media print { body { padding: 0; background: #fff; } .sheet { border: none; box-shadow: none; max-width: none; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }")
     append("</style></head><body>")
+
     append("<div class='sheet'>")
+    append("<div class='top-content'>")
     append("<div class='header-box'><div class='header-info'><div class='gym-name'>$gymName</div><div class='gym-loc'>$gymAddress · $gymCity</div></div><div class='logo-area'>TG</div><div class='header-title-area'><div class='rutina-title'>${titleText.take(45)}</div><div class='rutina-sub'>${objectiveText.take(55)}</div></div></div>")
     append("<div class='focus-box'>PROGRAMA ENFOCADO EN: $subObjText</div>")
     append("<div class='member-box'><span>Nombre: $userName</span><span>Fecha: $currentDate</span><span>Objetivo: $objectiveText</span><span>Nivel: General</span></div>")
@@ -286,6 +293,9 @@ private fun buildMinimalistHtml(
         }
         append("</tbody></table>")
     }
+    append("</div>") // End top-content
+
+    append("<div class='bottom-content'>")
     append("<div class='footer-section'>")
     append("<div class='footer-col'><div class='footer-col-title'>INDICACIONES GENERALES</div><div class='footer-col-body'>• Realizar entrada en calor de 10 min.<br>• Priorizar técnica antes que peso.<br>• Aumentar cargas progresivamente.<br>• Mantener buena hidratación.<br>• Consultar con profesional ante dudas.</div></div>")
     append("<div class='footer-col'><div class='footer-col-title' style='background:#222;'>REGISTRO DE PROGRESO</div><div class='footer-col-body' style='padding: 2px;'><table style='margin:0; font-size:7px;'><tr><th style='background:#222; color:white;'>FECHA</th><th style='background:#222; color:white;'>DOLOR</th><th style='background:#222; color:white;'>REND.</th></tr>")
@@ -294,6 +304,8 @@ private fun buildMinimalistHtml(
     append("<div class='footer-col'><div class='footer-col-title'>NOTAS</div><div class='footer-col-body'>${routines.firstOrNull()?.notes.orEmpty().ifBlank { "Consultar cualquier duda con tu profesor." }}</div></div>")
     append("</div>")
     append("<div class='bottom-footer'><span>$gymAddress · $gymCity</span><strong style='color: #222;'>$gymInstagram</strong><span>$gymSlogan</span></div>")
+    append("</div>") // End bottom-content
+
     append("</div></body></html>")
 }
 
@@ -304,8 +316,7 @@ private fun buildProHtml(
     val primaryColor = "#1E1E1E"
     append("<!DOCTYPE html><html><head><meta charset='utf-8'><title>$titleText - $gymName</title>")
     append("<style>")
-    append("body { font-family: Arial, sans-serif; color: #111; margin: 0; padding: 15px; background: #fff; }")
-    append(".sheet { width: 100%; max-width: 750px; margin: 0 auto; border: 1.5px solid #1E293B; padding: 15px; box-sizing: border-box; background: #fff; }")
+    append(commonA4Style(primaryColor))
     append(".header-box { background: #1E1E1E; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-radius: 4px; }")
     append(".logo-area { width: 90px; height: 85px; background: #333; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 26px; font-weight: bold; border: 1.5px solid #E2E8F0; }")
     append(".header-info { flex: 1; text-align: center; margin: 0 15px; }")
@@ -317,18 +328,13 @@ private fun buildProHtml(
     append(".focus-box { background: #333333; color: white; text-align: center; padding: 6px; font-size: 8.5px; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; }")
     append(".member-box { border: 1px solid #1E293B; padding: 6px 10px; display: flex; justify-content: space-between; font-size: 9px; font-weight: bold; margin-bottom: 12px; background: #fff; color: #1E1E1E; }")
     append(".day-header { background: #2E7D32; color: white; padding: 6px 10px; font-size: 10px; font-weight: bold; display: flex; justify-content: space-between; margin-top: 10px; }")
-    append("table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }")
-    append("th, td { border: 0.5px solid #CBD5E1; padding: 6px 8px; font-size: 9px; text-align: left; }")
     append("th { background: #E6F4EA; color: #000; font-weight: bold; }")
-    append("tr:nth-child(even) { background: #F8FAFC; }")
-    append(".footer-section { display: flex; gap: 8px; margin-top: 15px; }")
-    append(".footer-col { flex: 1; border: 0.8px solid #1E293B; font-size: 8px; }")
-    append(".footer-col-title { background: #2E7D32; color: white; padding: 4px 6px; font-weight: bold; font-size: 8px; text-align: center; }")
-    append(".footer-col-body { padding: 6px; color: #333; }")
+    append(".footer-col-title { background: #2E7D32; }")
     append(".bottom-footer { border: 0.5px solid #CBD5E1; padding: 8px 10px; margin-top: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 8px; color: #555; }")
-    append("@media print { body { padding: 0; background: #fff; } .sheet { border: none; box-shadow: none; max-width: none; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }")
     append("</style></head><body>")
+
     append("<div class='sheet'>")
+    append("<div class='top-content'>")
     append("<div class='header-box'><div class='logo-area'>TG</div><div class='header-info'><div class='gym-name'>$gymName</div><div class='gym-city'>★ ${gymCity.uppercase()} ★</div><div class='rutina-title'>${titleText.take(45)}</div><div class='rutina-sub'>${objectiveText.take(55)}</div></div><div class='right-box'>ANATOMÍA H-PRO</div></div>")
     append("<div class='focus-box'>PROGRAMA ENFOCADO EN: $subObjText</div>")
     append("<div class='member-box'><span>NOMBRE: $userName</span><span>FECHA: $currentDate</span><span>OBJETIVO: $objectiveText</span><span>NIVEL: General</span></div>")
@@ -341,6 +347,9 @@ private fun buildProHtml(
         }
         append("</tbody></table>")
     }
+    append("</div>") // End top-content
+
+    append("<div class='bottom-content'>")
     append("<div class='footer-section'>")
     append("<div class='footer-col'><div class='footer-col-title'>INDICACIONES GENERALES</div><div class='footer-col-body'>✓ Realizar entrada en calor de 10 min.<br>✓ Priorizar técnica antes que peso.<br>✓ Aumentar cargas progresivamente.<br>✓ Mantener buena hidratación.<br>✓ Consultar con profesional ante dudas.</div></div>")
     append("<div class='footer-col'><div class='footer-col-title' style='background: #2E7D32;'>REGISTRO DE PROGRESO</div><div class='footer-col-body' style='padding: 2px;'><table style='margin:0; font-size:7px;'><tr><th style='background:#E6F4EA;'>FECHA</th><th style='background:#E6F4EA;'>DOLOR</th><th style='background:#E6F4EA;'>REND.</th></tr>")
@@ -349,5 +358,7 @@ private fun buildProHtml(
     append("<div class='footer-col'><div class='footer-col-title'>NOTAS</div><div class='footer-col-body'>${routines.firstOrNull()?.notes.orEmpty().ifBlank { "Consultar cualquier duda con tu profesor." }}</div></div>")
     append("</div>")
     append("<div class='bottom-footer'><span>$gymAddress · $gymCity</span><strong style='color: #2E7D32;'>$gymInstagram</strong><span>$gymSlogan</span></div>")
+    append("</div>") // End bottom-content
+
     append("</div></body></html>")
 }
