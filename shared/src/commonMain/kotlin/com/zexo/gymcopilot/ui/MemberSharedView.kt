@@ -765,11 +765,15 @@ fun MemberDashboardSharedScreen(
     }
 
     if (showQrDialog) {
-        val qrContent = "ATTENDANCE:$activeEmail"
+        val gymIdVal = activeGymName.lowercase().replace(Regex("[^a-z0-9]"), "_").ifBlank { "gym_default" }
+        val qrContent = "ATTENDANCE:$gymIdVal:$activeEmail"
         val qrBitmap: ImageBitmap? = remember(qrContent) { generateQrBitmap(qrContent, 512) }
+        val displayName = if (activeFirstName.isNotBlank()) "$activeFirstName $activeLastName".trim() else "Socio del Gimnasio"
+        val displayGym = if (activeGymName.isNotBlank() && activeGymName != "Gym 19") activeGymName else "Gimnasio"
+
         AlertDialog(
             onDismissRequest = { showQrDialog = false },
-            title = { Text("Mi Código QR", color = TextWhite, fontWeight = FontWeight.Bold) },
+            title = { Text("Mi Código QR - Asistencia", color = TextWhite, fontWeight = FontWeight.Bold) },
             text = {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -778,23 +782,45 @@ fun MemberDashboardSharedScreen(
                     Surface(
                         color = Color.White,
                         shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.size(180.dp)
+                        modifier = Modifier.size(200.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             if (qrBitmap != null) {
                                 Image(
                                     bitmap = qrBitmap,
-                                    contentDescription = "QR Login",
+                                    contentDescription = "QR Asistencia",
                                     modifier = Modifier.fillMaxSize().padding(8.dp),
                                     contentScale = ContentScale.Fit
                                 )
                             } else {
-                                Icon(Icons.Default.QrCode2, contentDescription = "QR Login", tint = Color.Black, modifier = Modifier.size(140.dp))
+                                Icon(Icons.Default.QrCode2, contentDescription = "QR Asistencia", tint = Color.Black, modifier = Modifier.size(150.dp))
                             }
                         }
                     }
                     Spacer(Modifier.height(12.dp))
-                    Text("Escanea en la recepción para ingresar", color = TextGray, fontSize = 12.sp)
+                    Text(
+                        text = displayName,
+                        color = PrimaryTurquoise,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = activeEmail,
+                        color = TextWhite,
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        text = displayGym,
+                        color = TextGray,
+                        fontSize = 11.sp
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "Muestra este código en la recepción para que el administrador escanee tu asistencia.",
+                        color = TextGray,
+                        fontSize = 11.sp,
+                        textAlign = TextAlign.Center
+                    )
                 }
             },
             containerColor = Color(0xFF081C24),

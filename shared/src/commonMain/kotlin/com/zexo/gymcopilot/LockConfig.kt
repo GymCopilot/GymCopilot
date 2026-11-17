@@ -15,10 +15,10 @@ object LockConfig {
 
     /**
      * Bloqueo / Visibilidad de perfiles específico para la App Web.
-     * 0: Muestra todos los roles en la Web.
-     * 1: Muestra únicamente el perfil del alumno (socio) en la Web (durante desarrollo).
+     * 0: Muestra todos los roles en la Web (durante desarrollo).
+     * 1: Muestra únicamente el perfil del alumno (socio) en la Web.
      */
-    const val WEB_ROLE_LOCK_ENABLED = 0
+    const val WEB_ROLE_LOCK_ENABLED = 1
 
     /**
      * Define el entorno operativo de la aplicación.
