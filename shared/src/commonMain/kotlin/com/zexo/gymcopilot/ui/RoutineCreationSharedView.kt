@@ -582,18 +582,13 @@ fun RoutineCreationSharedScreen(
             list.add(assigned)
         }
         remoteProfessorsNames.forEach { if (!list.contains(it)) list.add(it) }
-        if (list.isEmpty()) {
-            list.add(localMember?.firstName?.let { "Prof. $it" } ?: "Profesor Asignado")
-        }
         list.distinct()
     }
 
-    val selectedProfessorIds = remember(routineToEdit, professorsList) {
+    val selectedProfessorIds = remember(routineToEdit) {
         mutableStateListOf<String>().apply {
             if (routineToEdit != null && routineToEdit.professorIds.isNotEmpty()) {
                 addAll(routineToEdit.professorIds)
-            } else {
-                if (professorsList.isNotEmpty()) add(professorsList.first())
             }
         }
     }
@@ -985,48 +980,52 @@ fun RoutineCreationSharedScreen(
                             Text("Obtenido de la base de datos", color = TextGray, fontSize = 11.sp)
                             Spacer(modifier = Modifier.height(14.dp))
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                professorsList.forEach { profName ->
-                                    val isProfSelected = selectedProfessorIds.contains(profName)
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier
-                                            .clickable {
-                                                if (isProfSelected) selectedProfessorIds.remove(profName)
-                                                else selectedProfessorIds.add(profName)
-                                            }
-                                            .width(85.dp)
-                                    ) {
-                                        Box(
+                            if (professorsList.isEmpty()) {
+                                Text("No hay profesores registrados", color = TextGray, fontSize = 12.sp)
+                            } else {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    professorsList.forEach { profName ->
+                                        val isProfSelected = selectedProfessorIds.contains(profName)
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
                                             modifier = Modifier
-                                                .size(56.dp)
-                                                .clip(CircleShape)
-                                                .background(if (isProfSelected) PrimaryTurquoise.copy(alpha = 0.2f) else Color(0xFF0F151B))
-                                                .border(
-                                                    width = if (isProfSelected) 2.dp else 1.dp,
-                                                    color = if (isProfSelected) PrimaryTurquoise else Color.White.copy(alpha = 0.1f),
-                                                    shape = CircleShape
-                                                ),
-                                            contentAlignment = Alignment.Center
+                                                .clickable {
+                                                    if (isProfSelected) selectedProfessorIds.remove(profName)
+                                                    else selectedProfessorIds.add(profName)
+                                                }
+                                                .width(85.dp)
                                         ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Person,
-                                                contentDescription = profName,
-                                                tint = if (isProfSelected) PrimaryTurquoise else TextGray,
-                                                modifier = Modifier.size(28.dp)
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(56.dp)
+                                                    .clip(CircleShape)
+                                                    .background(if (isProfSelected) PrimaryTurquoise.copy(alpha = 0.2f) else Color(0xFF0F151B))
+                                                    .border(
+                                                        width = if (isProfSelected) 2.dp else 1.dp,
+                                                        color = if (isProfSelected) PrimaryTurquoise else Color.White.copy(alpha = 0.1f),
+                                                        shape = CircleShape
+                                                    ),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Person,
+                                                    contentDescription = profName,
+                                                    tint = if (isProfSelected) PrimaryTurquoise else TextGray,
+                                                    modifier = Modifier.size(28.dp)
+                                                )
+                                            }
+                                            Spacer(Modifier.height(6.dp))
+                                            Text(
+                                                text = profName,
+                                                color = if (isProfSelected) PrimaryTurquoise else TextWhite,
+                                                fontSize = 11.sp,
+                                                fontWeight = if (isProfSelected) FontWeight.Bold else FontWeight.Normal,
+                                                textAlign = TextAlign.Center
                                             )
                                         }
-                                        Spacer(Modifier.height(6.dp))
-                                        Text(
-                                            text = profName,
-                                            color = if (isProfSelected) PrimaryTurquoise else TextWhite,
-                                            fontSize = 11.sp,
-                                            fontWeight = if (isProfSelected) FontWeight.Bold else FontWeight.Normal,
-                                            textAlign = TextAlign.Center
-                                        )
                                     }
                                 }
                             }
