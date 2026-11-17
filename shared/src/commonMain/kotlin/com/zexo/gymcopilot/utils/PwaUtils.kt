@@ -14,3 +14,4 @@ expect fun triggerRoutinePdfExport(
     customSubObjective: String,
     gymName: String
 )
+expect fun updateWebPageBranding(gymName: String, gymLogoUri: String?)

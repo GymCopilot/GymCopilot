@@ -39,6 +39,7 @@ import com.zexo.gymcopilot.utils.generateQrBitmap
 import com.zexo.gymcopilot.utils.launchQrScanner
 import com.zexo.gymcopilot.utils.readLocalMemberProfile
 import com.zexo.gymcopilot.utils.saveLocalMemberProfile
+import com.zexo.gymcopilot.utils.updateWebPageBranding
 import gymcopilot.shared.generated.resources.*
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -231,6 +232,10 @@ fun MemberDashboardSharedScreen(
     val gymLogoBitmap = remember(serverGymLogoUri, customLogoUri) {
         val uri = serverGymLogoUri ?: customLogoUri
         if (uri != null) decodeBase64ToBitmap(uri) else null
+    }
+
+    LaunchedEffect(activeGymName, serverGymLogoUri) {
+        updateWebPageBranding(activeGymName, serverGymLogoUri)
     }
 
     var bannerTitle by remember { mutableStateOf("Asistencia Registrada") }

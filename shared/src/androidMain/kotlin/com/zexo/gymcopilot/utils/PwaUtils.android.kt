@@ -15,3 +15,5 @@ actual fun triggerRoutinePdfExport(
     customSubObjective: String,
     gymName: String
 ) {}
+
+actual fun updateWebPageBranding(gymName: String, gymLogoUri: String?) {}

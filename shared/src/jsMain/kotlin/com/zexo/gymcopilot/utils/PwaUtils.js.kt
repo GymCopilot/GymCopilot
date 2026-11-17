@@ -1,7 +1,9 @@
 package com.zexo.gymcopilot.utils
 
 import com.zexo.gymcopilot.model.Routine
+import kotlinx.browser.document
 import kotlinx.browser.window
+import org.w3c.dom.Element
 
 actual fun isStandaloneMode(): Boolean {
     return try {
@@ -31,6 +33,23 @@ actual fun isIOSDevice(): Boolean {
 }
 
 actual fun isWebTarget(): Boolean = true
+
+actual fun updateWebPageBranding(gymName: String, gymLogoUri: String?) {
+    try {
+        if (gymName.isNotBlank() && gymName != "Gym 19" && gymName != "Nombre del Gimnasio") {
+            document.title = gymName
+            val metaAppTitle = document.querySelector("meta[name='apple-mobile-web-app-title']")
+            metaAppTitle?.setAttribute("content", gymName)
+        }
+        if (!gymLogoUri.isNullOrBlank()) {
+            val links = document.querySelectorAll("link[rel*='icon']")
+            for (i in 0 until links.length) {
+                val link = links.item(i) as? Element
+                link?.setAttribute("href", gymLogoUri)
+            }
+        }
+    } catch (e: Throwable) {}
+}
 
 actual fun triggerRoutinePdfExport(
     routines: List<Routine>,
