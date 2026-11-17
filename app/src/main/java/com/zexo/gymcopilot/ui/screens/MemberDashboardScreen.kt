@@ -248,10 +248,10 @@ fun MemberDashboardScreen(
     }
 
     val activePlanName = remember(currentMember, plans) {
-        if (currentMember == null) "Plan Mensual"
+        if (currentMember == null) "No asignado"
         else {
             val matchingPlan = plans.find { it.id == currentMember.planId } ?: plans.find { it.name.equals(currentMember.planType, ignoreCase = true) }
-            matchingPlan?.name ?: currentMember.planType.takeIf { it.isNotBlank() && it != "null" } ?: "Plan Mensual"
+            matchingPlan?.name ?: currentMember.planType.takeIf { it.isNotBlank() && it != "null" } ?: "No asignado"
         }
     }
 

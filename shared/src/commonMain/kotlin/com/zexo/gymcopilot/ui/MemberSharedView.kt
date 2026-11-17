@@ -80,7 +80,7 @@ fun MemberDashboardSharedScreen(
     var activeGymUrl by remember { mutableStateOf(LockConfig.activeApiUrl) }
     var activeMembershipStatus by remember { mutableStateOf("ACTIVO") }
     var activeNextRenewalDate by remember { mutableLongStateOf(0L) }
-    var activePlanName by remember { mutableStateOf("Plan Mensual") }
+    var activePlanName by remember { mutableStateOf("No asignado") }
     var activeAssignedTrainer by remember { mutableStateOf("") }
 
     // CARGA PERSISTENTE DESDE LOCALSTORAGE EN WEB / DISPOSITIVO

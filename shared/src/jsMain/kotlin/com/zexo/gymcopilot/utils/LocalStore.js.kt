@@ -32,12 +32,12 @@ actual fun readLocalMemberProfile(): LocalMemberData? {
         val weight = localStorage.getItem("gymcopilot_member_weight") ?: ""
         val height = localStorage.getItem("gymcopilot_member_height") ?: ""
         val photo = localStorage.getItem("gymcopilot_member_photo")
-        val gymName = localStorage.getItem("gymcopilot_gym_name") ?: "Gym 19"
+        val gymName = localStorage.getItem("gymcopilot_gym_name") ?: "Nombre del Gimnasio"
         val gymUrl = localStorage.getItem("gymcopilot_gym_url") ?: LockConfig.activeApiUrl
         val spreadsheetId = localStorage.getItem("gymcopilot_gym_ssid") ?: ""
         val membershipStatus = localStorage.getItem("gymcopilot_member_status") ?: "ACTIVO"
         val nextRenewalDate = localStorage.getItem("gymcopilot_member_renewal")?.toLongOrNull() ?: 0L
-        val planName = localStorage.getItem("gymcopilot_member_plan") ?: "Plan Mensual"
+        val planName = localStorage.getItem("gymcopilot_member_plan") ?: "No asignado"
 
         LocalMemberData(
             firstName = firstName,

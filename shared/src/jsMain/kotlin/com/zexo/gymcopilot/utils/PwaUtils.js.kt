@@ -4,6 +4,9 @@ import com.zexo.gymcopilot.model.Routine
 import kotlinx.browser.document
 import kotlinx.browser.window
 import org.w3c.dom.Element
+import org.w3c.dom.url.URL
+import org.w3c.files.Blob
+import org.w3c.files.BlobPropertyBag
 
 actual fun isStandaloneMode(): Boolean {
     return try {
@@ -36,18 +39,41 @@ actual fun isWebTarget(): Boolean = true
 
 actual fun updateWebPageBranding(gymName: String, gymLogoUri: String?) {
     try {
-        if (gymName.isNotBlank() && gymName != "Gym 19" && gymName != "Nombre del Gimnasio") {
-            document.title = gymName
-            val metaAppTitle = document.querySelector("meta[name='apple-mobile-web-app-title']")
-            metaAppTitle?.setAttribute("content", gymName)
+        val cleanName = if (gymName.isNotBlank() && gymName != "Gym 19" && gymName != "Nombre del Gimnasio") gymName else "GymCopilot"
+        document.title = cleanName
+        val metaAppTitle = document.querySelector("meta[name='apple-mobile-web-app-title']")
+        metaAppTitle?.setAttribute("content", cleanName)
+
+        val finalLogo = if (!gymLogoUri.isNullOrBlank()) gymLogoUri else "icon-512.png"
+
+        val links = document.querySelectorAll("link[rel*='icon'], link[rel='apple-touch-icon']")
+        for (i in 0 until links.length) {
+            val link = links.item(i) as? Element
+            link?.setAttribute("href", finalLogo)
         }
-        if (!gymLogoUri.isNullOrBlank()) {
-            val links = document.querySelectorAll("link[rel*='icon']")
-            for (i in 0 until links.length) {
-                val link = links.item(i) as? Element
-                link?.setAttribute("href", gymLogoUri)
+
+        val manifestJson = """
+            {
+              "name": "$cleanName",
+              "short_name": "$cleanName",
+              "start_url": "./",
+              "display": "standalone",
+              "background_color": "#00151C",
+              "theme_color": "#00151C",
+              "icons": [
+                {
+                  "src": "$finalLogo",
+                  "sizes": "192x192 512x512",
+                  "type": "image/png"
+                }
+              ]
             }
-        }
+        """.trimIndent()
+
+        val blob = Blob(arrayOf(manifestJson), BlobPropertyBag(type = "application/manifest+json"))
+        val blobUrl = URL.createObjectURL(blob)
+        val manifestLink = document.querySelector("link[rel='manifest']")
+        manifestLink?.setAttribute("href", blobUrl)
     } catch (e: Throwable) {}
 }
 

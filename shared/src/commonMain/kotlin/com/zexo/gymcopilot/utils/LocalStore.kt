@@ -11,12 +11,12 @@ data class LocalMemberData(
     val weight: String = "",
     val height: String = "",
     val photoUri: String? = null,
-    val gymName: String = "Gym 19",
+    val gymName: String = "Nombre del Gimnasio",
     val gymApiUrl: String = LockConfig.activeApiUrl,
     val spreadsheetId: String = "",
     val membershipStatus: String = "DEUDOR",
     val nextRenewalDate: Long = 0L,
-    val planName: String = "Plan Mensual",
+    val planName: String = "No asignado",
     val assignedTrainer: String = ""
 )
 
