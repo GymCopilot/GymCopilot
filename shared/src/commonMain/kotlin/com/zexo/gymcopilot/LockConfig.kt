@@ -11,7 +11,7 @@ object LockConfig {
      * 0: Desactivado.
      * 1: Activado.
      */
-    const val ANDROID_ROLE_LOCK_ENABLED = 0
+    const val ANDROID_ROLE_LOCK_ENABLED = 1
 
     /**
      * Bloqueo / Visibilidad de perfiles específico para la App Web.
