@@ -2,6 +2,7 @@ package com.zexo.gymcopilot.repository
 
 import android.util.Log
 import com.zexo.gymcopilot.DataStoreManager
+import com.zexo.gymcopilot.LockConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -10,7 +11,8 @@ class GoogleCloudRepository(
     private val dataStoreManager: DataStoreManager
 ) {
     companion object {
-        var MASTER_BACKEND_URL = "https://script.google.com/macros/s/AKfycbyn85W_HL8njFGFxhQJQM7yh-nxDuFef8aBYqWDNd48bzIcT_FGyZSHye2b9W5ui7HW/exec"
+        val MASTER_BACKEND_URL: String
+            get() = LockConfig.activeApiUrl
     }
 
     suspend fun setupGymBackend(gymName: String, customUrl: String? = null): Result<String> {

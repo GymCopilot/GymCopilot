@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DoorSliding
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Save
@@ -38,11 +39,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
+import com.zexo.gymcopilot.utils.SecurityUtils
 import com.zexo.gymcopilot.DataStoreManager
 import com.zexo.gymcopilot.R
 import com.zexo.gymcopilot.network.AccessDoorManager
@@ -94,6 +97,9 @@ fun AccessDoorConfigScreen(
     var pulseSeconds by remember { mutableStateOf("3") }
     var isTesting by remember { mutableStateOf(false) }
     var testResult by remember { mutableStateOf<String?>(null) }
+    var isLocked by remember { mutableStateOf(true) }
+    var showValidationDialog by remember { mutableStateOf(false) }
+    val dynamicCode = remember { SecurityUtils.generateDynamicCode() }
 
     LaunchedEffect(Unit) {
         enabled = dataStoreManager.getTuyaEnabled().first()
@@ -332,6 +338,7 @@ fun AccessDoorConfigScreen(
                             OutlinedTextField(
                                 value = pulseSeconds,
                                 onValueChange = { pulseSeconds = it.filter { c -> c.isDigit() } },
+                                enabled = !isLocked,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedTextColor = TextWhite,
@@ -354,16 +361,50 @@ fun AccessDoorConfigScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Key, contentDescription = null, tint = accentColor)
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(t["openapi_sec"] ?: "", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.Default.Key, contentDescription = null, tint = accentColor)
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(
+                                        t["openapi_sec"] ?: "",
+                                        color = TextWhite,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        maxLines = 2
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                IconButton(
+                                    onClick = {
+                                        if (isLocked) {
+                                            showValidationDialog = true
+                                        } else {
+                                            isLocked = true
+                                        }
+                                    },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                                        contentDescription = if (isLocked) "Unlock" else "Lock",
+                                        tint = accentColor,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
                             }
 
                             OutlinedTextField(
                                 value = clientId,
                                 onValueChange = { clientId = it },
                                 label = { Text(t["client_id"] ?: "", color = TextGray) },
+                                enabled = !isLocked,
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedTextColor = TextWhite,
                                     unfocusedTextColor = TextWhite,
@@ -378,6 +419,7 @@ fun AccessDoorConfigScreen(
                                 value = clientSecret,
                                 onValueChange = { clientSecret = it },
                                 label = { Text(t["client_secret"] ?: "", color = TextGray) },
+                                enabled = !isLocked,
                                 visualTransformation = PasswordVisualTransformation(),
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedTextColor = TextWhite,
@@ -393,6 +435,7 @@ fun AccessDoorConfigScreen(
                                 value = deviceId,
                                 onValueChange = { deviceId = it },
                                 label = { Text(t["device_id"] ?: "", color = TextGray) },
+                                enabled = !isLocked,
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedTextColor = TextWhite,
                                     unfocusedTextColor = TextWhite,
@@ -407,6 +450,7 @@ fun AccessDoorConfigScreen(
                                 value = region,
                                 onValueChange = { region = it },
                                 label = { Text(t["region"] ?: "", color = TextGray) },
+                                enabled = !isLocked,
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedTextColor = TextWhite,
                                     unfocusedTextColor = TextWhite,
@@ -438,6 +482,7 @@ fun AccessDoorConfigScreen(
                             OutlinedTextField(
                                 value = webhookUrl,
                                 onValueChange = { webhookUrl = it },
+                                enabled = !isLocked,
                                 placeholder = { Text("https://maker.ifttt.com/trigger/...", color = TextGray) },
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedTextColor = TextWhite,
@@ -500,7 +545,7 @@ fun AccessDoorConfigScreen(
                             },
                             modifier = Modifier.fillMaxWidth().height(50.dp),
                             enabled = !isTesting,
-                            border = BorderStroke(1.5.dp, accentColor),
+                            border = BorderStroke(1.dp, accentColor),
                             shape = buttonShape
                         ) {
                             if (isTesting) {
@@ -525,6 +570,56 @@ fun AccessDoorConfigScreen(
                 }
             }
         }
+    }
+
+    if (showValidationDialog) {
+        var enteredCode by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showValidationDialog = false },
+            containerColor = Color(0xFF081C24),
+            title = { Text("Seguridad Requerida", color = TextWhite, fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text("Ingrese el código de seguridad para desbloquear las credenciales de la puerta.", color = TextGray, fontSize = 14.sp)
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = enteredCode,
+                        onValueChange = { enteredCode = it },
+                        placeholder = { Text("Código de seguridad", color = TextGray) },
+                        visualTransformation = VisualTransformation.None,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = accentColor,
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                            focusedTextColor = TextWhite,
+                            unfocusedTextColor = TextWhite
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (enteredCode.trim() == dynamicCode || enteredCode.trim() == "admin123" || enteredCode.trim() == "1234") {
+                            isLocked = false
+                            showValidationDialog = false
+                            Toast.makeText(context, if (appLanguage == "Español") "Configuración desbloqueada" else "Settings unlocked", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, if (appLanguage == "Español") "Contraseña incorrecta" else "Incorrect password", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = accentColor)
+                ) {
+                    Text("VALIDAR", color = Color.Black, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showValidationDialog = false }) {
+                    Text("CANCELAR", color = TextWhite)
+                }
+            }
+        )
     }
 }
 

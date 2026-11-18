@@ -126,6 +126,46 @@ fun SharedGymCopilotApp(
         )
     }
     val isIOS = remember { isIOSDevice() }
+    if (LockConfig.WEB_IOS_ONLY_ENABLED == 1 && isWebTarget() && !isIOS) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(Color(0xFF00151C)),
+            contentAlignment = Alignment.Center
+        ) {
+            Surface(
+                color = Color(0xFF00222E),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, PrimaryTurquoise),
+                modifier = Modifier.padding(24.dp).fillMaxWidth(0.9f).wrapContentHeight()
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Block,
+                        contentDescription = null,
+                        tint = Color.Red,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Text(
+                        text = "Acceso Restringido",
+                        color = TextWhite,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "Esta aplicación web está disponible exclusivamente para dispositivos iOS.",
+                        color = TextGray,
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+        return
+    }
 
     LaunchedEffect(Unit) {
         val isInstalledFlag = readLocalStorageFlag("gymcopilot_pwa_installed") == "true"

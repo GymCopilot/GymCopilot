@@ -280,13 +280,13 @@ class DataStoreManager(private val context: Context) {
     fun getTuyaEnabled(): Flow<Boolean> = dataStore.data.map { it[TUYA_ENABLED] ?: false }
 
     suspend fun setTuyaClientId(clientId: String) { dataStore.edit { it[TUYA_CLIENT_ID] = clientId } }
-    fun getTuyaClientId(): Flow<String> = dataStore.data.map { it[TUYA_CLIENT_ID] ?: "" }
+    fun getTuyaClientId(): Flow<String> = dataStore.data.map { it[TUYA_CLIENT_ID] ?: "vxd3daan4q8fswsh8977" }
 
     suspend fun setTuyaClientSecret(secret: String) { dataStore.edit { it[TUYA_CLIENT_SECRET] = secret } }
-    fun getTuyaClientSecret(): Flow<String> = dataStore.data.map { it[TUYA_CLIENT_SECRET] ?: "" }
+    fun getTuyaClientSecret(): Flow<String> = dataStore.data.map { it[TUYA_CLIENT_SECRET] ?: "5388b78969454be7a9e8e010a960a242" }
 
     suspend fun setTuyaDeviceId(deviceId: String) { dataStore.edit { it[TUYA_DEVICE_ID] = deviceId } }
-    fun getTuyaDeviceId(): Flow<String> = dataStore.data.map { it[TUYA_DEVICE_ID] ?: "" }
+    fun getTuyaDeviceId(): Flow<String> = dataStore.data.map { it[TUYA_DEVICE_ID] ?: "eb40d0a2a38db6ac95gdt2" }
 
     suspend fun setTuyaRegion(region: String) { dataStore.edit { it[TUYA_REGION] = region } }
     fun getTuyaRegion(): Flow<String> = dataStore.data.map { it[TUYA_REGION] ?: "us" }
