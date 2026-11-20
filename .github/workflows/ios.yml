@@ -2,9 +2,9 @@ name: Compilar iOS (GymCopilot KMP)
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, TEST ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, master, TEST ]
   workflow_dispatch:
 
 jobs:
