@@ -31,6 +31,7 @@ import androidx.compose.ui.zIndex
 import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import com.zexo.gymcopilot.navigation.GymNavGraph
+import com.zexo.gymcopilot.ui.LockConfigBanner
 import com.zexo.gymcopilot.ui.screens.SplashScreen
 import com.zexo.gymcopilot.ui.theme.GymCopilotTheme
 import com.zexo.gymcopilot.ui.theme.GymBackgroundGradient
@@ -270,23 +271,12 @@ class MainActivity : ComponentActivity() {
 
                                 // Cartel de Prueba (Test Mode) en Android Native
                                 if (LockConfig.APP_ENVIRONMENT == 0) {
-                                    Box(
+                                    LockConfigBanner(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .align(Alignment.TopCenter)
                                             .zIndex(999f)
-                                            .background(Color(0xFFD32F2F).copy(alpha = 0.9f))
-                                            .padding(vertical = 6.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = "⚠️ MODO PRUEBA (TEST) - AISLADO",
-                                            color = Color.White,
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            textAlign = TextAlign.Center
-                                        )
-                                    }
+                                    )
                                 }
                             }
                         }

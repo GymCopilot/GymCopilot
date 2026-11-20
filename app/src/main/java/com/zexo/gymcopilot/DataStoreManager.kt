@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import com.zexo.gymcopilot.model.*
+import com.zexo.gymcopilot.model.CancellationRecord
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
@@ -87,6 +88,7 @@ class DataStoreManager(private val context: Context) {
         val GYM_ROUTINES = stringPreferencesKey("GYM_ROUTINES")
         val SUBSCRIPTION_PLANS = stringPreferencesKey("SUBSCRIPTION_PLANS")
         val PAYMENT_RECORDS = stringPreferencesKey("PAYMENT_RECORDS")
+        val CANCELLATION_RECORDS = stringPreferencesKey("CANCELLATION_RECORDS")
         
         val AUTH_TOKEN = stringPreferencesKey("AUTH_TOKEN")
         val GOOGLE_ACCESS_TOKEN = stringPreferencesKey("GOOGLE_ACCESS_TOKEN")
@@ -100,6 +102,8 @@ class DataStoreManager(private val context: Context) {
         val TUYA_REGION = stringPreferencesKey("TUYA_REGION")
         val TUYA_WEBHOOK_URL = stringPreferencesKey("TUYA_WEBHOOK_URL")
         val TUYA_PULSE_SECONDS = intPreferencesKey("TUYA_PULSE_SECONDS")
+        val LICENSE_MODEL_PAYER = stringPreferencesKey("LICENSE_MODEL_PAYER")
+        val LICENSE_MODEL_LOCKED = booleanPreferencesKey("LICENSE_MODEL_LOCKED")
 
         val GYM_IS_OPEN = booleanPreferencesKey("GYM_IS_OPEN")
         val CLASS_IN_SESSION_MANUAL = booleanPreferencesKey("CLASS_IN_SESSION_MANUAL")
@@ -296,6 +300,12 @@ class DataStoreManager(private val context: Context) {
 
     suspend fun setTuyaPulseSeconds(seconds: Int) { dataStore.edit { it[TUYA_PULSE_SECONDS] = seconds } }
     fun getTuyaPulseSeconds(): Flow<Int> = dataStore.data.map { it[TUYA_PULSE_SECONDS] ?: 3 }
+
+    suspend fun setLicenseModelPayer(payer: String) { dataStore.edit { it[LICENSE_MODEL_PAYER] = payer } }
+    fun getLicenseModelPayer(): Flow<String> = dataStore.data.map { it[LICENSE_MODEL_PAYER] ?: "admin" }
+
+    suspend fun setLicenseModelLocked(locked: Boolean) { dataStore.edit { it[LICENSE_MODEL_LOCKED] = locked } }
+    fun isLicenseModelLocked(): Flow<Boolean> = dataStore.data.map { it[LICENSE_MODEL_LOCKED] ?: false }
     
     fun getProducts(): Flow<List<Product>> = dataStore.data.map { preferences ->
         val productsJson = preferences[STORE_PRODUCTS] ?: "[]"
@@ -688,6 +698,19 @@ class DataStoreManager(private val context: Context) {
             val current = try { Json.decodeFromString<MutableList<PaymentRecord>>(preferences[PAYMENT_RECORDS] ?: "[]") } catch (e: Exception) { mutableListOf() }
             current.add(record)
             preferences[PAYMENT_RECORDS] = Json.encodeToString(current)
+        }
+    }
+
+    fun getCancellationRecords(): Flow<List<CancellationRecord>> = dataStore.data.map { preferences ->
+        val json = preferences[CANCELLATION_RECORDS] ?: "[]"
+        try { Json.decodeFromString<List<CancellationRecord>>(json) } catch (e: Exception) { emptyList() }
+    }
+
+    suspend fun addCancellationRecord(record: CancellationRecord) {
+        dataStore.edit { preferences ->
+            val current = try { Json.decodeFromString<MutableList<CancellationRecord>>(preferences[CANCELLATION_RECORDS] ?: "[]") } catch (e: Exception) { mutableListOf() }
+            current.add(record)
+            preferences[CANCELLATION_RECORDS] = Json.encodeToString(current)
         }
     }
 

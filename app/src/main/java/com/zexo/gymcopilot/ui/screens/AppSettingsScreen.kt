@@ -121,6 +121,7 @@ fun AppSettingsScreen(
     var showUpdatesDialog by remember { mutableStateOf(false) }
     var showPdfTemplateDialog by remember { mutableStateOf(false) }
     var showDoorSystemDialog by remember { mutableStateOf(false) }
+    val userBankAccount by dataStoreManager.getUserBankAccount().collectAsState(initial = "")
 
     val t = remember(appLanguage) {
         when (appLanguage) {
@@ -345,6 +346,121 @@ fun AppSettingsScreen(
                             shape = buttonShape,
                             onClick = onCurrencyClick
                         )
+                    }
+
+                    item {
+                        val licenseModelPayer by dataStoreManager.getLicenseModelPayer().collectAsState(initial = "admin")
+                        var showLicenseDialog by remember { mutableStateOf(false) }
+                        val descModel = when (licenseModelPayer) {
+                            "admin" -> "Gimnasio paga Licencia"
+                            "member_all" -> "Alumno paga membresía y App"
+                            "member_gym_only" -> "Alumno paga solo membresía"
+                            else -> "Gimnasio paga Licencia"
+                        }
+
+                        SettingsCard(
+                            title = "Modelo de Licenciamiento",
+                            description = descModel,
+                            icon = Icons.Default.Payment,
+                            accentColor = accentColor,
+                            cardColor = Color(0xFF009EE3),
+                            shape = buttonShape,
+                            onClick = { showLicenseDialog = true }
+                        )
+
+                        if (showLicenseDialog) {
+                            var selectedModel by remember(licenseModelPayer) { mutableStateOf(licenseModelPayer) }
+                            var tempAlias by remember(userBankAccount) { mutableStateOf(userBankAccount) }
+                            AlertDialog(
+                                onDismissRequest = { showLicenseDialog = false },
+                                containerColor = Color(0xFF081C24),
+                                title = { Text("Modelo de Licenciamiento", color = TextWhite, fontWeight = FontWeight.Bold) },
+                                text = {
+                                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                        Text("Elige quién financia la plataforma GymCopilot:", color = TextGray, fontSize = 14.sp)
+                                        Spacer(Modifier.height(4.dp))
+
+                                        // Modalidad 1
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().clickable { selectedModel = "member_all" }.padding(6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            RadioButton(selected = selectedModel == "member_all", onClick = { selectedModel = "member_all" })
+                                            Spacer(Modifier.width(8.dp))
+                                            Column {
+                                                Text("El alumno paga membresía y licencia de App", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                                Text("El socio abona ambas cuotas", color = TextGray, fontSize = 11.sp)
+                                            }
+                                        }
+
+                                        // Modalidad 2
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().clickable { selectedModel = "member_gym_only" }.padding(6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            RadioButton(selected = selectedModel == "member_gym_only", onClick = { selectedModel = "member_gym_only" })
+                                            Spacer(Modifier.width(8.dp))
+                                            Column {
+                                                Text("El alumno paga solo membresía del gimnasio", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                                Text("El socio abona sólo la cuota del gym", color = TextGray, fontSize = 11.sp)
+                                            }
+                                        }
+
+                                        // Modalidad 3
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().clickable { selectedModel = "admin" }.padding(6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            RadioButton(selected = selectedModel == "admin", onClick = { selectedModel = "admin" })
+                                            Spacer(Modifier.width(8.dp))
+                                            Column {
+                                                Text("El gimnasio paga la licencia de la app", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                                Text("El admin abona la cuota mensual de la plataforma", color = TextGray, fontSize = 11.sp)
+                                            }
+                                        }
+
+                                        HorizontalDivider(color = Color.White.copy(alpha = 0.12f), modifier = Modifier.padding(vertical = 4.dp))
+                                        Text("Alias / CBU del Gimnasio (para transferencias):", color = accentColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        OutlinedTextField(
+                                            value = tempAlias,
+                                            onValueChange = { tempAlias = it },
+                                            placeholder = { Text("Ej: gimnasio.mp o CBU...", color = TextGray, fontSize = 13.sp) },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            singleLine = true,
+                                            colors = OutlinedTextFieldDefaults.colors(
+                                                focusedBorderColor = accentColor,
+                                                unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                                                focusedTextColor = TextWhite,
+                                                unfocusedTextColor = TextWhite
+                                            ),
+                                            shape = RoundedCornerShape(12.dp)
+                                        )
+                                    }
+                                },
+                                confirmButton = {
+                                    Button(
+                                        onClick = {
+                                            scope.launch {
+                                                dataStoreManager.setLicenseModelPayer(selectedModel)
+                                                dataStoreManager.setUserBankAccount(tempAlias.trim())
+                                                attendanceRepository?.syncGymInfo(licenseModelPayer = selectedModel, bankAccount = tempAlias.trim())
+                                                showLicenseDialog = false
+                                                Toast.makeText(context, "Modelo y Alias guardados", Toast.LENGTH_SHORT).show()
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text("GUARDAR", color = Color.Black, fontWeight = FontWeight.Bold)
+                                    }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { showLicenseDialog = false }) {
+                                        Text("CANCELAR", color = TextWhite.copy(alpha = 0.7f))
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
 

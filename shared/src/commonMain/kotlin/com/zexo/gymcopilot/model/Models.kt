@@ -117,6 +117,33 @@ data class PaymentRecord(
 )
 
 @Serializable
+data class LicenseTransaction(
+    val id: String = "",
+    val gymName: String = "",
+    val memberEmail: String = "",
+    val operationType: String = "LICENSE",
+    val paymentModality: String = "admin",
+    val amount: Double = 0.0,
+    val currency: String = "ARS",
+    val operationId: String = "",
+    val subscriptionId: String = "",
+    val status: String = "PENDING",
+    val operationDate: Long = 0L
+)
+
+@Serializable
+data class CancellationRecord(
+    val id: String = "",
+    val gymName: String = "",
+    val memberEmail: String = "",
+    val reason: String = "",
+    val observation: String = "",
+    val subscriptionId: String = "",
+    val status: String = "CANCELLED",
+    val timestamp: Long = 0L
+)
+
+@Serializable
 data class Product(
     val id: String,
     val name: String,

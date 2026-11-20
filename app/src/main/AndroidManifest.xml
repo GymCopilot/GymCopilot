@@ -12,6 +12,20 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
+    <!-- Declaración de visibilidad de paquetes para Android 11+ (Mercado Pago / Mercado Libre) -->
+    <queries>
+        <package android:name="com.mercadopago.wallet" />
+        <package android:name="com.mercadolibre" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" android:host="www.mercadopago.com.ar" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="mercadopago" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"

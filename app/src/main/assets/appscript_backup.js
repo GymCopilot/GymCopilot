@@ -11,12 +11,83 @@ function authorizeAndSetup() {
     var folderName = "GymCopilot_Databases";
     var folders = DriveApp.getFoldersByName(folderName);
     var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+
+    // Forzar la solicitud del permiso script.external_request para UrlFetchApp (Mercado Pago)
+    try {
+      UrlFetchApp.fetch("https://www.google.com");
+    } catch (eFetch) {}
+
     Logger.log("Permisos otorgados con éxito. Carpeta ID: " + folder.getId());
-    return "Permisos de DriveApp y SpreadsheetApp autorizados correctamente.";
+    return "Permisos de DriveApp, SpreadsheetApp y UrlFetchApp autorizados correctamente.";
   } catch (err) {
     Logger.log("Error al autorizar: " + err.toString());
     throw err;
   }
+}
+
+function testReadPrices() {
+  var testGymId = "gym_79";
+  var masterSS = getMasterSS();
+  var gymRegSheet = masterSS.getSheetByName("GymsRegistry");
+  if (gymRegSheet) {
+    var dataRange = gymRegSheet.getDataRange().getValues();
+    Logger.log("Filas encontradas en GymsRegistry: " + dataRange.length);
+    if (dataRange.length > 1) {
+      Logger.log("Fila 2 (Valores por defecto): Admin = " + dataRange[1][4] + " | Alumno = " + dataRange[1][5]);
+    }
+    for (var r = 2; r < dataRange.length; r++) {
+      if (String(dataRange[r][0]).toLowerCase().trim() === testGymId) {
+        Logger.log("Gimnasio " + testGymId + " en Fila " + (r + 1) + ": Admin = " + dataRange[r][4] + " | Alumno = " + dataRange[r][5]);
+      }
+    }
+  }
+}
+
+function testCreateMpPreference() {
+  var testData = {
+    action: "create_mp_preference",
+    gymId: "gym_79",
+    memberEmail: "cliente@gymcopilot.com",
+    planId: "plan_1",
+    amount: 1500,
+    operationType: "MEMBERSHIP",
+    paymentModality: "member_gym_only"
+  };
+  var result = processAction("create_mp_preference", testData, null);
+  Logger.log("Resultado create_mp_preference: " + result.getContent());
+}
+
+function testMercadoPagoAPI() {
+  var accessToken = PropertiesService.getScriptProperties().getProperty("MP_ACCESS_TOKEN") || "";
+  Logger.log("Token configurado: " + accessToken);
+
+  var payload = {
+    "items": [
+      {
+        "title": "Prueba Licencia GymCopilot",
+        "quantity": 1,
+        "unit_price": 1500.0,
+        "currency_id": "ARS"
+      }
+    ],
+    "payer": {
+      "email": "cliente@gymcopilot.com"
+    }
+  };
+
+  var options = {
+    "method": "post",
+    "contentType": "application/json",
+    "headers": {
+      "Authorization": "Bearer " + accessToken
+    },
+    "payload": JSON.stringify(payload),
+    "muteHttpExceptions": true
+  };
+
+  var response = UrlFetchApp.fetch("https://api.mercadopago.com/checkout/preferences", options);
+  Logger.log("Código HTTP Mercado Pago: " + response.getResponseCode());
+  Logger.log("Respuesta Mercado Pago: " + response.getContentText());
 }
 
 function testCreateGym() {
@@ -142,6 +213,168 @@ function doPost(e) {
 function processAction(action, data, e) {
   var ss = getSS(e);
 
+  if (action === "create_mp_preference") {
+    var operationType = data.operationType || "MEMBERSHIP";
+    var gymId = String(data.gymId || "").trim().toLowerCase();
+    var gymName = String(data.gymName || data.gym || "GymCopilot").trim();
+    var title = data.title || data.planName || (operationType === "LICENSE" ? "Licencia Mensual GymCopilot" : "Cuota Membresía - " + gymName);
+
+    // Leer valores dinámicamente desde la planilla maestra GymCopilot_Master_DB (hoja GymsRegistry)
+    var precioLicenciaAdmin = 80000.0;
+    var precioMantenimientoApp = 1500.0;
+
+    try {
+      var masterSS = getMasterSS();
+      if (masterSS) {
+        var gymRegSheet = masterSS.getSheetByName("GymsRegistry");
+        if (gymRegSheet) {
+          var dataRange = gymRegSheet.getDataRange().getValues();
+          if (dataRange.length > 0) {
+            var headers = dataRange[0].map(function(h) { return String(h || "").trim().toUpperCase(); });
+            var colAdminIdx = -1;
+            var colAppIdx = -1;
+            var colGymIdIdx = 0;
+
+            for (var c = 0; c < headers.length; c++) {
+              var h = headers[c];
+              if (h.indexOf("ADMIN") !== -1 || h.indexOf("LICENCIA ADMIN") !== -1 || h.indexOf("VALOR DE LICENCIA ADMIN") !== -1) {
+                colAdminIdx = c;
+              }
+              if (h.indexOf("ALUMNO") !== -1 || h.indexOf("APP") !== -1 || h.indexOf("MANTENIMIENTO") !== -1 || h.indexOf("VALOR DE LICENCIA ALUMNO") !== -1) {
+                colAppIdx = c;
+              }
+            }
+
+            // 1. Leer valores por defecto de la Fila 2 (índice 1) si existen
+            if (dataRange.length > 1) {
+              if (colAdminIdx !== -1 && dataRange[1][colAdminIdx] !== "" && dataRange[1][colAdminIdx] !== null) {
+                var defAdmin = Number(dataRange[1][colAdminIdx]);
+                if (!isNaN(defAdmin) && defAdmin > 0) precioLicenciaAdmin = defAdmin;
+              }
+              if (colAppIdx !== -1 && dataRange[1][colAppIdx] !== "" && dataRange[1][colAppIdx] !== null) {
+                var defApp = Number(dataRange[1][colAppIdx]);
+                if (!isNaN(defApp) && defApp > 0) precioMantenimientoApp = defApp;
+              }
+            }
+
+            // 2. Buscar si el gimnasio específico tiene un valor personalizado en su fila
+            for (var r = 2; r < dataRange.length; r++) {
+              var rGymId = String(dataRange[r][colGymIdIdx] || "").trim().toLowerCase();
+              if (gymId && rGymId === gymId) {
+                if (colAdminIdx !== -1 && dataRange[r][colAdminIdx] !== "" && dataRange[r][colAdminIdx] !== null) {
+                  var valAdmin = Number(dataRange[r][colAdminIdx]);
+                  if (!isNaN(valAdmin) && valAdmin > 0) precioLicenciaAdmin = valAdmin;
+                }
+                if (colAppIdx !== -1 && dataRange[r][colAppIdx] !== "" && dataRange[r][colAppIdx] !== null) {
+                  var valApp = Number(dataRange[r][colAppIdx]);
+                  if (!isNaN(valApp) && valApp > 0) precioMantenimientoApp = valApp;
+                }
+                break;
+              }
+            }
+          }
+        }
+      }
+    } catch (eMaster) {}
+
+    var amount = Number(data.amount) || precioMantenimientoApp;
+    if (operationType === "LICENSE") {
+      amount = precioLicenciaAdmin;
+      title = "Licencia Mensual Plataforma GymCopilot";
+    } else if (operationType === "MEMBERSHIP") {
+      title = "Cuota Membresía - " + gymName;
+    }
+
+    var memberEmail = String(data.memberEmail || data.email || "").trim();
+    if (!memberEmail || memberEmail.indexOf("@") === -1) {
+      memberEmail = "cliente@gymcopilot.com";
+    }
+
+    if (isNaN(amount) || amount <= 0) {
+      amount = 1500.0;
+    }
+
+    var accessToken = PropertiesService.getScriptProperties().getProperty("MP_ACCESS_TOKEN") || "";
+
+    if (!accessToken || accessToken === "TUS_CREDENCIALES_AQUÍ") {
+      var mockInitPoint = "https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=TEST-" + Math.floor(Math.random() * 1000000000);
+      return createJsonResponse({
+        "status": "success",
+        "init_point": mockInitPoint,
+        "message": "Preferencia de prueba creada (Token MP no configurado en backend)"
+      });
+    }
+
+    try {
+      var isSubscription = String(data.isSubscription || "").toLowerCase() === "true" || operationType === "LICENSE" || operationType === "MEMBERSHIP";
+
+      var payload = {
+        "items": [
+          {
+            "title": title,
+            "quantity": 1,
+            "unit_price": amount,
+            "currency_id": "ARS"
+          }
+        ],
+        "payer": {
+          "email": memberEmail
+        },
+        "back_urls": {
+          "success": "https://www.mercadopago.com.ar",
+          "failure": "https://www.mercadopago.com.ar",
+          "pending": "https://www.mercadopago.com.ar"
+        },
+        "auto_return": "approved"
+      };
+
+      if (isSubscription) {
+        payload.auto_recurring = {
+          "frequency": 1,
+          "frequency_type": "months",
+          "transaction_amount": amount,
+          "currency_id": "ARS"
+        };
+      }
+
+      var options = {
+        "method": "post",
+        "contentType": "application/json",
+        "headers": {
+          "Authorization": "Bearer " + accessToken
+        },
+        "payload": JSON.stringify(payload),
+        "muteHttpExceptions": true
+      };
+
+      var response = UrlFetchApp.fetch("https://api.mercadopago.com/checkout/preferences", options);
+      var jsonRes = JSON.parse(response.getContentText());
+
+      var preferenceUrl = jsonRes.init_point || jsonRes.sandbox_init_point || "";
+
+      if (preferenceUrl) {
+        return createJsonResponse({
+          "status": "success",
+          "init_point": preferenceUrl,
+          "sandbox_init_point": jsonRes.sandbox_init_point || "",
+          "preference_id": jsonRes.id || ""
+        });
+      } else {
+        throw new Error(JSON.stringify(jsonRes));
+      }
+    } catch (err) {
+      return createJsonResponse({
+        "status": "error",
+        "message": "Error al conectar con Mercado Pago: " + err.toString()
+      });
+    }
+  }
+
+  if (action === "mp_webhook") {
+    Logger.log("Webhook de Mercado Pago recibido: " + JSON.stringify(data));
+    return createJsonResponse({ "status": "approved" });
+  }
+
   if (isMasterSS(ss) && action !== "create_gym" && action !== "reset_gym" && action !== "clear_gym_data") {
     cleanMasterSS(ss);
     return createJsonResponse({ "status": "error", "message": "Operación no permitida en GymCopilot_Master_DB." });
@@ -182,6 +415,8 @@ function processAction(action, data, e) {
     var newButtonBgColor = (data.buttonBackgroundColor !== undefined && data.buttonBackgroundColor !== null && data.buttonBackgroundColor !== "") ? data.buttonBackgroundColor : (existingRow[18] !== undefined ? existingRow[18] : "");
     var newBottomNavBgColor = (data.bottomNavBackgroundColor !== undefined && data.bottomNavBackgroundColor !== null && data.bottomNavBackgroundColor !== "") ? data.bottomNavBackgroundColor : (existingRow[19] !== undefined ? existingRow[19] : "");
     var newPdfTemplate = (data.pdfTemplate !== undefined && data.pdfTemplate !== null && data.pdfTemplate !== "") ? data.pdfTemplate : (existingRow[20] !== undefined ? existingRow[20] : "Clásica");
+    var newBankAccount = (data.bankAccount !== undefined && data.bankAccount !== null) ? data.bankAccount : (existingRow[21] !== undefined ? existingRow[21] : "");
+    var newLicenseModel = (data.licenseModelPayer !== undefined && data.licenseModelPayer !== null && data.licenseModelPayer !== "") ? data.licenseModelPayer : (existingRow[22] !== undefined ? existingRow[22] : "admin");
 
     updateRow(sheet, "GYM_CONFIG", 0, [
       "GYM_CONFIG",
@@ -205,6 +440,8 @@ function processAction(action, data, e) {
       newButtonBgColor,
       newBottomNavBgColor,
       newPdfTemplate,
+      newBankAccount,
+      newLicenseModel,
       new Date()
     ]);
     return createJsonResponse({ "status": "success" });
@@ -968,42 +1205,13 @@ function fixRoutineSheetStructure(sheet) {
 }
 
 function fixConfigSheetStructure(sheet) {
-  var expectedHeaders = ["ID", "Nombre", "Logo", "Telefono", "Direccion", "Ciudad", "CP", "Pais", "Color", "BgColor", "ButtonStyle", "MostrarBordeLogo", "ClaseActiva", "Mensaje", "GimnasioAbierto", "WifiSSID1", "WifiSSID2", "WifiSSID3", "ButtonBgColor", "BottomNavBgColor", "PdfTemplate", "Actualizado"];
+  var expectedHeaders = ["ID", "Nombre", "Logo", "Telefono", "Direccion", "Ciudad", "CP", "Pais", "Color", "BgColor", "ButtonStyle", "MostrarBordeLogo", "ClaseActiva", "Mensaje", "GimnasioAbierto", "WifiSSID1", "WifiSSID2", "WifiSSID3", "ButtonBgColor", "BottomNavBgColor", "PdfTemplate", "BankAccount", "LicenseModelPayer", "Actualizado"];
 
   var lastCol = sheet.getLastColumn();
-  if (lastCol > 0) {
-    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-    var hasPdfTemplate = false;
-    for (var i = 0; i < headers.length; i++) {
-      if (String(headers[i]).trim() === "PdfTemplate") {
-        hasPdfTemplate = true;
-        break;
-      }
-    }
-
-    if (!hasPdfTemplate) {
-      var actualizadoIdx = -1;
-      for (var i = 0; i < headers.length; i++) {
-        if (String(headers[i]).trim().toLowerCase() === "actualizado") {
-          actualizadoIdx = i + 1;
-          break;
-        }
-      }
-
-      if (actualizadoIdx !== -1) {
-        sheet.insertColumnBefore(actualizadoIdx);
-        sheet.getRange(1, actualizadoIdx).setValue("PdfTemplate");
-        var lastRow = sheet.getLastRow();
-        if (lastRow > 1) {
-          sheet.getRange(2, actualizadoIdx, lastRow - 1, 1).setValue("Clásica");
-        }
-        SpreadsheetApp.flush();
-      } else {
-        sheet.getRange(1, 1, 1, expectedHeaders.length).setValues([expectedHeaders]);
-      }
-    }
-  } else {
+  var headers = lastCol > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
+  if (lastCol < expectedHeaders.length || String(headers[21] || "").trim() !== "BankAccount") {
     sheet.getRange(1, 1, 1, expectedHeaders.length).setValues([expectedHeaders]);
+    SpreadsheetApp.flush();
   }
 
   var values = sheet.getDataRange().getValues();

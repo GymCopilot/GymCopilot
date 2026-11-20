@@ -4,6 +4,7 @@ import android.util.Log
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.zexo.gymcopilot.DataStoreManager
+import com.zexo.gymcopilot.LockConfig
 import com.zexo.gymcopilot.model.*
 import com.zexo.gymcopilot.network.*
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
@@ -622,7 +623,9 @@ class AttendanceRepository(
         gymIsOpen: Boolean? = null,
         pdfTemplate: String? = null,
         slogan: String? = null,
-        instagram: String? = null
+        instagram: String? = null,
+        bankAccount: String? = null,
+        licenseModelPayer: String? = null
     ): Result<Unit> {
         return try {
             if (logoUri != null) lastLocalLogoUpdateTimestamp = System.currentTimeMillis()
@@ -655,6 +658,8 @@ class AttendanceRepository(
             val finalClass = classInSession ?: dataStoreManager.getClassInSessionManual().first()
             val finalGymOpen = gymIsOpen ?: dataStoreManager.getGymIsOpen().first()
             val finalPdfTemplate = pdfTemplate ?: dataStoreManager.getRoutinePdfTemplate().first()
+            val finalBankAccount = bankAccount ?: dataStoreManager.getUserBankAccount().first()
+            val finalLicenseModel = licenseModelPayer ?: dataStoreManager.getLicenseModelPayer().first()
             
             val ssid1 = dataStoreManager.getGymWifiSsid().first()
             val ssid2 = dataStoreManager.getGymWifiSsid2().first()
@@ -686,6 +691,8 @@ class AttendanceRepository(
                 wifiSsid2 = ssid2,
                 wifiSsid3 = ssid3,
                 pdfTemplate = finalPdfTemplate,
+                bankAccount = finalBankAccount,
+                licenseModelPayer = finalLicenseModel,
                 gymId = gymId,
                 email = userEmail,
                 spreadsheetId = ssId
@@ -700,10 +707,12 @@ class AttendanceRepository(
             val encMsg = java.net.URLEncoder.encode(finalMessage, "UTF-8")
             val encEmail = java.net.URLEncoder.encode(userEmail, "UTF-8")
             val encPdfTemplate = URLEncoder.encode(finalPdfTemplate, "UTF-8")
+            val encBankAccount = URLEncoder.encode(finalBankAccount, "UTF-8")
+            val encLicenseModel = URLEncoder.encode(finalLicenseModel, "UTF-8")
 
             val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
             val paramChar = if (gymUrl.contains("?")) "&" else "?"
-            val requestUrl = "$gymUrl${paramChar}action=update_gym_info&gymId=$gymId&email=$encEmail&name=$encName&phone=$encPhone&address=$encAddress&city=$encCity&zip=$encZip&country=$encCountry&accentColor=$finalColor&backgroundColor=$finalBgColor&buttonBackgroundColor=$finalButtonBgColor&bottomNavBackgroundColor=$finalBottomNavBgColor&buttonStyle=$finalStyle&showLogoBorder=$finalShowBorder&classInSession=$finalClass&broadcastMessage=$encMsg&gymIsOpen=$finalGymOpen&pdfTemplate=$encPdfTemplate$ssParam"
+            val requestUrl = "$gymUrl${paramChar}action=update_gym_info&gymId=$gymId&email=$encEmail&name=$encName&phone=$encPhone&address=$encAddress&city=$encCity&zip=$encZip&country=$encCountry&accentColor=$finalColor&backgroundColor=$finalBgColor&buttonBackgroundColor=$finalButtonBgColor&bottomNavBackgroundColor=$finalBottomNavBgColor&buttonStyle=$finalStyle&showLogoBorder=$finalShowBorder&classInSession=$finalClass&broadcastMessage=$encMsg&gymIsOpen=$finalGymOpen&pdfTemplate=$encPdfTemplate&bankAccount=$encBankAccount&licenseModelPayer=$encLicenseModel$ssParam"
 
             try {
                 val responseText = GymKtorApiClient.postData(requestUrl, request)
@@ -843,6 +852,18 @@ class AttendanceRepository(
             val validTemplates = listOf("Clásica", "Moderna", "Minimalista", "Ejecutiva", "Profesional")
             if (!remotePdfTemplate.isBlank() && remotePdfTemplate != "null" && remotePdfTemplate in validTemplates) {
                 dataStoreManager.setRoutinePdfTemplate(remotePdfTemplate)
+            }
+
+            val isDateString = { s: String -> s.matches(Regex("""\d{4}-\d{2}-\d{2}T.*""")) || (s.contains("T") && s.contains("Z")) }
+
+            val remoteBankAccount = if (configRow!!.size() > 21) configRow!![21].asString else ""
+            if (!remoteBankAccount.isBlank() && remoteBankAccount != "null" && !isDateString(remoteBankAccount)) {
+                dataStoreManager.setUserBankAccount(remoteBankAccount)
+            }
+
+            val remoteLicenseModel = if (configRow!!.size() > 22) configRow!![22].asString else ""
+            if (!remoteLicenseModel.isBlank() && remoteLicenseModel != "null" && !isDateString(remoteLicenseModel)) {
+                dataStoreManager.setLicenseModelPayer(remoteLicenseModel)
             }
             
             val colorInt = colorStr.toIntOrNull()
@@ -1463,6 +1484,98 @@ class AttendanceRepository(
         }
         if (remoteProducts.isNotEmpty()) {
             dataStoreManager.saveAllProducts(remoteProducts)
+        }
+    }
+
+    suspend fun createMercadoPagoPreference(
+        gymId: String,
+        gymName: String,
+        memberEmail: String,
+        planId: String,
+        amount: Double,
+        operationType: String,
+        paymentModality: String,
+        isSubscription: Boolean = true
+    ): Result<String> {
+        return try {
+            val gymUrl = LockConfig.activeApiUrl
+            val ssId = dataStoreManager.getGymSpreadsheetId().first()
+
+            val encGymId = URLEncoder.encode(gymId, "UTF-8")
+            val encGymName = URLEncoder.encode(gymName, "UTF-8")
+            val encEmail = URLEncoder.encode(memberEmail, "UTF-8")
+            val encPlanId = URLEncoder.encode(planId, "UTF-8")
+            val encOpType = URLEncoder.encode(operationType, "UTF-8")
+            val encMod = URLEncoder.encode(paymentModality, "UTF-8")
+            val encSsId = URLEncoder.encode(ssId, "UTF-8")
+
+            val paramChar = if (gymUrl.contains("?")) "&" else "?"
+            val requestUrl = "$gymUrl${paramChar}action=create_mp_preference&gymId=$encGymId&gymName=$encGymName&memberEmail=$encEmail&planId=$encPlanId&amount=$amount&operationType=$encOpType&paymentModality=$encMod&spreadsheetId=$encSsId&isSubscription=$isSubscription"
+            
+            val apiServiceGet = NetworkModule.getApiServiceForGet(gymUrl)
+            val response = apiServiceGet.getConfigRaw(requestUrl, null)
+            val responseText = if (response.isSuccessful) {
+                response.body()?.toString() ?: ""
+            } else {
+                "Error HTTP ${response.code()}"
+            }
+
+            val initPoint = try {
+                val regex = Regex("\"init_point\"\\s*:\\s*\"([^\"]+)\"")
+                regex.find(responseText)?.groupValues?.get(1) ?: ""
+            } catch (e: Exception) { "" }
+
+            if (initPoint.isNotBlank()) {
+                Result.success(initPoint)
+            } else {
+                Result.failure(Exception("Respuesta inválida del servidor: $responseText"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun createMercadoPagoSubscription(
+        gymId: String,
+        memberEmail: String,
+        planId: String,
+        amount: Double,
+        frequencyDays: Int,
+        operationType: String,
+        paymentModality: String
+    ): Result<String> {
+        return try {
+            val gymUrl = dataStoreManager.getGymApiUrl().first()
+            if (gymUrl.isBlank()) return Result.failure(Exception("URL no configurada"))
+            val ssId = dataStoreManager.getGymSpreadsheetId().first()
+            val request = mapOf(
+                "action" to "create_mp_subscription",
+                "gymId" to gymId,
+                "memberEmail" to memberEmail,
+                "planId" to planId,
+                "amount" to amount,
+                "frequencyDays" to frequencyDays,
+                "operationType" to operationType,
+                "paymentModality" to paymentModality,
+                "spreadsheetId" to ssId,
+                "timestamp" to System.currentTimeMillis()
+            )
+            val paramChar = if (gymUrl.contains("?")) "&" else "?"
+            val requestUrl = "$gymUrl${paramChar}action=create_mp_subscription"
+            val responseText = GymKtorApiClient.postData(requestUrl, request)
+
+            val initPoint = try {
+                val regex = Regex("\"init_point\"\\s*:\\s*\"([^\"]+)\"")
+                regex.find(responseText)?.groupValues?.get(1) ?: ""
+            } catch (e: Exception) { "" }
+
+            if (initPoint.isNotBlank()) {
+                Result.success(initPoint)
+            } else {
+                Result.failure(Exception("No se pudo obtener el link de suscripción de Mercado Pago: $responseText"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 

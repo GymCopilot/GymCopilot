@@ -44,6 +44,12 @@ actual fun isIOSDevice(): Boolean {
 
 actual fun isWebTarget(): Boolean = true
 
+actual fun openExternalUrl(url: String) {
+    try {
+        window.open(url, "_blank")
+    } catch (_: Throwable) {}
+}
+
 actual fun updateWebPageBranding(gymName: String, gymLogoUri: String?) {
     try {
         val cleanName = if (gymName.isNotBlank() && gymName != "Gym 19" && gymName != "Nombre del Gimnasio") gymName else "GymCopilot"

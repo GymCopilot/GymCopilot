@@ -2,9 +2,11 @@ package com.zexo.gymcopilot.ui.screens
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -19,6 +21,7 @@ import androidx.camera.core.CameraControl
 import androidx.camera.core.CameraSelector
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -73,8 +76,10 @@ import com.google.zxing.common.HybridBinarizer
 import com.google.zxing.qrcode.QRCodeWriter
 import com.zexo.gymcopilot.R
 import com.zexo.gymcopilot.DataStoreManager
+import com.zexo.gymcopilot.LockConfig
 import com.zexo.gymcopilot.Member
 import com.zexo.gymcopilot.Professor
+import com.zexo.gymcopilot.model.PaymentRecord
 import com.zexo.gymcopilot.network.NetworkModule
 import com.zexo.gymcopilot.repository.AttendanceRepository
 import com.zexo.gymcopilot.repository.ScheduleRepository
@@ -85,7 +90,9 @@ import com.zexo.gymcopilot.ui.theme.TextGray
 import com.zexo.gymcopilot.ui.theme.TextWhite
 import com.zexo.gymcopilot.ui.theme.getButtonStyleShape
 import com.zexo.gymcopilot.ui.theme.getGymFontFamily
+import com.zexo.gymcopilot.utils.SecurityUtils
 import com.zexo.gymcopilot.utils.ShortcutUtils
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -93,7 +100,10 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.net.URLEncoder
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -138,6 +148,9 @@ fun AdminDashboardScreen(
     val dashboardTourProfessorsDismissed by dataStoreManager.getDashboardTourProfessorsDismissed().collectAsState(initial = false)
     val dashboardTourMembersNavDismissed by dataStoreManager.getDashboardTourMembersNavDismissed().collectAsState(initial = false)
     val dashboardTourStoreNavDismissed by dataStoreManager.getDashboardTourStoreNavDismissed().collectAsState(initial = false)
+
+    val licenseModelPayer by dataStoreManager.getLicenseModelPayer().collectAsState(initial = "admin")
+    val showAdminMpButton = LockConfig.MP_ENABLED
 
     val copiFontFamily = remember { FontFamily(Font(R.font.copi)) }
     var showWelcomeBubble by remember { mutableStateOf(false) }
@@ -833,7 +846,12 @@ fun AdminDashboardScreen(
                                     permissionLauncher.launch(Manifest.permission.CAMERA)
                                 }
                             }
-                        ), accentColor, containerShape)
+                        ), accentColor, containerShape, showAdminMpButton, licenseModelPayer, paymentRecords, members, dataStoreManager, gymName, gymApiUrl, attendanceRepository, coroutineScope) { newModel ->
+                            coroutineScope.launch {
+                                dataStoreManager.setLicenseModelPayer(newModel)
+                                Toast.makeText(context, "Modelo actualizado: $newModel", Toast.LENGTH_SHORT).show()
+                            }
+                        }
 
                         // --- TOUR COPI: PLANES (OVERLAY FLOTANTE) ---
                         Box(
@@ -2289,7 +2307,47 @@ fun OccupancyCard(label: String, accentColor: Color, shape: Shape) {
 }
 
 @Composable
-fun MetricsGridSection(metrics: List<MetricData>, accentColor: Color, shape: Shape) {
+fun MetricsGridSection(
+    metrics: List<MetricData>,
+    accentColor: Color,
+    shape: Shape,
+    showMpButton: Boolean,
+    licenseModelPayer: String,
+    paymentRecords: List<PaymentRecord> = emptyList(),
+    members: List<Member> = emptyList(),
+    dataStoreManager: DataStoreManager,
+    gymName: String,
+    gymApiUrl: String,
+    attendanceRepository: AttendanceRepository? = null,
+    coroutineScope: CoroutineScope,
+    onModelChange: (String) -> Unit
+) {
+    val context = LocalContext.current
+    var showModelDialog by remember { mutableStateOf(false) }
+    var showPaymentsDialog by remember { mutableStateOf(false) }
+
+    val isLockedStored by dataStoreManager.isLicenseModelLocked().collectAsState(initial = false)
+    val isLocked = if (LockConfig.LICENSE_MODEL_LOCK_ENABLED == 0) false else isLockedStored
+    var unlockInputText by remember { mutableStateOf("") }
+    var selectedOption by remember(licenseModelPayer) { mutableStateOf(licenseModelPayer) }
+    val userBankAccount by dataStoreManager.getUserBankAccount().collectAsState(initial = "")
+    var tempAlias by remember(userBankAccount) { mutableStateOf(userBankAccount) }
+
+    val modelTitle = "Licencia"
+    val modelSub = when (licenseModelPayer) {
+        "admin" -> "Gimnasio Paga"
+        "member_all" -> "Socio Paga Todo"
+        "member_gym_only" -> "Sólo Gimnasio"
+        else -> "Gimnasio Paga"
+    }
+
+    val mpSub = when (licenseModelPayer) {
+        "admin" -> "Licencia app"
+        "member_gym_only" -> "Licencia app"
+        "member_all" -> "Membresía"
+        else -> "Licencia app"
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         for (i in metrics.indices step 2) {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -2297,51 +2355,413 @@ fun MetricsGridSection(metrics: List<MetricData>, accentColor: Color, shape: Sha
                 if (i + 1 < metrics.size) SmallMetricCard(metrics[i + 1], Modifier.weight(1f), accentColor, shape)
                 else Spacer(Modifier.weight(1f))
             }
-            if (i == 0 || i == 4) {
+            if (i == 0) {
+                // BOTÓN 1 (con función de Licencia) y BOTÓN 2 (con función de Pagos) siempre lado a lado
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SmallMetricCard(
+                        data = MetricData(
+                            label = modelSub,
+                            value = modelTitle,
+                            icon = Icons.Default.Settings,
+                            color = accentColor
+                        ) { showModelDialog = true },
+                        modifier = Modifier.weight(1f),
+                        accentColor = accentColor,
+                        shape = shape
+                    )
+
+                    SmallMetricCard(
+                        data = MetricData(
+                            label = mpSub,
+                            value = "PAGOS",
+                            icon = Icons.Default.Payment,
+                            color = Color(0xFF009EE3)
+                        ) {
+                            if (licenseModelPayer == "admin") {
+                                coroutineScope.launch {
+                                    val gymNameVal = gymName.ifBlank { "Gym_Copilot" }
+                                    val gymId = gymNameVal.lowercase().replace(Regex("[^a-z0-9]"), "_")
+                                    val repo = attendanceRepository ?: AttendanceRepository(NetworkModule.getApiService(gymApiUrl), dataStoreManager)
+                                    val result = repo.createMercadoPagoPreference(
+                                        gymId = gymId,
+                                        gymName = gymNameVal,
+                                        memberEmail = dataStoreManager.getUserEmail().first(),
+                                        planId = "gym_license",
+                                        amount = 80000.0,
+                                        operationType = "LICENSE",
+                                        paymentModality = licenseModelPayer
+                                    )
+                                    if (result.isSuccess && (result.getOrNull() ?: "").isNotBlank()) {
+                                        SecurityUtils.openMercadoPagoUrl(context, result.getOrNull()!!)
+                                    } else {
+                                        val err = result.exceptionOrNull()?.message ?: "Error al generar cobro"
+                                        Toast.makeText(context, err, Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            } else {
+                                showPaymentsDialog = true
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        accentColor = accentColor,
+                        shape = shape
+                    )
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp, color = Color.White.copy(alpha = 0.12f))
+
+                if (showPaymentsDialog) {
+                    PaymentsListDialog(
+                        onDismiss = { showPaymentsDialog = false },
+                        paymentRecords = paymentRecords,
+                        members = members,
+                        accentColor = accentColor,
+                        shape = shape
+                    )
+                }
+
+                if (showModelDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showModelDialog = false },
+                        containerColor = Color(0xFF081C24),
+                        shape = RoundedCornerShape(20.dp),
+                        title = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = if (isLocked) Icons.Default.Lock else Icons.Default.Settings,
+                                    contentDescription = null,
+                                    tint = if (isLocked) Color(0xFFFFC107) else accentColor,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Text("Modelo de Licenciamiento", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            }
+                        },
+                        text = {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                if (isLocked) {
+                                    Text(
+                                        text = "Para cambiar el modelo de licenciamiento ingresa la clave de soporte GymCopilot.",
+                                        color = TextGray,
+                                        fontSize = 13.sp,
+                                        lineHeight = 16.sp
+                                    )
+
+                                    Spacer(Modifier.height(4.dp))
+
+                                    Button(
+                                        onClick = {
+                                            val gymNameVal = gymName.ifBlank { "mi gimnasio" }
+                                            val message = "Hola GymCopilot, solicito la clave para cambiar el modelo de licenciamiento de mi gimnasio: $gymNameVal"
+                                            val encodedMsg = URLEncoder.encode(message, "UTF-8")
+                                            val waUrl = "https://api.whatsapp.com/send?phone=542266486794&text=$encodedMsg"
+                                            try {
+                                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(waUrl))
+                                                context.startActivity(intent)
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, "No se pudo abrir WhatsApp", Toast.LENGTH_SHORT).show()
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                                            Image(
+                                                painter = painterResource(id = R.drawable.whatsapp),
+                                                contentDescription = "WhatsApp",
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text("PEDIR CLAVE POR WHATSAPP", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                        }
+                                    }
+
+                                    Spacer(Modifier.height(4.dp))
+
+                                    OutlinedTextField(
+                                        value = unlockInputText,
+                                        onValueChange = { unlockInputText = it },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        placeholder = { Text("Clave de desbloqueo...", color = TextGray, fontSize = 14.sp) },
+                                        singleLine = true,
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = accentColor,
+                                            unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                                            focusedTextColor = TextWhite,
+                                            unfocusedTextColor = TextWhite
+                                        ),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                } else {
+                                    Text("Elige quién financia la plataforma GymCopilot:", color = TextGray, fontSize = 13.sp)
+                                    Spacer(Modifier.height(4.dp))
+
+                                    // Modalidad 1
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().clickable {
+                                            selectedOption = "member_all"
+                                        }.padding(6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        RadioButton(selected = selectedOption == "member_all", onClick = { selectedOption = "member_all" })
+                                        Spacer(Modifier.width(8.dp))
+                                        Column {
+                                            Text("El alumno paga membresía y licencia de App", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                            Text("El socio abona ambas cuotas", color = TextGray, fontSize = 11.sp)
+                                        }
+                                    }
+
+                                    // Modalidad 2
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().clickable {
+                                            selectedOption = "member_gym_only"
+                                        }.padding(6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        RadioButton(selected = selectedOption == "member_gym_only", onClick = { selectedOption = "member_gym_only" })
+                                        Spacer(Modifier.width(8.dp))
+                                        Column {
+                                            Text("El alumno paga solo membresía (Licencia App abonada)", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                            Text("Pago de app por Mercado Pago/Suscripción y membresía en efectivo al gimnasio", color = TextGray, fontSize = 11.sp)
+                                        }
+                                    }
+
+                                    // Modalidad 3
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().clickable {
+                                            selectedOption = "admin"
+                                        }.padding(6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        RadioButton(selected = selectedOption == "admin", onClick = { selectedOption = "admin" })
+                                        Spacer(Modifier.width(8.dp))
+                                        Column {
+                                            Text("El gimnasio paga la licencia de la app", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                            Text("El admin abona la cuota mensual de la plataforma", color = TextGray, fontSize = 11.sp)
+                                        }
+                                    }
+
+                                    HorizontalDivider(color = Color.White.copy(alpha = 0.12f), modifier = Modifier.padding(vertical = 4.dp))
+                                    Text("Alias / CBU del Gimnasio (para transferencias):", color = accentColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    OutlinedTextField(
+                                        value = tempAlias,
+                                        onValueChange = { tempAlias = it },
+                                        placeholder = { Text("Ej: gimnasio.mp o CBU...", color = TextGray, fontSize = 13.sp) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        singleLine = true,
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = accentColor,
+                                            unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                                            focusedTextColor = TextWhite,
+                                            unfocusedTextColor = TextWhite
+                                        ),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            if (!isLocked) {
+                                Button(
+                                    onClick = {
+                                        onModelChange(selectedOption)
+                                        coroutineScope.launch {
+                                            dataStoreManager.setUserBankAccount(tempAlias.trim())
+                                            attendanceRepository?.syncGymInfo(licenseModelPayer = selectedOption, bankAccount = tempAlias.trim())
+                                            dataStoreManager.setLicenseModelLocked(true)
+                                        }
+                                        showModelDialog = false
+                                        Toast.makeText(context, "Modelo y Alias guardados y fijados", Toast.LENGTH_SHORT).show()
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00222E)),
+                                    border = BorderStroke(1.5.dp, accentColor),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text("GUARDAR Y FIJAR", color = accentColor, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                }
+                            } else {
+                                Button(
+                                    onClick = {
+                                        val expectedKey = SecurityUtils.generateLicenseDynamicCode()
+                                        if (unlockInputText.trim().lowercase() == expectedKey.lowercase()) {
+                                            coroutineScope.launch {
+                                                dataStoreManager.setLicenseModelLocked(false)
+                                                Toast.makeText(context, "¡Modelo desbloqueado!", Toast.LENGTH_SHORT).show()
+                                            }
+                                        } else {
+                                            Toast.makeText(context, "Clave incorrecta. Solicítala por WhatsApp.", Toast.LENGTH_LONG).show()
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00222E)),
+                                    border = BorderStroke(1.5.dp, accentColor),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text("DESBLOQUEAR", color = accentColor, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                }
+                            }
+                        },
+                        dismissButton = {
+                            if (!isLocked) {
+                                TextButton(onClick = { showModelDialog = false }) {
+                                    Text("CANCELAR", color = TextWhite, fontWeight = FontWeight.Bold)
+                                }
+                            } else {
+                                TextButton(onClick = { showModelDialog = false }) {
+                                    Text("CERRAR", color = TextWhite, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    )
+                }
+            } else if (i == 4) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp, color = Color.White.copy(alpha = 0.12f))
             }
         }
     }
 }
 
-data class MetricData(
-    val label: String, 
-    val value: String, 
-    val icon: androidx.compose.ui.graphics.vector.ImageVector, 
-    val color: Color, 
-    val isSecure: Boolean = false,
-    val isVisible: Boolean = true,
-    val onToggleVisibility: (() -> Unit)? = null,
-    val onClick: (() -> Unit)? = null
-)
-
 @Composable
-fun SmallMetricCard(data: MetricData, modifier: Modifier, accentColor: Color, shape: Shape) {
-    val buttonBgColor = LocalButtonBackgroundColor.current
-    val valColor = if (buttonBgColor.luminance() > 0.5f) Color.Black else TextWhite
-    val lblColor = if (buttonBgColor.luminance() > 0.5f) Color.DarkGray else TextGray
+fun PaymentsListDialog(
+    onDismiss: () -> Unit,
+    paymentRecords: List<PaymentRecord>,
+    members: List<Member>,
+    accentColor: Color,
+    shape: Shape
+) {
+    var selectedTab by remember { mutableIntStateOf(0) }
 
-    Card(modifier = modifier.border(1.5.dp, accentColor.copy(alpha = 0.4f), shape).clickable(enabled = data.onClick != null) { data.onClick?.invoke() }, shape = shape, colors = CardDefaults.cardColors(containerColor = buttonBgColor)) {
-        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            val contentWeight = if (data.isSecure) 3f else 1f
-            Row(modifier = Modifier.weight(contentWeight), verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(36.dp).background(data.color.copy(alpha = 0.1f), CircleShape), contentAlignment = Alignment.Center) {
-                    Icon(data.icon, null, tint = data.color, modifier = Modifier.size(18.dp))
+    val mpPayments = remember(paymentRecords) {
+        paymentRecords.filter { it.method.contains("Mercado", ignoreCase = true) || it.method.contains("MP", ignoreCase = true) || it.method.contains("Virtual", ignoreCase = true) }
+    }
+    val cashPayments = remember(paymentRecords) {
+        paymentRecords.filter { it.method.contains("Efectivo", ignoreCase = true) || it.method.isBlank() }
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+                .border(1.5.dp, accentColor, shape),
+            shape = shape,
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF00222E))
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Payment, contentDescription = null, tint = accentColor, modifier = Modifier.size(24.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Historial de Pagos", color = TextWhite, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
-                Spacer(modifier = Modifier.width(10.dp))
-                Column {
-                    Text(data.value, color = valColor, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(data.label, color = lblColor, fontSize = 10.sp, lineHeight = 11.sp)
+
+                Spacer(Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(8.dp)).padding(4.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    TabButton("Todos (${paymentRecords.size})", selectedTab == 0, accentColor) { selectedTab = 0 }
+                    TabButton("Mercado Pago (${mpPayments.size})", selectedTab == 1, Color(0xFF009EE3)) { selectedTab = 1 }
+                    TabButton("Efectivo (${cashPayments.size})", selectedTab == 2, Color(0xFF4CAF50)) { selectedTab = 2 }
                 }
-            }
-            if (data.isSecure) {
-                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
-                    IconButton(onClick = { data.onToggleVisibility?.invoke() }, modifier = Modifier.size(32.dp)) {
-                        Icon(imageVector = if (data.isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff, contentDescription = null, tint = TextGray.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
+
+                Spacer(Modifier.height(16.dp))
+
+                val displayList = when (selectedTab) {
+                    1 -> mpPayments
+                    2 -> cashPayments
+                    else -> paymentRecords
+                }.sortedByDescending { it.timestamp }
+
+                if (displayList.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
+                        Text("No hay pagos registrados en este apartado", color = TextGray, fontSize = 13.sp)
                     }
+                } else {
+                    LazyColumn(modifier = Modifier.heightIn(max = 280.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(displayList) { record ->
+                            val memberObj = members.find { it.email.equals(record.memberEmail, ignoreCase = true) }
+                            val memberName = memberObj?.fullName ?: record.memberEmail
+                            val isMp = record.method.contains("Mercado", ignoreCase = true) || record.method.contains("MP", ignoreCase = true)
+                            val badgeColor = if (isMp) Color(0xFF009EE3) else Color(0xFF4CAF50)
+                            val sdf = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
+                            val dateStr = remember(record.timestamp) { if (record.timestamp > 0) sdf.format(
+                                Date(record.timestamp)
+                            ) else "Fecha N/A" }
+
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.03f)),
+                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(memberName, color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                        Text("Plan: ${record.planName} • $dateStr", color = TextGray, fontSize = 11.sp)
+                                    }
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text("$${record.amount}", color = accentColor, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                                        Surface(
+                                            color = badgeColor.copy(alpha = 0.15f),
+                                            shape = RoundedCornerShape(4.dp),
+                                            border = BorderStroke(1.dp, badgeColor)
+                                        ) {
+                                            Text(
+                                                text = if (isMp) "Mercado Pago" else "Efectivo",
+                                                color = badgeColor,
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                Button(
+                    onClick = onDismiss,
+                    colors = ButtonDefaults.buttonColors(containerColor = LocalButtonBackgroundColor.current),
+                    shape = shape,
+                    modifier = Modifier.fillMaxWidth().border(1.dp, accentColor, shape)
+                ) {
+                    val contentColor = if (LocalButtonBackgroundColor.current.luminance() > 0.5f) Color.Black else Color.White
+                    Text("CERRAR", color = contentColor, fontWeight = FontWeight.Bold)
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun TabButton(label: String, isSelected: Boolean, accentColor: Color, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(if (isSelected) accentColor.copy(alpha = 0.2f) else Color.Transparent)
+            .border(if (isSelected) 1.dp else 0.dp, if (isSelected) accentColor else Color.Transparent, RoundedCornerShape(6.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            color = if (isSelected) TextWhite else TextGray,
+            fontSize = 11.sp,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+        )
     }
 }
 

@@ -145,6 +145,8 @@ data class GymSyncRequest(
     val wifiSsid2: String? = null,
     val wifiSsid3: String? = null,
     val pdfTemplate: String? = null,
+    val bankAccount: String? = null,
+    val licenseModelPayer: String? = null,
     val gymId: String? = null,
     val email: String? = null,
     val timestamp: Long = System.currentTimeMillis(),

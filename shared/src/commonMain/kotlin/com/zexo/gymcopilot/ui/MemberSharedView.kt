@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.shared.network.CheckInRequest
@@ -38,7 +39,10 @@ import com.zexo.gymcopilot.utils.getCurrentTimeMillis
 import com.zexo.gymcopilot.utils.generateQrBitmap
 import com.zexo.gymcopilot.utils.launchQrScanner
 import com.zexo.gymcopilot.utils.readLocalMemberProfile
+import com.zexo.gymcopilot.utils.readLocalStorageFlag
+import com.zexo.gymcopilot.utils.openExternalUrl
 import com.zexo.gymcopilot.utils.saveLocalMemberProfile
+import com.zexo.gymcopilot.utils.saveLocalStorageFlag
 import com.zexo.gymcopilot.utils.updateWebPageBranding
 import gymcopilot.shared.generated.resources.*
 import kotlinx.coroutines.launch
@@ -82,6 +86,54 @@ fun MemberDashboardSharedScreen(
     var activeNextRenewalDate by remember { mutableLongStateOf(0L) }
     var activePlanName by remember { mutableStateOf("No asignado") }
     var activeAssignedTrainer by remember { mutableStateOf("") }
+
+    var licenseModelPayer by remember { mutableStateOf(readLocalStorageFlag("license_model_payer") ?: "admin") }
+    var userBankAccount by remember { mutableStateOf(readLocalStorageFlag("bank_account") ?: "") }
+    var showBankTransferDialog by remember { mutableStateOf(false) }
+    var showPayUrlDialog by remember { mutableStateOf(false) }
+    var payUrlToDisplay by remember { mutableStateOf("") }
+
+    val onPayClickAction: () -> Unit = {
+        if (licenseModelPayer == "admin" || licenseModelPayer == "member_gym_only") {
+            showBankTransferDialog = true
+        } else {
+            coroutineScope.launch {
+                try {
+                    val gymIdVal = activeGymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+                    val localProfile = readLocalMemberProfile()
+                    val ssId = localProfile?.spreadsheetId.orEmpty()
+                    val paramChar = if (activeGymUrl.contains("?")) "&" else "?"
+                    val amount = 1500.0
+
+                    val reqUrl = "$activeGymUrl${paramChar}action=create_mp_preference&gymId=$gymIdVal&gymName=${activeGymName}&memberEmail=$activeEmail&planId=$activePlanName&amount=$amount&operationType=MEMBERSHIP&paymentModality=$licenseModelPayer&spreadsheetId=$ssId&isSubscription=true"
+                    val requestBody = mapOf(
+                        "action" to "create_mp_preference",
+                        "gymId" to gymIdVal,
+                        "gymName" to activeGymName,
+                        "memberEmail" to activeEmail,
+                        "planId" to activePlanName,
+                        "amount" to amount,
+                        "operationType" to "MEMBERSHIP",
+                        "paymentModality" to licenseModelPayer,
+                        "spreadsheetId" to ssId,
+                        "isSubscription" to true
+                    )
+                    val responseText = apiClient.postData(reqUrl, requestBody)
+                    val regex = Regex("\"init_point\"\\s*:\\s*\"([^\"]+)\"")
+                    val initPoint = regex.find(responseText)?.groupValues?.get(1) ?: ""
+                    if (initPoint.isNotBlank()) {
+                        payUrlToDisplay = initPoint
+                        showPayUrlDialog = true
+                    } else {
+                        openExternalUrl("https://www.mercadopago.com.ar")
+                    }
+                } catch (e: Throwable) {
+                    openExternalUrl("https://www.mercadopago.com.ar")
+                }
+            }
+        }
+        Unit
+    }
 
     // CARGA PERSISTENTE DESDE LOCALSTORAGE EN WEB / DISPOSITIVO
     LaunchedEffect(Unit) {
@@ -213,6 +265,22 @@ fun MemberDashboardSharedScreen(
                                         val rawOpen = row[14].jsonPrimitive.content
                                         if (rawOpen != "null") {
                                             gymIsOpen = rawOpen == "true" || rawOpen == "1"
+                                        }
+                                    }
+                                    if (row.size > 21) {
+                                        val rawBank = row[21].jsonPrimitive.content
+                                        val isIsoDate = rawBank.matches(Regex("""\d{4}-\d{2}-\d{2}T.*""")) || (rawBank.contains("T") && rawBank.contains("Z"))
+                                        if (rawBank.isNotBlank() && rawBank != "null" && !isIsoDate) {
+                                            userBankAccount = rawBank
+                                            saveLocalStorageFlag("bank_account", rawBank)
+                                        }
+                                    }
+                                    if (row.size > 22) {
+                                        val rawLicense = row[22].jsonPrimitive.content
+                                        val isIsoDate = rawLicense.matches(Regex("""\d{4}-\d{2}-\d{2}T.*""")) || (rawLicense.contains("T") && rawLicense.contains("Z"))
+                                        if (rawLicense.isNotBlank() && rawLicense != "null" && !isIsoDate) {
+                                            licenseModelPayer = rawLicense
+                                            saveLocalStorageFlag("license_model_payer", rawLicense)
                                         }
                                     }
                                     break
@@ -495,7 +563,8 @@ fun MemberDashboardSharedScreen(
                     SharedMembershipStatusCard(
                         membershipStatus = activeMembershipStatus,
                         nextRenewalDate = activeNextRenewalDate,
-                        planName = activePlanName
+                        planName = activePlanName,
+                        onPayClick = onPayClickAction
                     )
                 }
             }
@@ -918,7 +987,8 @@ fun StatusChip(text: String, color: Color, modifier: Modifier = Modifier) {
 fun SharedMembershipStatusCard(
     membershipStatus: String,
     nextRenewalDate: Long,
-    planName: String
+    planName: String,
+    onPayClick: () -> Unit = {}
 ) {
     val isActivo = membershipStatus.uppercase() == "ACTIVO" || membershipStatus.uppercase() == "ACTIVE"
     val statusText = if (isActivo) "Activo" else "Pendiente de pago"
@@ -1006,6 +1076,34 @@ fun SharedMembershipStatusCard(
                         tint = Color.Black,
                         modifier = Modifier.size(20.dp)
                     )
+                }
+            }
+        }
+
+        HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 20.dp))
+        Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
+            Card(
+                modifier = Modifier
+                    .width(165.dp)
+                    .border(1.5.dp, PrimaryTurquoise.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                    .clickable {
+                        openExternalUrl("https://www.mercadopago.com.ar")
+                    },
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF00222E))
+            ) {
+                Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier.size(36.dp).background(Color(0xFF009EE3).copy(alpha = 0.1f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Payment, contentDescription = null, tint = Color(0xFF009EE3), modifier = Modifier.size(18.dp))
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text("PAGOS", color = TextWhite, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("Membresía", color = TextGray, fontSize = 10.sp, lineHeight = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                 }
             }
         }

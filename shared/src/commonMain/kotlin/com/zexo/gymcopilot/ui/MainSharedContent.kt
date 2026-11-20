@@ -581,8 +581,11 @@ fun MainAppView(
 
     Scaffold(
         topBar = {
-            if (!isWeb) {
-                Column {
+            Column {
+                if (LockConfig.APP_ENVIRONMENT == 0 && isWeb) {
+                    LockConfigBanner()
+                }
+                if (!isWeb) {
                     HeaderBar(
                         gymName = gymName,
                         userRole = userRole,

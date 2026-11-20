@@ -278,6 +278,24 @@ fun RealAdminDashboardView(
                                 showMonthlyIncome = !showMonthlyIncome
                             }
                         }
+
+                        if (LockConfig.isMpButtonVisibleForAdmin) {
+                            Button(
+                                onClick = { },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF009EE3)),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth().height(48.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(Icons.Default.Payment, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("RENOVAR LICENCIA GYMCOPILOT (MERCADO PAGO)", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                }
+                            }
+                        }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             RealGridButton("${membersList.size}", "TOTAL", painterResource(Res.drawable.ic_clients), PrimaryTurquoise, Modifier.weight(1f)) { onTabSelected(2) }
                             RealGridButton("${professorsList.size}", "PROFESORES", painterResource(Res.drawable.ic_professors), Color(0xFFFFC107), Modifier.weight(1f)) { onTabSelected(3) }

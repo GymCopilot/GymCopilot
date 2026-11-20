@@ -11,7 +11,7 @@ object LockConfig {
      * 0: Desactivado.
      * 1: Activado.
      */
-    const val ANDROID_ROLE_LOCK_ENABLED = 1
+    const val ANDROID_ROLE_LOCK_ENABLED = 0
 
     /**
      * Bloqueo / Visibilidad de perfiles específico para la App Web.
@@ -28,14 +28,36 @@ object LockConfig {
     const val WEB_IOS_ONLY_ENABLED = 0
 
     /**
+     * Modelo de cobro de licencia de GymCopilot.
+     * "admin"  : El gimnasio (Admin) paga la cuota de la plataforma (botón visible en Admin debajo de "Ingresos").
+     * "member" : Los alumnos pagan la cuota de la app (botón visible en tarjeta "Estado de Membresía" del alumno).
+     */
+    const val LICENSE_MODEL_PAYER = "admin"
+
+    /**
+     * Control de bloqueo del modelo de licenciamiento para pruebas de desarrollo.
+     * 0: Desactivado el bloqueo / Desbloqueado (permite cambiar modalidades libremente para pruebas).
+     * 1: Activado el bloqueo (fijación permanente activa, requiere clave dinámica para cambiar).
+     */
+    const val LICENSE_MODEL_LOCK_ENABLED = 0
+
+    const val MP_ENABLED = true
+
+    val isMpButtonVisibleForAdmin: Boolean
+        get() = MP_ENABLED && LICENSE_MODEL_PAYER == "admin"
+
+    val isMpButtonVisibleForMember: Boolean
+        get() = MP_ENABLED && LICENSE_MODEL_PAYER == "member"
+
+    /**
      * Define el entorno operativo de la aplicación.
      * 0: Entorno de Pruebas (Staging).
      * 1: Entorno de Trabajo (Producción).
      */
-    const val APP_ENVIRONMENT = 1
+    const val APP_ENVIRONMENT = 0
 
-    const val TEST_API_URL = "https://script.google.com/macros/s/AKfycby-9R6nd1UHfFSJF1h5uPIluuvJpXXVc89zVzloRVw-VBuWRZBEgBfGQxXAO6ldhH6T/exec"
-    const val PRODUCTION_API_URL = "https://script.google.com/macros/s/AKfycbyn85W_HL8njFGFxhQJQM7yh-nxDuFef8aBYqWDNd48bzIcT_FGyZSHye2b9W5ui7HW/exec"
+    const val TEST_API_URL = "https://script.google.com/macros/s/AKfycby0ZiLLxVDG5IQvlVne8eyp7DyOwBDIdmSL4Zt8zQtWtVoQl_JLE0G7fdWrHAXT5t2y/exec"
+    const val PRODUCTION_API_URL = "https://script.google.com/macros/s/AKfycbyz74p36j9wu0c8R4Qzs0sxYuFPfN68lboA0K-2Cvzhvnt8pQ394diablRYw4B-TPs0/exec"
 
     /**
      * Devuelve la URL activa según el entorno configurado (0 = Pruebas, 1 = Trabajo).

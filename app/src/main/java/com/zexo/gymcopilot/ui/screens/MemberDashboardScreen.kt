@@ -1,7 +1,10 @@
 package com.zexo.gymcopilot.ui.screens
 
+import android.content.Intent
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.util.Base64
+import android.widget.Toast
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -22,12 +25,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -36,6 +42,7 @@ import coil.compose.AsyncImage
 import com.google.gson.JsonArray
 import com.zexo.gymcopilot.R
 import com.zexo.gymcopilot.DataStoreManager
+import com.zexo.gymcopilot.LockConfig
 import com.zexo.gymcopilot.network.NetworkModule
 import com.zexo.gymcopilot.repository.AttendanceRepository
 import com.zexo.gymcopilot.ui.theme.PrimaryTurquoise
@@ -44,6 +51,7 @@ import com.zexo.gymcopilot.ui.theme.TextWhite
 import com.zexo.gymcopilot.ui.theme.LocalButtonBackgroundColor
 import com.zexo.gymcopilot.ui.theme.getButtonStyleShape
 import com.zexo.gymcopilot.ui.theme.getGymFontFamily
+import com.zexo.gymcopilot.utils.SecurityUtils
 import com.zexo.gymcopilot.utils.ShortcutUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -54,6 +62,7 @@ import java.util.Locale
 import java.util.Calendar
 import java.text.SimpleDateFormat
 import org.json.JSONObject
+import java.net.URLEncoder
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -116,6 +125,12 @@ fun MemberDashboardScreen(
     val buttonStyle by dataStoreManager.getButtonStyle().collectAsState(initial = 1)
     val containerShape = getButtonStyleShape(buttonStyle)
 
+    var showPayUrlDialog by remember { mutableStateOf(false) }
+    var payUrlToDisplay by remember { mutableStateOf("") }
+    var showBankTransferDialog by remember { mutableStateOf(false) }
+    val userBankAccount by dataStoreManager.getUserBankAccount().collectAsState(initial = "")
+    val clipboardManager = LocalClipboardManager.current
+
     val shortcutCreated by dataStoreManager.isShortcutCreated().collectAsState(initial = false)
     val lastShortcutName by dataStoreManager.getLastShortcutName().collectAsState(initial = "")
     val lastShortcutLogoUri by dataStoreManager.getLastShortcutLogoUri().collectAsState(initial = "")
@@ -139,6 +154,7 @@ fun MemberDashboardScreen(
     }
 
     val gymApiUrl by dataStoreManager.getGymApiUrl().collectAsState(initial = "")
+    val gymPhone by dataStoreManager.getGymPhone().collectAsState(initial = "")
     val gymIsOpen by dataStoreManager.getGymIsOpen().collectAsState(initial = true)
     val classInSession by dataStoreManager.getClassInSessionManual().collectAsState(initial = false)
     var unreadCount by remember { mutableIntStateOf(0) }
@@ -467,7 +483,45 @@ fun MemberDashboardScreen(
                         planName = activePlanName,
                         daysRemaining = daysRemaining,
                         accentColor = accentColor,
-                        shape = containerShape
+                        shape = containerShape,
+                        onPayClick = {
+                            scope.launch {
+                                val licensePayer = dataStoreManager.getLicenseModelPayer().first()
+                                val gymNameVal = gymName.ifBlank { "Gym_Copilot" }
+
+                                if (licensePayer == "admin" || licensePayer == "member_gym_only") {
+                                    showBankTransferDialog = true
+                                } else {
+                                    val gymId = gymNameVal.lowercase().replace(Regex("[^a-z0-9]"), "_")
+                                    val activeMemberEmail = currentMember?.email ?: dataStoreManager.getUserEmail().first()
+                                    val activePlanId = currentMember?.planId ?: ""
+                                    val activePlanPrice = plans.find { it.id == activePlanId || it.name.equals(currentMember?.planType, ignoreCase = true) }?.price ?: 0.0
+
+                                    val repo = repository ?: AttendanceRepository(NetworkModule.getApiService(gymApiUrl), dataStoreManager)
+                                    val result = repo.createMercadoPagoPreference(
+                                        gymId = gymId,
+                                        gymName = gymNameVal,
+                                        memberEmail = activeMemberEmail,
+                                        planId = activePlanId,
+                                        amount = activePlanPrice,
+                                        operationType = "MEMBERSHIP",
+                                        paymentModality = licensePayer,
+                                        isSubscription = true
+                                    )
+
+                                    if (result.isSuccess && (result.getOrNull() ?: "").isNotBlank()) {
+                                        val url = result.getOrNull()!!
+                                        clipboardManager.setText(AnnotatedString(url))
+                                        payUrlToDisplay = url
+                                        showPayUrlDialog = true
+                                        Toast.makeText(context, "¡Link copiado al portapapeles!", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        val err = result.exceptionOrNull()?.message ?: "Error al generar cobro"
+                                        Toast.makeText(context, err, Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            }
+                        }
                     )
                 }
             }
@@ -548,6 +602,178 @@ fun MemberDashboardScreen(
                 shape = containerShape
             )
         }
+
+        if (showBankTransferDialog) {
+            val activePlanPrice = plans.find { it.id == (currentMember?.planId ?: "") || it.name.equals(currentMember?.planType, ignoreCase = true) }?.price ?: 0.0
+            AlertDialog(
+                onDismissRequest = { showBankTransferDialog = false },
+                containerColor = Color(0xFF081C24),
+                shape = RoundedCornerShape(20.dp),
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.AccountBalance,
+                            contentDescription = null,
+                            tint = accentColor,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text("Pago por Transferencia - $gymName", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    }
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(
+                            "El gimnasio administra su propia licencia. Realiza la transferencia de tu cuota ($activePlanPrice) directamente a la cuenta del establecimiento:\n\n💡 Al presionar 'Abrir Mercado Pago', el Alias se copiará automáticamente y Mercado Pago detectará tu transferencia al abrirse.",
+                            color = TextWhite.copy(alpha = 0.85f),
+                            fontSize = 13.sp
+                        )
+                        
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF111926))
+                                .padding(16.dp)
+                        ) {
+                            Column {
+                                Text("Alias / Cuenta Bancaria:", color = accentColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = userBankAccount.ifBlank { "El gimnasio aún no ha configurado su Alias / CBU." },
+                                    color = TextWhite,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        if (userBankAccount.isNotBlank()) {
+                            Button(
+                                onClick = {
+                                    clipboardManager.setText(AnnotatedString(userBankAccount))
+                                    Toast.makeText(context, "¡Alias copiado al portapapeles!", Toast.LENGTH_SHORT).show()
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Black)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Copiar Alias", color = Color.Black, fontWeight = FontWeight.Bold)
+                            }
+
+                            Button(
+                                onClick = {
+                                    clipboardManager.setText(AnnotatedString(userBankAccount))
+                                    Toast.makeText(context, "¡Alias copiado! Toca 'Transferir' en Mercado Pago.", Toast.LENGTH_LONG).show()
+                                    val launchIntent = context.packageManager.getLaunchIntentForPackage("com.mercadopago.wallet")
+                                    if (launchIntent != null) {
+                                        launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        context.startActivity(launchIntent)
+                                    } else {
+                                        try {
+                                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.mercadopago.com.ar")))
+                                        } catch (_: Exception) {}
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF009EE3)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                @Suppress("DEPRECATION")
+                                Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.White)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Abrir Mercado Pago", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+
+                            if (gymPhone.isNotBlank()) {
+                                OutlinedButton(
+                                    onClick = {
+                                        val msg = "Hola $gymName, acabo de realizar la transferencia de mi cuota ($activePlanPrice) al Alias $userBankAccount."
+                                        val encodedMsg = URLEncoder.encode(msg, "UTF-8")
+                                        val waUrl = "https://api.whatsapp.com/send?phone=$gymPhone&text=$encodedMsg"
+                                        try {
+                                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(waUrl)))
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "No se pudo abrir WhatsApp", Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    border = BorderStroke(1.dp, Color(0xFF25D366)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Image(painter = painterResource(id = R.drawable.whatsapp), contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Enviar Comprobante por WhatsApp", color = Color(0xFF25D366), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showBankTransferDialog = false }) {
+                        Text("Cerrar", color = accentColor, fontWeight = FontWeight.Bold)
+                    }
+                }
+            )
+        }
+
+        if (showPayUrlDialog) {
+            AlertDialog(
+                onDismissRequest = { showPayUrlDialog = false },
+                containerColor = Color(0xFF081C24),
+                shape = RoundedCornerShape(20.dp),
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Payment, contentDescription = null, tint = accentColor, modifier = Modifier.size(24.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text("Link de Pago Mercado Pago", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    }
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Copia el link de pago para probar en modo incógnito o abrirlo:", color = TextGray, fontSize = 13.sp)
+                        OutlinedTextField(
+                            value = payUrlToDisplay,
+                            onValueChange = {},
+                            readOnly = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = accentColor,
+                                unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                                focusedTextColor = TextWhite,
+                                unfocusedTextColor = TextWhite
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            SecurityUtils.openMercadoPagoUrl(context, payUrlToDisplay)
+                            showPayUrlDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00222E)),
+                        border = BorderStroke(1.5.dp, accentColor),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("IR A PAGAR", color = accentColor, fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    Button(
+                        onClick = {
+                            clipboardManager.setText(AnnotatedString(payUrlToDisplay))
+                            Toast.makeText(context, "Link copiado al portapapeles", Toast.LENGTH_SHORT).show()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00222E)),
+                        border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.3f)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("COPIAR LINK", color = TextWhite, fontWeight = FontWeight.Bold)
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -587,8 +813,10 @@ fun MembershipStatusCard(
     planName: String,
     daysRemaining: Long?,
     accentColor: Color,
-    shape: androidx.compose.ui.graphics.Shape
+    shape: Shape,
+    onPayClick: (() -> Unit)? = null
 ) {
+    val context = LocalContext.current
     val isVigente = status.equals("Vigente", ignoreCase = true) || status.equals("Activo", ignoreCase = true) || status.equals("ACTIVO", ignoreCase = true) || status.equals("ACTIVE", ignoreCase = true) || status.equals("ACTIVA", ignoreCase = true)
     val statusText = if (isVigente) "Activo" else "Pendiente de pago"
     val statusColor = if (isVigente) Color(0xFF00C853) else Color(0xFFFF3D00)
@@ -674,6 +902,27 @@ fun MembershipStatusCard(
                     )
                 }
             }
+        }
+
+        HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 20.dp))
+        Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
+            SmallMetricCard(
+                data = MetricData(
+                    label = "Membresía",
+                    value = "PAGOS",
+                    icon = Icons.Default.Payment,
+                    color = Color(0xFF009EE3)
+                ) {
+                    if (onPayClick != null) {
+                        onPayClick()
+                    } else {
+                        SecurityUtils.openMercadoPagoUrl(context, "https://www.mercadopago.com.ar")
+                    }
+                },
+                modifier = Modifier.width(165.dp),
+                accentColor = accentColor,
+                shape = RoundedCornerShape(12.dp)
+            )
         }
     }
 }

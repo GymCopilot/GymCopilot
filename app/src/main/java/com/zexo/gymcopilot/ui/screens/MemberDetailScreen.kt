@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -47,6 +48,7 @@ import com.zexo.gymcopilot.ui.theme.PrimaryTurquoise
 import com.zexo.gymcopilot.ui.theme.TextGray
 import com.zexo.gymcopilot.ui.theme.TextWhite
 import com.zexo.gymcopilot.ui.theme.getButtonStyleShape
+import com.zexo.gymcopilot.utils.SecurityUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
@@ -72,6 +74,7 @@ fun MemberDetailScreen(
     attendanceRepository: com.zexo.gymcopilot.repository.AttendanceRepository? = null
 ) {
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     val dataStoreManager = remember { DataStoreManager(context) }
     val coroutineScope = rememberCoroutineScope()
     
