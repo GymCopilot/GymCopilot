@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>GymCopilot - Sistema de Gestión de Gimnasios</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GymCopilot">
+    <meta name="mobile-web-app-capable" content="yes">
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #00151C;
+            overflow: hidden;
+            position: fixed;
+            touch-action: none;
+        }
+        #ComposeTarget {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <input type="file" id="gym_copilot_image_input" accept="image/*" style="display:none">
+    <canvas id="ComposeTarget"></canvas>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('./sw.js').catch(function() {});
+            });
+        }
+
+        function invokeKotlinCb(cb, arg) {
+            if (!cb) return;
+            try {
+                if (typeof cb === 'function') {
+                    cb(arg);
+                } else if (cb && typeof cb.invoke === 'function') {
+                    cb.invoke(arg);
+                } else if (cb && typeof cb.invoke_0 === 'function') {
+                    cb.invoke_0(arg);
+                }
+            } catch (e) {
+                console.error("Kotlin callback error:", e);
+            }
+        }
+
+        window.gymCopilotImageCallback = null;
+        document.getElementById('gym_copilot_image_input').addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (file) {
+                var reader = new FileReader();
+                reader.onload = function(evt) {
+                    if (window.gymCopilotImageCallback) {
+                        invokeKotlinCb(window.gymCopilotImageCallback, evt.target.result);
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        window.openGymCopilotFilePicker = function(callback) {
+            window.gymCopilotImageCallback = callback;
+            var input = document.getElementById('gym_copilot_image_input');
+            if (input) {
+                input.value = '';
+                input.click();
+            }
+        };
+
+        window.launchGymCopilotScannerKotlin = function(kotlinCallback) {
+            window.openGymCopilotQrScanner(function(code) {
+                invokeKotlinCb(kotlinCallback, code);
+            });
+        };
+
+        window.openGymCopilotQrScanner = function(callback) {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                var oldOverlay = document.getElementById('qr_camera_overlay');
+                if (oldOverlay && oldOverlay.parentNode) oldOverlay.parentNode.removeChild(oldOverlay);
+
+                var overlay = document.createElement('div');
+                overlay.id = 'qr_camera_overlay';
+                overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,15,22,0.96);z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:sans-serif;color:white;';
+
+                var title = document.createElement('div');
+                title.style.cssText = 'font-size:18px;font-weight:bold;color:#00e5ff;margin-bottom:16px;text-align:center;padding:0 16px;';
+                title.innerText = 'Escaneando Código QR con Cámara';
+
+                var videoContainer = document.createElement('div');
+                videoContainer.style.cssText = 'position:relative;width:280px;height:280px;border-radius:20px;overflow:hidden;border:3px solid #00e5ff;box-shadow:0 0 24px rgba(0,229,255,0.5);background:#000;';
+
+                var video = document.createElement('video');
+                video.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+                video.setAttribute('playsinline', 'true');
+                video.setAttribute('autoplay', 'true');
+
+                videoContainer.appendChild(video);
+
+                var canvasElement = document.createElement('canvas');
+                var canvasContext = canvasElement.getContext('2d', { willReadFrequently: true });
+
+                var hint = document.createElement('div');
+                hint.style.cssText = 'font-size:13px;color:#aaa;margin-top:16px;text-align:center;padding:0 20px;';
+                hint.innerText = 'Apunta la cámara al código QR de asistencia';
+
+                var closeBtn = document.createElement('button');
+                closeBtn.style.cssText = 'margin-top:20px;background:#00e5ff;color:#000;border:none;padding:12px 32px;font-size:14px;font-weight:bold;border-radius:20px;cursor:pointer;';
+                closeBtn.innerText = 'CANCELAR';
+
+                overlay.appendChild(title);
+                overlay.appendChild(videoContainer);
+                overlay.appendChild(hint);
+                overlay.appendChild(closeBtn);
+                document.body.appendChild(overlay);
+
+                var activeStream = null;
+                var intervalId = null;
+
+                function stopCamera() {
+                    if (intervalId) clearInterval(intervalId);
+                    if (activeStream) {
+                        activeStream.getTracks().forEach(function(track) { track.stop(); });
+                    }
+                    if (overlay && overlay.parentNode) {
+                        overlay.parentNode.removeChild(overlay);
+                    }
+                }
+
+                closeBtn.onclick = function() {
+                    stopCamera();
+                };
+
+                function startScanningStream(stream) {
+                    activeStream = stream;
+                    video.srcObject = stream;
+                    video.play();
+
+                    intervalId = setInterval(function() {
+                        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                            canvasElement.width = video.videoWidth;
+                            canvasElement.height = video.videoHeight;
+                            if (canvasElement.width > 0 && canvasElement.height > 0) {
+                                canvasContext.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+                                var imageData = canvasContext.getImageData(0, 0, canvasElement.width, canvasElement.height);
+
+                                // Try jsQR if loaded
+                                if (typeof jsQR === 'function') {
+                                    var code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+                                    if (code && code.data) {
+                                        stopCamera();
+                                        if (callback) invokeKotlinCb(callback, code.data);
+                                        return;
+                                    }
+                                }
+
+                                // Fallback to BarcodeDetector if available
+                                if ('BarcodeDetector' in window) {
+                                    var detector = new BarcodeDetector({ formats: ['qr_code'] });
+                                    detector.detect(video).then(function(barcodes) {
+                                        if (barcodes.length > 0) {
+                                            var qrText = barcodes[0].rawValue;
+                                            stopCamera();
+                                            if (callback) invokeKotlinCb(callback, qrText);
+                                        }
+                                    }).catch(function() {});
+                                }
+                            }
+                        }
+                    }, 250);
+                }
+
+                function handleCameraError(msg) {
+                    hint.innerText = msg || "Permiso de cámara denegado o no disponible. Habilita el acceso a la cámara en la configuración de tu navegador para escanear.";
+                    hint.style.color = "#ff8a80";
+                }
+
+                function requestCameraPermission() {
+                    var constraintsToTry = [
+                        { video: { facingMode: { ideal: "environment" } } },
+                        { video: { facingMode: "environment" } },
+                        { video: true }
+                    ];
+
+                    function tryConstraints(index) {
+                        if (index >= constraintsToTry.length) {
+                            handleCameraError();
+                            return;
+                        }
+                        navigator.mediaDevices.getUserMedia(constraintsToTry[index])
+                            .then(function(stream) {
+                                hint.innerText = 'Apunta la cámara al código QR de asistencia';
+                                hint.style.color = '#aaa';
+                                startScanningStream(stream);
+                            })
+                            .catch(function(err) {
+                                if (err && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) {
+                                    handleCameraError("Permiso de cámara denegado. Habilita la cámara en la configuración de tu navegador para escanear.");
+                                } else {
+                                    tryConstraints(index + 1);
+                                }
+                            });
+                    }
+
+                    tryConstraints(0);
+                }
+
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    requestCameraPermission();
+                } else {
+                    handleCameraError("Tu navegador no soporta el acceso a la cámara.");
+                }
+            }
+        };
+
+        let deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+        });
+
+        window.addEventListener('appinstalled', (evt) => {
+            deferredPrompt = null;
+            window.location.reload();
+        });
+
+        window.isGymCopilotStandalone = function() {
+            return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        };
+
+        window.isIOSDevice = function() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        };
+
+        window.triggerGymCopilotInstall = function() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                    }
+                    deferredPrompt = null;
+                });
+                return true;
+            } else {
+                alert('Para instalar la aplicación con el logo y nombre de tu gimnasio, abre el menú de tu navegador (tres puntos en Android o botón Compartir en iPhone/Safari) y selecciona "Agregar a la pantalla de inicio" o "Instalar aplicación".');
+                return false;
+            }
+        };
+    </script>
+
+    <script src="skiko.js"></script>
+    <script src="shared.js?v=20261021_v4"></script>
+</body>
+</html>

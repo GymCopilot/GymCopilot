@@ -1,0 +1,1518 @@
+/**
+ * GymCopilot Backend - Gestión de Chats, Horarios, Tienda e Identidad
+ * Versión v5.9.7: Planilla Maestra "GymCopilot_Master_DB" con pestaña exclusiva "GymsRegistry".
+ */
+
+var SS_ID_FROM_APP = '';
+
+function authorizeAndSetup() {
+  try {
+    var masterSS = getMasterSS();
+    var folderName = "GymCopilot_Databases";
+    var folders = DriveApp.getFoldersByName(folderName);
+    var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+
+    // Forzar la solicitud del permiso script.external_request para UrlFetchApp (Mercado Pago)
+    try {
+      UrlFetchApp.fetch("https://www.google.com");
+    } catch (eFetch) {}
+
+    Logger.log("Permisos otorgados con éxito. Carpeta ID: " + folder.getId());
+    return "Permisos de DriveApp, SpreadsheetApp y UrlFetchApp autorizados correctamente.";
+  } catch (err) {
+    Logger.log("Error al autorizar: " + err.toString());
+    throw err;
+  }
+}
+
+function testReadPrices() {
+  var testGymId = "gym_79";
+  var masterSS = getMasterSS();
+  var gymRegSheet = masterSS.getSheetByName("GymsRegistry");
+  if (gymRegSheet) {
+    var dataRange = gymRegSheet.getDataRange().getValues();
+    Logger.log("Filas encontradas en GymsRegistry: " + dataRange.length);
+    if (dataRange.length > 1) {
+      Logger.log("Fila 2 (Valores por defecto): Admin = " + dataRange[1][4] + " | Alumno = " + dataRange[1][5]);
+    }
+    for (var r = 2; r < dataRange.length; r++) {
+      if (String(dataRange[r][0]).toLowerCase().trim() === testGymId) {
+        Logger.log("Gimnasio " + testGymId + " en Fila " + (r + 1) + ": Admin = " + dataRange[r][4] + " | Alumno = " + dataRange[r][5]);
+      }
+    }
+  }
+}
+
+function testCreateMpPreference() {
+  var testData = {
+    action: "create_mp_preference",
+    gymId: "gym_79",
+    memberEmail: "cliente@gymcopilot.com",
+    planId: "plan_1",
+    amount: 1500,
+    operationType: "MEMBERSHIP",
+    paymentModality: "member_gym_only"
+  };
+  var result = processAction("create_mp_preference", testData, null);
+  Logger.log("Resultado create_mp_preference: " + result.getContent());
+}
+
+function testMercadoPagoAPI() {
+  var accessToken = PropertiesService.getScriptProperties().getProperty("MP_ACCESS_TOKEN") || "";
+  Logger.log("Token configurado: " + accessToken);
+
+  var payload = {
+    "items": [
+      {
+        "title": "Prueba Licencia GymCopilot",
+        "quantity": 1,
+        "unit_price": 1500.0,
+        "currency_id": "ARS"
+      }
+    ],
+    "payer": {
+      "email": "cliente@gymcopilot.com"
+    }
+  };
+
+  var options = {
+    "method": "post",
+    "contentType": "application/json",
+    "headers": {
+      "Authorization": "Bearer " + accessToken
+    },
+    "payload": JSON.stringify(payload),
+    "muteHttpExceptions": true
+  };
+
+  var response = UrlFetchApp.fetch("https://api.mercadopago.com/checkout/preferences", options);
+  Logger.log("Código HTTP Mercado Pago: " + response.getResponseCode());
+  Logger.log("Respuesta Mercado Pago: " + response.getContentText());
+}
+
+function testCreateGym() {
+  var testData = {
+    action: "create_gym",
+    gymName: "GimnasioCentral",
+    email: "admin@gymcopilot.com",
+    gymId: "gimnasio_central"
+  };
+  var result = executeCreateGym(testData);
+  Logger.log("Resultado de creación: " + JSON.stringify(result));
+  return result;
+}
+
+function setup() {
+  var ss = getSS();
+  if (isMasterSS(ss)) {
+    cleanMasterSS(ss);
+    return "Planilla maestra 'GymCopilot_Master_DB' configurada (solo GymsRegistry).";
+  }
+  var sheets = ["Asistencia", "Alumnos", "Profesores", "Horarios", "Chats", "Rutinas", "Tienda", "Configuracion", "Planes"];
+  sheets.forEach(function(name) {
+    getOrCreateSheet(ss, name);
+  });
+  return "Hojas inicializadas correctamente.";
+}
+
+function doGet(e) {
+  try {
+    var params = (e && e.parameter) ? e.parameter : {};
+    var action = params.action || "";
+    var topic = params.topic || params.type || "";
+
+    if (action === "mp_webhook" || action === "mercado_pago_webhook" || topic === "payment" || (action && action.indexOf("payment.") === 0)) {
+      return processAction("mp_webhook", params, e);
+    }
+
+    if (action) {
+      return processAction(action, params, e);
+    }
+
+    var ss = getSS(e);
+
+    if (e && e.parameter && e.parameter.action === "setup") {
+      var msg = setup();
+      return createJsonResponse({ "status": "success", "message": msg });
+    }
+
+    if (isMasterSS(ss)) {
+      cleanMasterSS(ss);
+      var regSheet = getOrCreateSheet(ss, "GymsRegistry");
+      return createJsonResponse({ "status": "success", "data": regSheet.getDataRange().getValues() });
+    }
+
+    var type = (e && e.parameter && e.parameter.type) ? e.parameter.type.toLowerCase() : "asistencia";
+
+    if (type === "all") {
+      var result = {
+        "config": getSheetData(ss, "Configuracion", fixConfigSheetStructure),
+        "plans": getSheetData(ss, "Planes"),
+        "members": getSheetData(ss, "Alumnos", fixMemberSheetStructure),
+        "professors": getSheetData(ss, "Profesores", fixProfessorSheetStructure),
+        "schedules": getSheetData(ss, "Horarios", fixScheduleSheetStructure),
+        "routines": getSheetData(ss, "Rutinas", fixRoutineSheetStructure),
+        "store": getSheetData(ss, "Tienda")
+      };
+      return createJsonResponse({ "status": "success", "data": result });
+    }
+
+    var sheetName = getSheetName(type);
+    var sheet = getOrCreateSheet(ss, sheetName);
+
+    if (sheetName === "Chats") fixChatSheetStructure(sheet);
+    if (sheetName === "Rutinas") fixRoutineSheetStructure(sheet);
+    if (sheetName === "Configuracion") fixConfigSheetStructure(sheet);
+    if (sheetName === "Horarios") fixScheduleSheetStructure(sheet);
+    if (sheetName === "Profesores") fixProfessorSheetStructure(sheet);
+    if (sheetName === "Alumnos") fixMemberSheetStructure(sheet);
+
+    var data = sheet.getDataRange().getValues();
+    return createJsonResponse({ "status": "success", "data": data });
+  } catch (err) {
+    return createJsonResponse({ "status": "error", "message": err.toString() });
+  }
+}
+
+function getSheetName(type) {
+  var mapping = {
+    "schedules":  "Horarios",
+    "chats":      "Chats",
+    "members":    "Alumnos",
+    "professors": "Profesores",
+    "store":      "Tienda",
+    "routines":   "Rutinas",
+    "config":     "Configuracion",
+    "plans":      "Planes"
+  };
+  return mapping[type] || "Asistencia";
+}
+
+function doPost(e) {
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+    var data = {};
+    if (e && e.postData && e.postData.contents) {
+      try {
+        data = JSON.parse(e.postData.contents);
+      } catch (errJson) {
+        data = {};
+      }
+    }
+    if (e && e.parameter) {
+      for (var key in e.parameter) {
+        if (e.parameter.hasOwnProperty(key)) {
+          if (!data[key]) data[key] = e.parameter[key];
+        }
+      }
+    }
+
+    var action = data.action || (e && e.parameter ? e.parameter.action : "");
+    var topic = data.topic || data.type || (e && e.parameter ? (e.parameter.topic || e.parameter.type) : "");
+
+    if (action === "mp_webhook" || action === "mercado_pago_webhook" || topic === "payment" || (action && action.indexOf("payment.") === 0)) {
+      return processAction("mp_webhook", data, e);
+    }
+
+    return processAction(action, data, e);
+  } catch(error) {
+    return createJsonResponse({ "status": "error", "message": error.toString() });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function processAction(action, data, e) {
+  var ss = getSS(e);
+
+  if (action === "create_mp_preference") {
+    var operationType = data.operationType || "MEMBERSHIP";
+    var gymId = String(data.gymId || "").trim().toLowerCase();
+    var gymName = String(data.gymName || data.gym || "GymCopilot").trim();
+    var title = data.title || data.planName || (operationType === "LICENSE" ? "Licencia Mensual GymCopilot" : "Cuota Membresía - " + gymName);
+
+    // Leer valores dinámicamente desde la planilla maestra GymCopilot_Master_DB (hoja GymsRegistry)
+    var precioLicenciaAdmin = 80000.0;
+    var precioMantenimientoApp = 1500.0;
+
+    try {
+      var masterSS = getMasterSS();
+      if (masterSS) {
+        var gymRegSheet = masterSS.getSheetByName("GymsRegistry");
+        if (gymRegSheet) {
+          var dataRange = gymRegSheet.getDataRange().getValues();
+          if (dataRange.length > 0) {
+            var headers = dataRange[0].map(function(h) { return String(h || "").trim().toUpperCase(); });
+            var colAdminIdx = -1;
+            var colAppIdx = -1;
+            var colGymIdIdx = 0;
+
+            for (var c = 0; c < headers.length; c++) {
+              var h = headers[c];
+              if (h.indexOf("ADMIN") !== -1 || h.indexOf("LICENCIA ADMIN") !== -1 || h.indexOf("VALOR DE LICENCIA ADMIN") !== -1) {
+                colAdminIdx = c;
+              }
+              if (h.indexOf("ALUMNO") !== -1 || h.indexOf("APP") !== -1 || h.indexOf("MANTENIMIENTO") !== -1 || h.indexOf("VALOR DE LICENCIA ALUMNO") !== -1) {
+                colAppIdx = c;
+              }
+            }
+
+            // 1. Leer valores por defecto de la Fila 2 (índice 1) si existen
+            if (dataRange.length > 1) {
+              if (colAdminIdx !== -1 && dataRange[1][colAdminIdx] !== "" && dataRange[1][colAdminIdx] !== null) {
+                var defAdmin = Number(dataRange[1][colAdminIdx]);
+                if (!isNaN(defAdmin) && defAdmin > 0) precioLicenciaAdmin = defAdmin;
+              }
+              if (colAppIdx !== -1 && dataRange[1][colAppIdx] !== "" && dataRange[1][colAppIdx] !== null) {
+                var defApp = Number(dataRange[1][colAppIdx]);
+                if (!isNaN(defApp) && defApp > 0) precioMantenimientoApp = defApp;
+              }
+            }
+
+            // 2. Buscar si el gimnasio específico tiene un valor personalizado en su fila
+            for (var r = 2; r < dataRange.length; r++) {
+              var rGymId = String(dataRange[r][colGymIdIdx] || "").trim().toLowerCase();
+              if (gymId && rGymId === gymId) {
+                if (colAdminIdx !== -1 && dataRange[r][colAdminIdx] !== "" && dataRange[r][colAdminIdx] !== null) {
+                  var valAdmin = Number(dataRange[r][colAdminIdx]);
+                  if (!isNaN(valAdmin) && valAdmin > 0) precioLicenciaAdmin = valAdmin;
+                }
+                if (colAppIdx !== -1 && dataRange[r][colAppIdx] !== "" && dataRange[r][colAppIdx] !== null) {
+                  var valApp = Number(dataRange[r][colAppIdx]);
+                  if (!isNaN(valApp) && valApp > 0) precioMantenimientoApp = valApp;
+                }
+                break;
+              }
+            }
+          }
+        }
+      }
+    } catch (eMaster) {}
+
+    var paymentModality = String(data.paymentModality || "").trim().toLowerCase();
+    var reqAmount = Number(data.amount) || 0;
+    var amount = reqAmount > 0 ? reqAmount : precioMantenimientoApp;
+
+    if (operationType === "LICENSE") {
+      amount = (paymentModality === "admin") ? precioLicenciaAdmin : precioMantenimientoApp;
+      title = "Licencia app";
+    } else if (operationType === "MEMBERSHIP") {
+      title = "Cuota Membresía - " + gymName;
+    }
+
+    var memberEmail = String(data.memberEmail || data.email || "").trim();
+    if (!memberEmail || memberEmail.indexOf("@") === -1) {
+      memberEmail = "cliente@gymcopilot.com";
+    }
+
+    if (isNaN(amount) || amount <= 0) {
+      amount = 1500.0;
+    }
+
+    var accessToken = PropertiesService.getScriptProperties().getProperty("MP_ACCESS_TOKEN") || "";
+
+    if (!accessToken || accessToken === "TUS_CREDENCIALES_AQUÍ") {
+      var mockInitPoint = "https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=TEST-" + Math.floor(Math.random() * 1000000000);
+      return createJsonResponse({
+        "status": "success",
+        "init_point": mockInitPoint,
+        "message": "Preferencia de prueba creada (Token MP no configurado en backend)"
+      });
+    }
+
+    try {
+      var isSubscription = String(data.isSubscription || "").toLowerCase() === "true" || operationType === "LICENSE" || operationType === "MEMBERSHIP";
+      var webAppUrl = ScriptApp.getService().getUrl() || "";
+
+      var extRefData = {
+        "email": memberEmail,
+        "gymId": gymId,
+        "type": operationType
+      };
+
+      var payload = {
+        "items": [
+          {
+            "title": title,
+            "quantity": 1,
+            "unit_price": amount,
+            "currency_id": "ARS"
+          }
+        ],
+        "payer": {
+          "email": memberEmail
+        },
+        "external_reference": JSON.stringify(extRefData),
+        "back_urls": {
+          "success": "https://www.mercadopago.com.ar",
+          "failure": "https://www.mercadopago.com.ar",
+          "pending": "https://www.mercadopago.com.ar"
+        },
+        "auto_return": "approved"
+      };
+
+      if (webAppUrl) {
+        payload.notification_url = webAppUrl + (webAppUrl.indexOf("?") !== -1 ? "&" : "?") + "action=mp_webhook";
+      }
+
+      if (isSubscription) {
+        payload.auto_recurring = {
+          "frequency": 1,
+          "frequency_type": "months",
+          "transaction_amount": amount,
+          "currency_id": "ARS"
+        };
+      }
+
+      var options = {
+        "method": "post",
+        "contentType": "application/json",
+        "headers": {
+          "Authorization": "Bearer " + accessToken
+        },
+        "payload": JSON.stringify(payload),
+        "muteHttpExceptions": true
+      };
+
+      var response = UrlFetchApp.fetch("https://api.mercadopago.com/checkout/preferences", options);
+      var jsonRes = JSON.parse(response.getContentText());
+
+      var preferenceUrl = jsonRes.init_point || jsonRes.sandbox_init_point || "";
+
+      if (preferenceUrl) {
+        return createJsonResponse({
+          "status": "success",
+          "init_point": preferenceUrl,
+          "sandbox_init_point": jsonRes.sandbox_init_point || "",
+          "preference_id": jsonRes.id || ""
+        });
+      } else {
+        throw new Error(JSON.stringify(jsonRes));
+      }
+    } catch (err) {
+      return createJsonResponse({
+        "status": "error",
+        "message": "Error al conectar con Mercado Pago: " + err.toString()
+      });
+    }
+  }
+
+  if (action === "mp_webhook" || action === "mercado_pago_webhook") {
+    try {
+      var paymentId = data.id || (data.data && data.data.id) || (e && e.parameter && e.parameter.id) || "";
+      if (paymentId) {
+        var accessToken = PropertiesService.getScriptProperties().getProperty("MP_ACCESS_TOKEN") || "";
+        var options = {
+          "method": "get",
+          "headers": { "Authorization": "Bearer " + accessToken },
+          "muteHttpExceptions": true
+        };
+        var payRes = UrlFetchApp.fetch("https://api.mercadopago.com/v1/payments/" + paymentId, options);
+        var payJson = JSON.parse(payRes.getContentText());
+        if (payJson && (payJson.status === "approved" || payJson.status === "authorized")) {
+          var extRefRaw = payJson.external_reference || "";
+          var targetEmail = "";
+          var opType = "";
+          var targetGymId = "";
+
+          try {
+            if (extRefRaw && extRefRaw.indexOf("{") === 0) {
+              var parsedRef = JSON.parse(extRefRaw);
+              targetEmail = String(parsedRef.email || "").trim().toLowerCase();
+              opType = String(parsedRef.type || "").trim().toUpperCase();
+              targetGymId = String(parsedRef.gymId || "").trim().toLowerCase();
+            }
+          } catch (eRef) {}
+
+          if (!targetEmail) {
+            targetEmail = String((payJson.payer && payJson.payer.email) || payJson.email || "").trim().toLowerCase();
+          }
+
+          var description = String(payJson.description || "").toLowerCase();
+          var title = "";
+          if (payJson.additional_info && payJson.additional_info.items && payJson.additional_info.items[0]) {
+            title = String(payJson.additional_info.items[0].title || "").toLowerCase();
+          }
+
+          var isGymLicense = opType === "LICENSE" || title.indexOf("licencia") !== -1 || description.indexOf("licencia") !== -1;
+
+          if (isGymLicense) {
+            try {
+              var targetSS = ss;
+              if (targetGymId) {
+                var foundSS = getSS({ parameter: { gymId: targetGymId } });
+                if (foundSS && !isMasterSS(foundSS)) targetSS = foundSS;
+              }
+
+              // 1. Verificar si targetEmail es un alumno de este gimnasio
+              var membersSheet = getOrCreateSheet(targetSS, "Alumnos");
+              fixMemberSheetStructure(membersSheet);
+              var mValues = membersSheet.getDataRange().getValues();
+              var studentMatched = false;
+              var licenseExpiry = new Date().getTime() + (30 * 24 * 60 * 60 * 1000);
+
+              for (var m = 1; m < mValues.length; m++) {
+                var mEmail = String(mValues[m][2] || "").trim().toLowerCase();
+                if (mEmail && targetEmail && mEmail === targetEmail) {
+                  membersSheet.getRange(m + 1, 15).setValue(licenseExpiry); // Columna O (Licencia_Vence)
+                  studentMatched = true;
+                  break;
+                }
+              }
+
+              // 2. Si no es un alumno específico (o es el admin), actualizar licencia global del gimnasio
+              if (!studentMatched) {
+                var masterSS = getMasterSS();
+                if (masterSS) {
+                  var regSheet = masterSS.getSheetByName("GymsRegistry");
+                  if (regSheet) {
+                    var regValues = regSheet.getDataRange().getValues();
+                    var matched = false;
+                    for (var i = 1; i < regValues.length; i++) {
+                      var rGymId = String(regValues[i][0] || "").toLowerCase().replace(/[^a-z0-9]/g, "_");
+                      var rEmail = String(regValues[i][2] || "").trim().toLowerCase();
+                      if ((rEmail && targetEmail && rEmail === targetEmail) || (rGymId && targetGymId && rGymId === targetGymId)) {
+                        regSheet.getRange(i + 1, 8).setValue("ACTIVO");
+                        regSheet.getRange(i + 1, 9).setValue(licenseExpiry);
+                        matched = true;
+                        var rSpreadsheetId = String(regValues[i][1] || "").trim();
+                        if (rSpreadsheetId) {
+                          try {
+                            var gymSS = SpreadsheetApp.openById(rSpreadsheetId);
+                            if (gymSS && !isMasterSS(gymSS)) {
+                              var configSheet = gymSS.getSheetByName("Configuracion");
+                              if (configSheet) {
+                                fixConfigSheetStructure(configSheet);
+                                var cValues = configSheet.getDataRange().getValues();
+                                if (cValues.length > 1 && String(cValues[1][0]).toUpperCase() === "GYM_CONFIG") {
+                                  var rowData = cValues[1];
+                                  while (rowData.length < 26) { rowData.push(""); }
+                                  rowData[23] = new Date();
+                                  rowData[24] = "ACTIVO";
+                                  rowData[25] = licenseExpiry;
+                                  configSheet.getRange(2, 1, 1, rowData.length).setValues([rowData]);
+                                }
+                              }
+                            }
+                          } catch (eG) {
+                            Logger.log("Error al actualizar config en gymSS: " + eG.toString());
+                          }
+                        }
+                        break;
+                      }
+                    }
+                    if (!matched && regValues.length > 1) {
+                      regSheet.getRange(2, 8).setValue("ACTIVO");
+                      regSheet.getRange(2, 9).setValue(licenseExpiry);
+                    }
+                  }
+                }
+              }
+            } catch (eLic) {
+              Logger.log("Error al actualizar licencia: " + eLic.toString());
+            }
+          } else {
+            var targetSS = ss;
+            if (targetGymId) {
+              var foundSS = getSS({ parameter: { gymId: targetGymId } });
+              if (foundSS && !isMasterSS(foundSS)) targetSS = foundSS;
+            }
+            var membersSheet = getOrCreateSheet(targetSS, "Alumnos");
+            if (membersSheet) {
+              var mValues = membersSheet.getDataRange().getValues();
+              for (var m = 1; m < mValues.length; m++) {
+                var mEmail = String(mValues[m][2] || "").trim().toLowerCase();
+                if (mEmail && targetEmail && mEmail === targetEmail) {
+                  membersSheet.getRange(m + 1, 4).setValue("ACTIVO");
+                  var newRenewal = new Date().getTime() + (30 * 24 * 60 * 60 * 1000);
+                  membersSheet.getRange(m + 1, 11).setValue(newRenewal);
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (eWeb) {
+      Logger.log("Error en mp_webhook: " + eWeb.toString());
+    }
+    return createJsonResponse({ "status": "approved" });
+  }
+
+  if (action === "verify_payment") {
+    var email = String(data.email || (e && e.parameter ? e.parameter.email : "") || "").trim().toLowerCase();
+    var reqGymId = String(data.gymId || (e && e.parameter ? e.parameter.gymId : "") || "").trim().toLowerCase();
+    var foundMember = false;
+    var foundLicense = false;
+    var licenseStatusVal = "INACTIVO";
+
+    if (email) {
+      var membersSheet = getOrCreateSheet(ss, "Alumnos");
+      if (membersSheet) {
+        var mValues = membersSheet.getDataRange().getValues();
+        for (var m = 1; m < mValues.length; m++) {
+          var mEmail = String(mValues[m][2] || "").trim().toLowerCase();
+          if (mEmail === email) {
+            membersSheet.getRange(m + 1, 4).setValue("ACTIVO");
+            var newRenewal = new Date().getTime() + (30 * 24 * 60 * 60 * 1000);
+            membersSheet.getRange(m + 1, 11).setValue(newRenewal);
+            foundMember = true;
+            break;
+          }
+        }
+      }
+    }
+
+    var masterSS = getMasterSS();
+    if (masterSS) {
+      var regSheet = masterSS.getSheetByName("GymsRegistry");
+      if (regSheet) {
+        var regValues = regSheet.getDataRange().getValues();
+        for (var i = 1; i < regValues.length; i++) {
+          var rGymId = String(regValues[i][0] || "").toLowerCase().replace(/[^a-z0-9]/g, "_");
+          var rEmail = String(regValues[i][2] || "").trim().toLowerCase();
+          var rSSID = String(regValues[i][1] || "").trim();
+          var currSSID = ss.getParent().getId();
+          if ((email && rEmail === email) || (reqGymId && rGymId === reqGymId) || (rSSID === currSSID) || regValues.length === 2) {
+            licenseStatusVal = String(regValues[i][7] || "INACTIVO").trim().toUpperCase();
+            if (licenseStatusVal === "ACTIVO") {
+              foundLicense = true;
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    var configSheet = getOrCreateSheet(ss, "Configuracion");
+    fixConfigSheetStructure(configSheet);
+    var cValues = configSheet.getDataRange().getValues();
+    if (cValues.length > 1 && String(cValues[1][0]).toUpperCase() === "GYM_CONFIG") {
+      var rowData = cValues[1];
+      while (rowData.length < 26) { rowData.push(""); }
+      rowData[23] = new Date();
+      rowData[24] = licenseStatusVal;
+      configSheet.getRange(2, 1, 1, rowData.length).setValues([rowData]);
+    }
+
+    var isPaid = (licenseStatusVal === "ACTIVO");
+    return createJsonResponse({
+      "status": "success",
+      "memberPaid": foundMember,
+      "licensePaid": isPaid,
+      "licenseStatus": licenseStatusVal,
+      "message": "Estado verificado: " + licenseStatusVal
+    });
+  }
+
+  if (isMasterSS(ss) && action !== "create_gym" && action !== "reset_gym" && action !== "clear_gym_data") {
+    cleanMasterSS(ss);
+    return createJsonResponse({ "status": "error", "message": "Operación no permitida en GymCopilot_Master_DB." });
+  }
+
+  if (action === "update_gym_info") {
+    var sheet = getOrCreateSheet(ss, "Configuracion");
+    fixConfigSheetStructure(sheet);
+
+    var existingValues = sheet.getDataRange().getValues();
+    var existingRow = (existingValues.length > 1 && String(existingValues[1][0]).toUpperCase() === "GYM_CONFIG") ? existingValues[1] : [];
+
+    var newName = (data.name !== undefined && data.name !== null && data.name !== "") ? data.name : (existingRow[1] || "");
+    var incomingLogo = data.logoUri;
+    var existingLogo = existingRow[2] || "";
+    var newLogo = existingLogo;
+    if (incomingLogo !== undefined && incomingLogo !== null && incomingLogo !== "") {
+      var incStr = String(incomingLogo).trim();
+      if (incStr !== "null" && incStr.indexOf("file://") !== 0 && incStr.indexOf("content://") !== 0) {
+        newLogo = incStr;
+      }
+    }
+    var newPhone = (data.phone !== undefined && data.phone !== null && data.phone !== "") ? data.phone : (existingRow[3] || "");
+    var newAddress = (data.address !== undefined && data.address !== null && data.address !== "") ? data.address : (existingRow[4] || "");
+    var newCity = (data.city !== undefined && data.city !== null && data.city !== "") ? data.city : (existingRow[5] || "");
+    var newZip = (data.zip !== undefined && data.zip !== null && data.zip !== "") ? data.zip : (existingRow[6] || "");
+    var newCountry = (data.country !== undefined && data.country !== null && data.country !== "") ? data.country : (existingRow[7] || "");
+    var newColor = (data.accentColor !== undefined && data.accentColor !== null && data.accentColor !== "") ? data.accentColor : (existingRow[8] !== undefined ? existingRow[8] : "");
+    var newBgColor = (data.backgroundColor !== undefined && data.backgroundColor !== null && data.backgroundColor !== "") ? data.backgroundColor : (existingRow[9] !== undefined ? existingRow[9] : "");
+    var newStyle = (data.buttonStyle !== undefined && data.buttonStyle !== null && data.buttonStyle !== "") ? data.buttonStyle : (existingRow[10] !== undefined ? existingRow[10] : "");
+    var newBorder = (data.showLogoBorder !== undefined && data.showLogoBorder !== null && data.showLogoBorder !== "") ? (data.showLogoBorder === true || data.showLogoBorder === "true") : (existingRow[11] !== undefined ? existingRow[11] : true);
+    var newClass = (data.classInSession !== undefined && data.classInSession !== null && data.classInSession !== "") ? (data.classInSession === true || data.classInSession === "true") : (existingRow[12] !== undefined ? existingRow[12] : false);
+    var newMsg = (data.broadcastMessage !== undefined && data.broadcastMessage !== null) ? data.broadcastMessage : (existingRow[13] !== undefined ? existingRow[13] : "");
+    var newGymOpen = (data.gymIsOpen !== undefined && data.gymIsOpen !== null && data.gymIsOpen !== "") ? (data.gymIsOpen === true || data.gymIsOpen === "true") : (existingRow[14] !== undefined ? existingRow[14] : true);
+    var newSsid1 = (data.wifiSsid !== undefined && data.wifiSsid !== null) ? data.wifiSsid : (existingRow[15] || "");
+    var newSsid2 = (data.wifiSsid2 !== undefined && data.wifiSsid2 !== null) ? data.wifiSsid2 : (existingRow[16] || "");
+    var newSsid3 = (data.wifiSsid3 !== undefined && data.wifiSsid3 !== null) ? data.wifiSsid3 : (existingRow[17] || "");
+    var newButtonBgColor = (data.buttonBackgroundColor !== undefined && data.buttonBackgroundColor !== null && data.buttonBackgroundColor !== "") ? data.buttonBackgroundColor : (existingRow[18] !== undefined ? existingRow[18] : "");
+    var newBottomNavBgColor = (data.bottomNavBackgroundColor !== undefined && data.bottomNavBackgroundColor !== null && data.bottomNavBackgroundColor !== "") ? data.bottomNavBackgroundColor : (existingRow[19] !== undefined ? existingRow[19] : "");
+    var newPdfTemplate = (data.pdfTemplate !== undefined && data.pdfTemplate !== null && data.pdfTemplate !== "") ? data.pdfTemplate : (existingRow[20] !== undefined ? existingRow[20] : "Clásica");
+    var newBankAccount = (data.bankAccount !== undefined && data.bankAccount !== null) ? data.bankAccount : (existingRow[21] !== undefined ? existingRow[21] : "");
+    var newLicenseModel = (data.licenseModelPayer !== undefined && data.licenseModelPayer !== null && data.licenseModelPayer !== "") ? data.licenseModelPayer : (existingRow[22] !== undefined ? existingRow[22] : "admin");
+    var newLicenseStatus = (existingRow[24] !== undefined && existingRow[24] !== null && existingRow[24] !== "" && String(existingRow[24]).indexOf("/") === -1) ? existingRow[24] : "INACTIVO";
+    var newLicenseVence = (existingRow[25] !== undefined && existingRow[25] !== null) ? existingRow[25] : "";
+
+    updateRow(sheet, "GYM_CONFIG", 0, [
+      "GYM_CONFIG",
+      newName,
+      newLogo,
+      newPhone,
+      newAddress,
+      newCity,
+      newZip,
+      newCountry,
+      newColor,
+      newBgColor,
+      newStyle,
+      newBorder,
+      newClass,
+      newMsg,
+      newGymOpen,
+      newSsid1,
+      newSsid2,
+      newSsid3,
+      newButtonBgColor,
+      newBottomNavBgColor,
+      newPdfTemplate,
+      newBankAccount,
+      newLicenseModel,
+      new Date(),
+      newLicenseStatus,
+      newLicenseVence
+    ]);
+    return createJsonResponse({ "status": "success" });
+  }
+
+  if (action === "update_plans") {
+    var sheet = getOrCreateSheet(ss, "Planes");
+    var rawPlans = data.plans || (e && e.parameter ? e.parameter.plans : null);
+    var plans = (typeof rawPlans === "string") ? JSON.parse(rawPlans) : (rawPlans || []);
+    sheet.clearContents();
+    sheet.appendRow(["ID", "Nombre", "Precio", "Duracion_Dias", "Descripcion", "Actualizado"]);
+    plans.forEach(function(p) {
+      sheet.appendRow([p.id || ("plan_" + Date.now()), p.name || "", p.price || 0, p.durationDays || p.duration_days || 30, p.description || "", new Date()]);
+    });
+    SpreadsheetApp.flush();
+    return createJsonResponse({ "status": "success" });
+  }
+
+  if (action === "update_product") {
+    updateRow(getOrCreateSheet(ss, "Tienda"), data.id, 0, [data.id, data.name, data.price, data.categoryId, data.imageUri || "", data.description || "", data.contactMethod || "", data.contactPhone || "", data.bannerType || "", data.bannerText || "", new Date()]);
+    return createJsonResponse({ "status": "success" });
+  }
+
+  if (action === "delete_product") {
+    var sheet = getOrCreateSheet(ss, "Tienda");
+    var values = sheet.getDataRange().getValues();
+    var idToDelete = String(data.id).trim().toLowerCase();
+    for (var i = values.length - 1; i >= 1; i--) {
+      if (String(values[i][0]).trim().toLowerCase() === idToDelete) sheet.deleteRow(i + 1);
+    }
+    SpreadsheetApp.flush();
+    return createJsonResponse({ "status": "success" });
+  }
+
+  if (action === "send_chat_message") {
+    var sheet = getOrCreateSheet(ss, "Chats");
+    fixChatSheetStructure(sheet);
+    sheet.appendRow([data.gymId, data.sender, data.recipient, data.text, data.timestamp, new Date()]);
+    SpreadsheetApp.flush();
+    return createJsonResponse({ "status": "success" });
+  }
+
+  if (action === "delete_chat" || action === "delete_chats") {
+    var sheet = getOrCreateSheet(ss, "Chats");
+    fixChatSheetStructure(sheet);
+    var values = sheet.getDataRange().getValues();
+    var sender = String(data.sender || "").trim().toLowerCase();
+    var recipient = String(data.recipient || data.otherId || "").trim().toLowerCase();
+    var deletedCount = 0;
+
+    var isGeneral = (recipient.indexOf("chat general") !== -1 || recipient.indexOf("general") !== -1 || sender.indexOf("general") !== -1);
+
+    for (var i = values.length - 1; i >= 1; i--) {
+      var rSender = String(values[i][1] || "").trim().toLowerCase();
+      var rRecipient = String(values[i][2] || "").trim().toLowerCase();
+
+      var matches = false;
+      if (isGeneral) {
+        if (rRecipient.indexOf("general") !== -1 || rSender.indexOf("general") !== -1) {
+          matches = true;
+        }
+      } else {
+        if ((rSender === sender && rRecipient === recipient) || (rSender === recipient && rRecipient === sender)) {
+          matches = true;
+        }
+      }
+
+      if (matches) {
+        sheet.getRange(i + 1, 1, 1, 6).clearContent();
+        sheet.deleteRow(i + 1);
+        deletedCount++;
+      }
+    }
+    SpreadsheetApp.flush();
+    return createJsonResponse({ "status": "success", "deleted": deletedCount });
+  }
+
+  if (action === "update_schedule") {
+    var sheet = getOrCreateSheet(ss, "Horarios");
+    fixScheduleSheetStructure(sheet);
+    var professorId = String(data.professorId).trim();
+    var schedules = (typeof data.schedulesJson === "string") ? JSON.parse(data.schedulesJson) : (data.schedulesJson || []);
+    var v = sheet.getDataRange().getValues();
+    for (var i = v.length - 1; i >= 1; i--) { if (String(v[i][0]).trim() === professorId) sheet.deleteRow(i + 1); }
+    schedules.forEach(function(item) {
+      var members = (item.assignedMemberEmails || []).join(",");
+      sheet.appendRow([professorId, item.date || item.dayOfWeek || "", item.startTime, item.endTime, item.eventName, members, new Date()]);
+    });
+    SpreadsheetApp.flush();
+    return createJsonResponse({ "status": "success" });
+  }
+
+  if (action === "check_in") {
+    getOrCreateSheet(ss, "Asistencia").appendRow([new Date(), data.gymId, data.memberEmail, data.timestamp]);
+    return createJsonResponse({ "status": "success" });
+  }
+
+  if (action === "abrir_puerta") {
+    // 1. Asistencia automática al abrir la puerta
+    try {
+      var gymId = data.gymId || "Gym_Default";
+      var memberEmail = data.alumnoId || data.memberEmail || "desconocido";
+      var timestamp = data.timestamp || new Date().getTime();
+      getOrCreateSheet(ss, "Asistencia").appendRow([new Date(), gymId, memberEmail, timestamp]);
+    } catch (eAsis) {}
+
+    // 2. Apertura física del relé con Tuya Cloud
+    try {
+      var puertaId = data.puertaId || "eb40d0a2a38db6ac95gdt2";
+      if (typeof abrirPuertaGimnasio === "function") {
+        abrirPuertaGimnasio(puertaId, "prej3qspsecguyufuq7d", "TU_CLIENT_SECRET");
+      }
+    } catch (eTuya) {}
+
+    return createJsonResponse({ "status": "success", "message": "Puerta abierta y asistencia registrada" });
+  }
+
+  if (action === "update_professor" || action === "update_profile") {
+    var sheet = getOrCreateSheet(ss, "Profesores");
+    fixProfessorSheetStructure(sheet);
+    var searchEmail = String(data.email || "").trim().toLowerCase();
+    var searchId = String(data.professorId || data.id || "").trim().toLowerCase();
+
+    var values = sheet.getDataRange().getValues();
+    var rowIndex = -1;
+    var existingRow = [];
+    for (var i = 1; i < values.length; i++) {
+      var rowId = String(values[i][0] || "").trim().toLowerCase();
+      var rowEmail = String(values[i][3] || "").trim().toLowerCase();
+      if ((searchId !== "" && rowId === searchId) || (searchEmail !== "" && rowEmail === searchEmail)) {
+        rowIndex = i + 1;
+        existingRow = values[i];
+        break;
+      }
+    }
+
+    var newId = data.professorId || data.id || searchId || (existingRow[0] || ("prof_" + Date.now()));
+    var newFirstName = (data.firstName !== undefined && data.firstName !== null && data.firstName !== "") ? data.firstName : (existingRow[1] || "");
+    var newLastName = (data.lastName !== undefined && data.lastName !== null && data.lastName !== "") ? data.lastName : (existingRow[2] || "");
+    var newEmail = (data.email !== undefined && data.email !== null && data.email !== "") ? data.email : (existingRow[3] || "");
+    var newSpecialty = (data.specialty !== undefined && data.specialty !== null) ? data.specialty : (existingRow[4] || "");
+    var newColor = (data.profileColor !== undefined && data.profileColor !== null && data.profileColor !== "" && data.profileColor !== 0) ? data.profileColor : (existingRow[5] !== undefined && existingRow[5] !== "" ? existingRow[5] : (data.profileColor !== undefined ? data.profileColor : ""));
+    var newPhoto = (data.photoUri !== undefined && data.photoUri !== null && data.photoUri !== "") ? data.photoUri : (existingRow[6] || "");
+
+    var rowData = [
+      newId,
+      newFirstName,
+      newLastName,
+      newEmail,
+      newSpecialty,
+      newColor,
+      newPhoto,
+      new Date()
+    ];
+
+    if (rowIndex !== -1) {
+      sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
+    } else {
+      sheet.appendRow(rowData);
+    }
+    return createJsonResponse({ "status": "success" });
+  }
+
+  if (action === "delete_professor") {
+    var sheet = getOrCreateSheet(ss, "Profesores");
+    fixProfessorSheetStructure(sheet);
+    var values = sheet.getDataRange().getValues();
+    var profIdToDelete = String(data.professorId || data.id || data.email || "").trim().toLowerCase();
+    var firstNameToDelete = String(data.firstName || data.nombre || "").trim().toLowerCase();
+    var lastNameToDelete = String(data.lastName || data.apellido || "").trim().toLowerCase();
+    var deletedCount = 0;
+    var matchedProfIds = [];
+
+    for (var i = values.length - 1; i >= 1; i--) {
+      var rowId = String(values[i][0] || "").trim().toLowerCase();
+      var rowName = String(values[i][1] || "").trim().toLowerCase();
+      var rowLastName = String(values[i][2] || "").trim().toLowerCase();
+      var rowEmail = String(values[i][3] || "").trim().toLowerCase();
+
+      var match = false;
+      if (profIdToDelete !== "" && (rowId === profIdToDelete || rowEmail === profIdToDelete)) {
+        match = true;
+      } else if (profIdToDelete !== "" && (rowEmail.indexOf(profIdToDelete) !== -1 || profIdToDelete.indexOf(rowEmail) !== -1)) {
+        match = true;
+      } else if (firstNameToDelete !== "" && rowName === firstNameToDelete && (lastNameToDelete === "" || rowLastName === lastNameToDelete)) {
+        match = true;
+      }
+
+      if (match) {
+        if (rowId !== "") matchedProfIds.push(rowId);
+        if (rowEmail !== "") matchedProfIds.push(rowEmail);
+        sheet.getRange(i + 1, 1, 1, 8).clearContent();
+        sheet.deleteRow(i + 1);
+        deletedCount++;
+      }
+    }
+
+    if (profIdToDelete !== "") matchedProfIds.push(profIdToDelete);
+
+    try {
+      var horSheet = getOrCreateSheet(ss, "Horarios");
+      var horValues = horSheet.getDataRange().getValues();
+      for (var h = horValues.length - 1; h >= 1; h--) {
+        var hProfId = String(horValues[h][0] || "").trim().toLowerCase();
+        for (var pIdx = 0; pIdx < matchedProfIds.length; pIdx++) {
+          var targetP = matchedProfIds[pIdx];
+          if (targetP !== "" && (hProfId === targetP || hProfId.indexOf(targetP) !== -1)) {
+            horSheet.getRange(h + 1, 1, 1, 7).clearContent();
+            horSheet.deleteRow(h + 1);
+            break;
+          }
+        }
+      }
+    } catch (eHor) {}
+
+    SpreadsheetApp.flush();
+    return createJsonResponse({ "status": "success", "deleted": deletedCount });
+  }
+
+  if (action === "update_member") {
+    var sheet = getOrCreateSheet(ss, "Alumnos");
+    fixMemberSheetStructure(sheet);
+    var searchEmail = data.targetEmail || data.originalEmail || data.email;
+    updateRow(sheet, searchEmail, 2, [
+      data.firstName !== undefined ? data.firstName : "",
+      data.lastName !== undefined ? data.lastName : "",
+      (data.email !== undefined && data.email !== "") ? data.email : searchEmail,
+      data.membershipStatus || "DEUDOR",
+      data.phone || "",
+      data.address || "",
+      data.weight || "",
+      data.height || "",
+      data.photoUri || "",
+      new Date(),
+      data.nextRenewalDate || "",
+      data.planId || "",
+      data.planType || "",
+      data.assignedTrainer || ""
+    ]);
+    return createJsonResponse({ "status": "success" });
+  }
+
+  if (action === "delete_member") {
+    var sheet = getOrCreateSheet(ss, "Alumnos");
+    fixMemberSheetStructure(sheet);
+    var values = sheet.getDataRange().getValues();
+
+    var emailToDelete = String(data.memberEmail || data.targetEmail || data.email || "").trim().toLowerCase();
+    var firstNameToDelete = String(data.firstName || data.nombre || "").trim().toLowerCase();
+    var lastNameToDelete = String(data.lastName || data.apellido || "").trim().toLowerCase();
+
+    var matchedEmails = [];
+    var deletedCount = 0;
+
+    for (var i = values.length - 1; i >= 1; i--) {
+      var rowName = String(values[i][0] || "").trim().toLowerCase();
+      var rowLastName = String(values[i][1] || "").trim().toLowerCase();
+      var rowEmail = String(values[i][2] || "").trim().toLowerCase();
+
+      var match = false;
+      if (emailToDelete !== "" && rowEmail === emailToDelete) {
+        match = true;
+      } else if (emailToDelete !== "" && (rowEmail.indexOf(emailToDelete) !== -1 || emailToDelete.indexOf(rowEmail) !== -1)) {
+        match = true;
+      } else if (firstNameToDelete !== "" && rowName === firstNameToDelete && (lastNameToDelete === "" || rowLastName === lastNameToDelete)) {
+        match = true;
+      }
+
+      if (match) {
+        if (rowEmail !== "") matchedEmails.push(rowEmail);
+        sheet.getRange(i + 1, 1, 1, 14).clearContent();
+        sheet.deleteRow(i + 1);
+        deletedCount++;
+      }
+    }
+
+    if (emailToDelete !== "") matchedEmails.push(emailToDelete);
+
+    try {
+      var attSheet = getOrCreateSheet(ss, "Asistencia");
+      var attValues = attSheet.getDataRange().getValues();
+      for (var a = attValues.length - 1; a >= 1; a--) {
+        var aEmail = String(attValues[a][2] || "").trim().toLowerCase();
+        for (var eIdx = 0; eIdx < matchedEmails.length; eIdx++) {
+          var targetE = matchedEmails[eIdx];
+          if (targetE !== "" && (aEmail === targetE || aEmail.indexOf(targetE) !== -1 || targetE.indexOf(aEmail) !== -1)) {
+            attSheet.getRange(a + 1, 1, 1, 4).clearContent();
+            attSheet.deleteRow(a + 1);
+            break;
+          }
+        }
+      }
+    } catch (eAtt) {}
+
+    try {
+      var rutSheet = getOrCreateSheet(ss, "Rutinas");
+      var rutValues = rutSheet.getDataRange().getValues();
+      for (var r = rutValues.length - 1; r >= 1; r--) {
+        var rEmail = String(rutValues[r][1] || "").trim().toLowerCase();
+        for (var eIdx = 0; eIdx < matchedEmails.length; eIdx++) {
+          var targetE = matchedEmails[eIdx];
+          if (targetE !== "" && (rEmail === targetE || rEmail.indexOf(targetE) !== -1 || targetE.indexOf(rEmail) !== -1)) {
+            rutSheet.getRange(r + 1, 1, 1, 5).clearContent();
+            rutSheet.deleteRow(r + 1);
+            break;
+          }
+        }
+      }
+    } catch (eRut) {}
+
+    try {
+      var chatSheet = getOrCreateSheet(ss, "Chats");
+      var chatValues = chatSheet.getDataRange().getValues();
+      for (var c = chatValues.length - 1; c >= 1; c--) {
+        var cSender = String(chatValues[c][1] || "").trim().toLowerCase();
+        var cRecipient = String(chatValues[c][2] || "").trim().toLowerCase();
+        for (var eIdx = 0; eIdx < matchedEmails.length; eIdx++) {
+          var targetE = matchedEmails[eIdx];
+          if (targetE !== "" && (cSender === targetE || cRecipient === targetE)) {
+            chatSheet.getRange(c + 1, 1, 1, 6).clearContent();
+            chatSheet.deleteRow(c + 1);
+            break;
+          }
+        }
+      }
+    } catch (eChat) {}
+
+    SpreadsheetApp.flush();
+    return createJsonResponse({ "status": "success", "deleted": deletedCount });
+  }
+
+  if (action === "add_routine" || action === "update_routine" || action === "sync_member_routine") {
+    var sheet = getOrCreateSheet(ss, "Rutinas");
+    fixRoutineSheetStructure(sheet);
+    var values = sheet.getDataRange().getValues();
+
+    var payload = data.data || data;
+    var memberEmail = payload.memberEmail;
+    var routineId = payload.routineId;
+    var routineJson = payload.routine || payload.routineJson;
+    var professorId = payload.professorId;
+
+    var s = payload.status;
+    var statusVal = (s === "Completada" || s === 1 || s === "1" || s === true || s === "true") ? 1 : 0;
+
+    var email = String(memberEmail || "").trim().toLowerCase();
+    var rId = String(routineId || "").trim();
+
+    if (!rId && routineJson) {
+      try { rId = JSON.parse(routineJson).id; } catch(e) {}
+    }
+
+    var rowData = [new Date(), email, professorId, statusVal, routineJson];
+
+    var matched = false;
+    for (var i = 1; i < values.length; i++) {
+      var rowEmail = String(values[i][1]).trim().toLowerCase();
+      var rowRoutine = String(values[i][4] || "");
+
+      if (rowEmail === email && (rId === "" || rowRoutine.indexOf(rId) !== -1)) {
+        sheet.getRange(i + 1, 1, 1, 5).setValues([[rowData[0], rowData[1], rowData[2], rowData[3], rowData[4]]]);
+        matched = true;
+        break;
+      }
+    }
+
+    if (!matched) {
+      sheet.appendRow(rowData);
+    }
+    SpreadsheetApp.flush();
+    return createJsonResponse({ "status": "success", "applied_status": statusVal });
+  }
+
+  if (action === "delete_routine") {
+    var sheet = getOrCreateSheet(ss, "Rutinas");
+    fixRoutineSheetStructure(sheet);
+    var values = sheet.getDataRange().getValues();
+    var email = String(data.memberEmail || data.email || "").trim().toLowerCase();
+    var routineId = String(data.routineId || data.id || "").trim();
+    var deletedCount = 0;
+    for (var i = values.length - 1; i >= 1; i--) {
+      var rowEmail = String(values[i][1] || "").trim().toLowerCase();
+      var rowRoutine = String(values[i][4] || "");
+      if ((email === "" || rowEmail === email || rowEmail.indexOf(email) !== -1) && (routineId === "" || rowRoutine.indexOf(routineId) !== -1)) {
+        sheet.deleteRow(i + 1);
+        deletedCount++;
+      }
+    }
+    SpreadsheetApp.flush();
+    return createJsonResponse({ "status": "success", "deleted": deletedCount });
+  }
+
+  if (action === "create_gym") {
+    var result = executeCreateGym(data);
+    return createJsonResponse(result);
+  }
+
+  if (action === "reset_gym" || action === "clear_gym_data") {
+    var gymId = data.gymId || (e && e.parameter ? e.parameter.gymId : "") || "";
+    var spreadsheetId = data.spreadsheetId || (e && e.parameter ? e.parameter.spreadsheetId : "") || "";
+    var masterSS = getMasterSS();
+    var registrySheet = getOrCreateSheet(masterSS, "GymsRegistry");
+
+    try {
+      var gymSS = getSS(e);
+      if (gymSS && gymSS.getId() !== masterSS.getId()) {
+        var sheets = gymSS.getSheets();
+        sheets.forEach(function(s) {
+          if (s.getName() !== "GymsRegistry") {
+            s.clearContents();
+          }
+        });
+        SpreadsheetApp.flush();
+      }
+    } catch (errClear) {
+      Logger.log("Error al limpiar datos del gimnasio: " + errClear.toString());
+    }
+
+    var registryValues = registrySheet.getDataRange().getValues();
+    var deleted = false;
+
+    for (var i = registryValues.length - 1; i >= 1; i--) {
+      var rGymId = String(registryValues[i][0]).trim();
+      var rSpreadsheetId = String(registryValues[i][1]).trim();
+      if ((gymId && rGymId === gymId) || (spreadsheetId && rSpreadsheetId === spreadsheetId)) {
+        try {
+          var file = DriveApp.getFileById(rSpreadsheetId);
+          file.setTrashed(true);
+        } catch (errDrive) {
+          Logger.log("Error al mover planilla a papelera: " + errDrive.toString());
+        }
+        registrySheet.deleteRow(i + 1);
+        deleted = true;
+      }
+    }
+    SpreadsheetApp.flush();
+    return createJsonResponse({ "status": "success", "message": "Base de datos eliminada correctamente.", "deleted": deleted });
+  }
+
+  return createJsonResponse({ "status": "error", "message": "Acción no reconocida: " + action });
+}
+
+function executeCreateGym(data) {
+  var gymName = data.gymName || "Mi Gimnasio";
+  var email = data.email || "";
+  var gymId = data.gymId || gymName.toLowerCase().replace(/[^a-z0-9]/g, "_");
+
+  var dbName = "GymCopilot_DB_" + gymName + "_" + gymId;
+  var newSS = null;
+  try {
+    newSS = SpreadsheetApp.create(dbName);
+  } catch (errSS) {
+    Logger.log("Error al crear planilla SpreadsheetApp: " + errSS.toString());
+    throw errSS;
+  }
+
+  try {
+    var folderName = "GymCopilot_Databases";
+    var folders = DriveApp.getFoldersByName(folderName);
+    var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+
+    var file = DriveApp.getFileById(newSS.getId());
+    try {
+      file.moveTo(folder);
+    } catch (eMove) {
+      folder.addFile(file);
+      try { DriveApp.getRootFolder().removeFile(file); } catch (err) {}
+    }
+  } catch (eDrive) {
+    Logger.log("Advertencia DriveApp al mover carpeta: " + eDrive.toString());
+  }
+
+  var sheets = ["Asistencia", "Alumnos", "Profesores", "Horarios", "Chats", "Rutinas", "Tienda", "Configuracion", "Planes"];
+  sheets.forEach(function(name) {
+    try { getOrCreateSheet(newSS, name); } catch (eSheet) {}
+  });
+
+  try {
+    var allSheets = newSS.getSheets();
+    for (var i = allSheets.length - 1; i >= 0; i--) {
+      var s = allSheets[i];
+      var sName = s.getName();
+      if (sheets.indexOf(sName) === -1 && newSS.getSheets().length > 1) {
+        newSS.deleteSheet(s);
+      }
+    }
+  } catch (eCleanGym) {}
+
+  try {
+    var configSheet = getOrCreateSheet(newSS, "Configuracion");
+    fixConfigSheetStructure(configSheet);
+    updateRow(configSheet, "GYM_CONFIG", 0, [
+      "GYM_CONFIG",
+      gymName,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      1,
+      true,
+      false,
+      "",
+      true,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "Clásica",
+      new Date()
+    ]);
+  } catch (eConfig) {}
+
+  try {
+    var masterSS = getMasterSS();
+    var registrySheet = getOrCreateSheet(masterSS, "GymsRegistry");
+    if (registrySheet.getLastRow() === 0 || (registrySheet.getLastRow() === 1 && registrySheet.getRange(1, 1).getValue() === "")) {
+      registrySheet.clearContents();
+      registrySheet.appendRow(["GymID", "SpreadsheetID", "Email", "Fecha"]);
+    }
+    registrySheet.appendRow([gymId, newSS.getId(), email, new Date()]);
+  } catch (eRegistry) {
+    Logger.log("Advertencia registro en GymsRegistry: " + eRegistry.toString());
+  }
+
+  return {
+    "status": "success",
+    "gymId": gymId,
+    "spreadsheetId": newSS.getId(),
+    "message": "Gimnasio y base de datos creados con éxito."
+  };
+}
+
+function isMasterSS(ss) {
+  if (!ss) return false;
+  try {
+    var prop = PropertiesService.getScriptProperties();
+    var masterSSId = prop.getProperty("MASTER_SS_ID");
+    if (masterSSId && ss.getId() === masterSSId) {
+      return true;
+    }
+    var name = ss.getName();
+    if (name === "GymCopilot_Master_DB" || name === "GymCopilot_BASE DE DATOS" || name.indexOf("Master") !== -1 || name.indexOf("BASE DE DATOS") !== -1 || name.indexOf("GymCopilot_Master_DB") !== -1) {
+      return true;
+    }
+  } catch (err) {}
+  return false;
+}
+
+function getMasterSS() {
+  var prop = PropertiesService.getScriptProperties();
+  var masterSSId = prop.getProperty("MASTER_SS_ID");
+  var masterSS = null;
+  if (masterSSId) {
+    try {
+      masterSS = SpreadsheetApp.openById(masterSSId);
+    } catch (err) {}
+  }
+
+  if (!masterSS) {
+    try {
+      masterSS = SpreadsheetApp.create("GymCopilot_Master_DB");
+      prop.setProperty("MASTER_SS_ID", masterSS.getId());
+    } catch (err) {
+      throw new Error("No se pudo crear/abrir la planilla maestra: " + err.toString());
+    }
+  }
+
+  cleanMasterSS(masterSS);
+  return masterSS;
+}
+
+function cleanMasterSS(masterSS) {
+  try {
+    if (!isMasterSS(masterSS)) return;
+    var regSheet = masterSS.getSheetByName("GymsRegistry");
+    if (!regSheet) {
+      regSheet = masterSS.insertSheet("GymsRegistry");
+      regSheet.appendRow(["GymID", "SpreadsheetID", "Email", "Fecha"]);
+    }
+    var sheets = masterSS.getSheets();
+    for (var i = sheets.length - 1; i >= 0; i--) {
+      var sName = sheets[i].getName();
+      if (sName !== "GymsRegistry" && masterSS.getSheets().length > 1) {
+        masterSS.deleteSheet(sheets[i]);
+      }
+    }
+  } catch (eClean) {}
+}
+
+function getSS(e) {
+  var masterSS = getMasterSS();
+  cleanMasterSS(masterSS);
+
+  var gymId = "";
+  var email = "";
+  var spreadsheetId = "";
+
+  try {
+    if (e && e.postData && e.postData.contents) {
+      var body = JSON.parse(e.postData.contents);
+      gymId = body.gymId || (e.parameter ? e.parameter.gymId : "") || "";
+      email = body.email || body.memberEmail || body.userEmail || (e.parameter ? e.parameter.email : "") || "";
+      spreadsheetId = body.spreadsheetId || (e.parameter ? e.parameter.spreadsheetId : "") || "";
+    } else if (e && e.parameter) {
+      gymId = e.parameter.gymId || "";
+      email = e.parameter.email || e.parameter.userEmail || e.parameter.memberEmail || "";
+      spreadsheetId = e.parameter.spreadsheetId || "";
+    }
+  } catch (err) {}
+
+  if (spreadsheetId) {
+    try {
+      var target = SpreadsheetApp.openById(spreadsheetId);
+      if (target && !isMasterSS(target)) {
+        return target;
+      }
+    } catch (e) {}
+  }
+
+  var normGymId = String(gymId || "").toLowerCase().replace(/[^a-z0-9]/g, "_");
+  var normEmail = String(email || "").toLowerCase().trim();
+
+  var registrySheet = getOrCreateSheet(masterSS, "GymsRegistry");
+  if (registrySheet) {
+    var values = registrySheet.getDataRange().getValues();
+    if (normGymId || normEmail) {
+      for (var i = 1; i < values.length; i++) {
+        var rGymId = String(values[i][0]).toLowerCase().replace(/[^a-z0-9]/g, "_");
+        var rSpreadsheetId = String(values[i][1]).trim();
+        var rEmail = String(values[i][2]).toLowerCase().trim();
+        if ((normGymId && rGymId === normGymId) || (normEmail && rEmail === normEmail)) {
+          try {
+            var foundSS = SpreadsheetApp.openById(rSpreadsheetId);
+            if (foundSS && !isMasterSS(foundSS)) {
+              return foundSS;
+            }
+          } catch (e) {}
+        }
+      }
+    }
+  }
+
+  return masterSS;
+}
+
+function updateRow(sheet, id, idColIndex, rowData) {
+  var values = sheet.getDataRange().getValues();
+  var searchId = String(id).trim().toLowerCase();
+
+  if (id === "GYM_CONFIG" && values.length === 2) {
+    sheet.getRange(2, 1, 1, rowData.length).setValues([rowData]);
+    return;
+  }
+
+  for (var i = 1; i < values.length; i++) {
+    if (String(values[i][idColIndex]).trim().toLowerCase() === searchId) {
+      sheet.getRange(i + 1, 1, 1, rowData.length).setValues([rowData]);
+      return;
+    }
+  }
+  sheet.appendRow(rowData);
+}
+
+function getSheetData(ss, name, fixFunction) {
+  var sheet = getOrCreateSheet(ss, name);
+  if (fixFunction) fixFunction(sheet);
+  return sheet.getDataRange().getValues();
+}
+
+function getOrCreateSheet(ss, name) {
+  if (isMasterSS(ss)) {
+    cleanMasterSS(ss);
+    var regSheet = ss.getSheetByName("GymsRegistry");
+    if (!regSheet) {
+      regSheet = ss.insertSheet("GymsRegistry");
+      regSheet.appendRow(["GymID", "SpreadsheetID", "Email", "Fecha"]);
+    }
+    return regSheet;
+  }
+
+  var sheet = ss.getSheetByName(name);
+  if (!sheet) {
+    sheet = ss.insertSheet(name);
+    var headers = {
+      "Asistencia": ["Fecha_Servidor", "Gimnasio", "Email_Miembro", "Timestamp_App"],
+      "Alumnos":    ["Nombre", "Apellido", "Email", "Estado", "Teléfono", "Dirección", "Peso", "Altura", "Foto", "Actualizado", "Membresia_Vence", "Plan_ID", "Plan_Nombre", "Profesor_Asignado", "Licencia_Vence"],
+      "Profesores": ["ID_Profesor", "Nombre", "Apellido", "Email", "Especialidad", "Color", "Foto", "Actualizado"],
+      "Horarios":   ["ID_Profesor", "Día/Fecha", "Inicio", "Fin", "Evento", "Alumnos", "Actualizado"],
+      "Chats":      ["Gimnasio", "Remitente", "Destinatario", "Mensaje", "Timestamp", "Fecha_Servidor"],
+      "Rutinas":    ["Fecha", "Email_Alumno", "ID_Profesor", "Estado", "Rutina"],
+      "Tienda":     ["ID", "Nombre", "Precio", "Categoría", "Imagen", "Descripción", "Contacto_Metodo", "Contacto_Tel", "Banner_Tipo", "Banner_Texto", "Actualizado"],
+      "Configuracion": ["ID", "Nombre", "Logo", "Telefono", "Direccion", "Ciudad", "CP", "Pais", "Color", "BgColor", "ButtonStyle", "MostrarBordeLogo", "ClaseActiva", "Mensaje", "GimnasioAbierto", "WifiSSID1", "WifiSSID2", "WifiSSID3", "ButtonBgColor", "BottomNavBgColor", "PdfTemplate", "Actualizado"],
+      "Planes":     ["ID", "Nombre", "Precio", "Duracion_Dias", "Descripcion", "Actualizado"]
+    };
+    if (headers[name]) sheet.appendRow(headers[name]);
+  }
+  return sheet;
+}
+
+function createJsonResponse(data) {
+  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function fixChatSheetStructure(sheet) {
+  var lastCol = sheet.getLastColumn();
+  if (lastCol === 0) return;
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  if (headers[0] !== "Gimnasio") {
+    sheet.insertColumnBefore(1);
+    sheet.getRange(1, 1).setValue("Gimnasio");
+    SpreadsheetApp.flush();
+  }
+}
+
+function fixScheduleSheetStructure(sheet) {
+  var lastCol = sheet.getLastColumn();
+  if (lastCol === 0) return;
+  var range = sheet.getRange(1, 1, 1, Math.max(lastCol, 7));
+  var headers = range.getValues()[0];
+  if (headers.length < 7 || headers[5] !== "Alumnos") {
+    sheet.insertColumnBefore(6);
+    sheet.getRange(1, 6).setValue("Alumnos");
+    SpreadsheetApp.flush();
+  }
+}
+
+function fixRoutineSheetStructure(sheet) {
+  var lastCol = sheet.getLastColumn();
+  if (lastCol === 0) return;
+  var range = sheet.getRange(1, 1, 1, Math.max(lastCol, 5));
+  var headers = range.getValues()[0];
+
+  if (headers[3] !== "Estado") {
+    if (headers[3] === "Rutina" || headers[3] === "" || lastCol < 5) {
+      sheet.insertColumnBefore(4);
+      sheet.getRange(1, 4).setValue("Estado");
+      var lastRow = sheet.getLastRow();
+      if (lastRow > 1) {
+        var estadoRange = sheet.getRange(2, 4, lastRow - 1, 1);
+        var estadoValues = estadoRange.getValues();
+        var changed = false;
+        for (var i = 0; i < estadoValues.length; i++) {
+          if (estadoValues[i][0] === "") {
+            estadoValues[i][0] = 0;
+            changed = true;
+          }
+        }
+        if (changed) SpreadsheetApp.flush();
+      }
+      SpreadsheetApp.flush();
+    } else {
+      sheet.getRange(1, 1, 1, 5).setValues([["Fecha", "Email_Alumno", "ID_Profesor", "Estado", "Rutina"]]);
+      SpreadsheetApp.flush();
+    }
+  }
+}
+
+function fixConfigSheetStructure(sheet) {
+  var expectedHeaders = ["ID", "Nombre", "Logo", "Telefono", "Direccion", "Ciudad", "CP", "Pais", "Color", "BgColor", "ButtonStyle", "MostrarBordeLogo", "ClaseActiva", "Mensaje", "GimnasioAbierto", "WifiSSID1", "WifiSSID2", "WifiSSID3", "ButtonBgColor", "BottomNavBgColor", "PdfTemplate", "BankAccount", "LicenseModelPayer", "Fecha_Actualizado", "ESTADO_LICENCIA_ADMIN", "VENCIMIENTO_LICENCIA_ADMIN"];
+
+  var lastCol = sheet.getLastColumn();
+  var headers = lastCol > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
+  if (lastCol < expectedHeaders.length || String(headers[21] || "").trim() !== "BankAccount" || String(headers[24] || "").trim() !== "ESTADO_LICENCIA_ADMIN") {
+    sheet.getRange(1, 1, 1, expectedHeaders.length).setValues([expectedHeaders]);
+    SpreadsheetApp.flush();
+  }
+
+  var values = sheet.getDataRange().getValues();
+  if (values.length > 1) {
+    for (var j = values.length - 1; j >= 1; j--) {
+      var idVal = String(values[j][0]).toUpperCase();
+      if (idVal !== "GYM_CONFIG") {
+        sheet.deleteRow(j + 1);
+      }
+    }
+  }
+
+  try {
+    var cValues = sheet.getDataRange().getValues();
+    if (cValues.length > 1 && String(cValues[1][0]).toUpperCase() === "GYM_CONFIG") {
+      var masterSS = getMasterSS();
+      if (masterSS) {
+        var regSheet = masterSS.getSheetByName("GymsRegistry");
+        if (regSheet) {
+          var ssId = sheet.getParent().getId();
+          var regValues = regSheet.getDataRange().getValues();
+          var regStatus = "INACTIVO";
+          for (var r = 1; r < regValues.length; r++) {
+            var rSSID = String(regValues[r][1] || "").trim();
+            if (rSSID === ssId || regValues.length === 2) {
+              regStatus = String(regValues[r][7] || "INACTIVO").trim().toUpperCase();
+              break;
+            }
+          }
+          if (regStatus && String(cValues[1][24] || "").trim().toUpperCase() !== regStatus) {
+            var rowData = cValues[1];
+            while (rowData.length < 26) { rowData.push(""); }
+            rowData[23] = new Date();
+            rowData[24] = regStatus;
+            sheet.getRange(2, 1, 1, rowData.length).setValues([rowData]);
+          }
+        }
+      }
+    }
+  } catch (eSyncLic) {}
+}
+
+function fixProfessorSheetStructure(sheet) {
+  var expectedHeaders = ["ID_Profesor", "Nombre", "Apellido", "Email", "Especialidad", "Color", "Foto", "Actualizado"];
+  for (var i = 0; i < expectedHeaders.length; i++) {
+    var cell = sheet.getRange(1, i + 1);
+    var headerName = cell.getValue();
+    if (String(headerName).toLowerCase().trim() !== expectedHeaders[i].toLowerCase().trim()) {
+      sheet.insertColumnBefore(i + 1);
+      sheet.getRange(1, i + 1).setValue(expectedHeaders[i]);
+      SpreadsheetApp.flush();
+    }
+  }
+}
+
+function fixMemberSheetStructure(sheet) {
+  var expectedHeaders = ["Nombre", "Apellido", "Email", "Estado", "Teléfono", "Dirección", "Peso", "Altura", "Foto", "Actualizado", "Membresia_Vence", "Plan_ID", "Plan_Nombre", "Profesor_Asignado", "Licencia_Vence"];
+  for (var i = 0; i < expectedHeaders.length; i++) {
+    var cell = sheet.getRange(1, i + 1);
+    var headerName = cell.getValue();
+    if (String(headerName).toLowerCase().trim() !== expectedHeaders[i].toLowerCase().trim()) {
+      sheet.insertColumnBefore(i + 1);
+      sheet.getRange(1, i + 1).setValue(expectedHeaders[i]);
+      SpreadsheetApp.flush();
+    }
+  }
+}
+
+

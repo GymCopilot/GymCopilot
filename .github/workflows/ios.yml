@@ -1,0 +1,97 @@
+name: Compilar iOS (GymCopilot KMP)
+
+on:
+  push:
+    branches: [ main, master, TEST ]
+  pull_request:
+    branches: [ main, master, TEST ]
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    env:
+      BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+      P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+      BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
+      KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+
+    steps:
+      - name: Checkout del proyecto
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Configurar Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Dar permisos de ejecucion a gradlew
+        run: chmod +x gradlew
+
+      - name: Compilar KMP Framework para Simulador (iosSimulatorArm64)
+        run: ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64
+
+      - name: Subir artefacto KMP Framework
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-framework-ios
+          path: shared/build/bin/iosSimulatorArm64/debugFramework/
+
+      - name: Compilar App de iOS (.app) para Appetize.io
+        run: |
+          mkdir -p iosApp/build-sim/Build/Products/Debug-iphonesimulator
+          cp -R shared/build/bin/iosSimulatorArm64/debugFramework/shared.framework iosApp/build-sim/Build/Products/Debug-iphonesimulator/
+          cp -R shared/build/bin/iosSimulatorArm64/debugFramework/shared.framework iosApp/
+          xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath iosApp/build-sim CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+          mkdir -p iosApp/build-sim/Build/Products/Debug-iphonesimulator/iosApp.app/Frameworks
+          cp -R shared/build/bin/iosSimulatorArm64/debugFramework/shared.framework iosApp/build-sim/Build/Products/Debug-iphonesimulator/iosApp.app/Frameworks/
+
+      - name: Subir Paquete (.app.zip) para Appetize.io
+        uses: actions/upload-artifact@v4
+        with:
+          name: GymCopilot-Appetize-iOS
+          path: iosApp/build-sim/Build/Products/Debug-iphonesimulator/iosApp.app
+
+      - name: Importar Certificado y Perfil de Firma iOS (si estan configurados)
+        if: ${{ env.BUILD_CERTIFICATE_BASE64 != '' }}
+        run: |
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security default-keychain -s $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          security import $CERTIFICATE_PATH -k $KEYCHAIN_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
+
+      - name: Compilar KMP Framework e IPA para Dispositivo Real (iosArm64)
+        if: ${{ env.BUILD_CERTIFICATE_BASE64 != '' }}
+        continue-on-error: true
+        run: |
+          ./gradlew :shared:linkReleaseFrameworkIosArm64
+          mkdir -p iosApp/build-ipa/Build/Products/Release-iphoneos
+          cp -R shared/build/bin/iosArm64/releaseFramework/shared.framework iosApp/build-ipa/Build/Products/Release-iphoneos/
+          cp -R shared/build/bin/iosArm64/releaseFramework/shared.framework iosApp/
+          
+          xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath iosApp/build-ipa CODE_SIGNING_ALLOWED=YES
+          
+          EXP_IDENTITY=$(security find-identity -v -p codesigning $RUNNER_TEMP/app-signing.keychain-db | head -n 1 | awk -F '"' '{print $2}')
+          cp $RUNNER_TEMP/build_pp.mobileprovision iosApp/build-ipa/Build/Products/Release-iphoneos/iosApp.app/embedded.mobileprovision
+          codesign --force --deep --sign "$EXP_IDENTITY" iosApp/build-ipa/Build/Products/Release-iphoneos/iosApp.app
+
+          cd iosApp/build-ipa/Build/Products/Release-iphoneos
+          mkdir -p Payload
+          cp -r iosApp.app Payload/
+          zip -r "$GITHUB_WORKSPACE/GymCopilot-iOS.ipa" Payload
