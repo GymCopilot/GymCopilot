@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.LockConfig
+import com.zexo.gymcopilot.model.SubscriptionPlan
 import com.zexo.gymcopilot.shared.network.CheckInRequest
 import com.zexo.gymcopilot.shared.network.GymKtorApiClient
 import com.zexo.gymcopilot.shared.network.MemberSyncRequest
@@ -93,12 +94,51 @@ fun MemberDashboardSharedScreen(
     var userBankAccount by remember { mutableStateOf(readLocalStorageFlag("bank_account") ?: "") }
     var isGymLicensePaid by remember { mutableStateOf(readLocalStorageFlag("gym_license_paid") == "true") }
     var gymLicenseVence by remember { mutableLongStateOf(readLocalStorageFlag("gym_license_vence")?.toLongOrNull() ?: 0L) }
+    var subscriptionPlans by remember { mutableStateOf<List<SubscriptionPlan>>(emptyList()) }
+
     var showBankTransferDialog by remember { mutableStateOf(false) }
     var showPayUrlDialog by remember { mutableStateOf(false) }
     var payUrlToDisplay by remember { mutableStateOf("") }
     var infoBannerTitle by remember { mutableStateOf("Estado de Cuenta") }
     var infoBannerMessage by remember { mutableStateOf("") }
     var showInfoBanner by remember { mutableStateOf(false) }
+
+    // Cargar planes de suscripción desde el servidor
+    LaunchedEffect(activeGymUrl) {
+        if (activeGymUrl.isNotBlank()) {
+            try {
+                val gymIdVal = activeGymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+                val localProfile = readLocalMemberProfile()
+                val ssId = localProfile?.spreadsheetId.orEmpty()
+                val paramChar = if (activeGymUrl.contains("?")) "&" else "?"
+                val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+                val url = "$activeGymUrl${paramChar}type=plans&gymId=$gymIdVal$ssParam"
+                val responseText = apiClient.getData(url)
+                if (responseText.isNotBlank() && responseText.contains("success")) {
+                    val jsonElement = Json.parseToJsonElement(responseText)
+                    val jsonObject = jsonElement as? JsonObject
+                    val dataArray = jsonObject?.get("data") as? JsonArray
+                    if (dataArray != null) {
+                        val plansList = mutableListOf<SubscriptionPlan>()
+                        for (i in 1 until dataArray.size) {
+                            val row = dataArray[i] as? JsonArray
+                            if (row != null && row.size >= 3) {
+                                val id = row[0].jsonPrimitive.content
+                                val name = row[1].jsonPrimitive.content
+                                val price = row[2].jsonPrimitive.content.toDoubleOrNull() ?: 0.0
+                                val days = if (row.size > 3) row[3].jsonPrimitive.content.toIntOrNull() ?: 30 else 30
+                                val desc = if (row.size > 4) row[4].jsonPrimitive.content else ""
+                                plansList.add(SubscriptionPlan(id = id, name = name, price = price, durationDays = days, description = desc))
+                            }
+                        }
+                        if (plansList.isNotEmpty()) {
+                            subscriptionPlans = plansList
+                        }
+                    }
+                }
+            } catch (_: Throwable) {}
+        }
+    }
 
     val onLicenciaPayClickAction: () -> Unit = {
         coroutineScope.launch {
@@ -137,7 +177,12 @@ fun MemberDashboardSharedScreen(
                     val localProfile = readLocalMemberProfile()
                     val ssId = localProfile?.spreadsheetId.orEmpty()
                     val paramChar = if (activeGymUrl.contains("?")) "&" else "?"
-                    val amount = 1500.0
+                    
+                    // Buscar el precio configurado para el plan actual del socio
+                    val matchingPlan = subscriptionPlans.find { 
+                        it.name.equals(activePlanName, ignoreCase = true) || it.id.equals(activePlanName, ignoreCase = true) 
+                    }
+                    val amount = matchingPlan?.price ?: 1500.0
 
                     val reqUrl = "$activeGymUrl${paramChar}action=create_mp_preference&gymId=$gymIdVal&gymName=${activeGymName}&memberEmail=$activeEmail&planId=$activePlanName&amount=$amount&operationType=MEMBERSHIP&paymentModality=$normLicense&spreadsheetId=$ssId&isSubscription=true&title=Cuota%20Membresía%20-%20${activeGymName}"
                     val responseText = apiClient.getData(reqUrl)
