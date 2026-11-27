@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.painter.Painter
@@ -95,14 +96,42 @@ fun MemberDashboardSharedScreen(
     var userBankAccount by remember { mutableStateOf(readLocalStorageFlag("bank_account") ?: "") }
     var isGymLicensePaid by remember { mutableStateOf(readLocalStorageFlag("gym_license_paid") == "true") }
     var gymLicenseVence by remember { mutableLongStateOf(readLocalStorageFlag("gym_license_vence")?.toLongOrNull() ?: 0L) }
-    var subscriptionPlans by remember { mutableStateOf<List<SubscriptionPlan>>(emptyList()) }
+    var subscriptionPlans by remember {
+        mutableStateOf<List<SubscriptionPlan>>(
+            try {
+                val cachedJson = readLocalStorageFlag("gym_plans_json")
+                if (!cachedJson.isNullOrBlank()) {
+                    val jsonElement = Json.parseToJsonElement(cachedJson)
+                    val jsonObject = jsonElement as? JsonObject
+                    val dataArray = jsonObject?.get("data") as? JsonArray
+                    if (dataArray != null) {
+                        val plansList = mutableListOf<SubscriptionPlan>()
+                        for (i in 1 until dataArray.size) {
+                            val row = dataArray[i] as? JsonArray
+                            if (row != null && row.size >= 3) {
+                                val id = row[0].jsonPrimitive.content.trim()
+                                val name = row[1].jsonPrimitive.content.trim()
+                                val rawPriceStr = row[2].jsonPrimitive.content.trim()
+                                val cleanPriceStr = rawPriceStr.replace(",", ".").replace(Regex("[^0-9.]"), "")
+                                val price = cleanPriceStr.toDoubleOrNull() ?: 0.0
+                                val days = if (row.size > 3) row[3].jsonPrimitive.content.toIntOrNull() ?: 30 else 30
+                                val desc = if (row.size > 4) row[4].jsonPrimitive.content else ""
+                                plansList.add(SubscriptionPlan(id = id, name = name, price = price, durationDays = days, description = desc))
+                            }
+                        }
+                        plansList
+                    } else emptyList()
+                } else emptyList()
+            } catch (_: Throwable) { emptyList() }
+        )
+    }
 
     var showBankTransferDialog by remember { mutableStateOf(false) }
     var infoBannerTitle by remember { mutableStateOf("Estado de Cuenta") }
     var infoBannerMessage by remember { mutableStateOf("") }
     var showInfoBanner by remember { mutableStateOf(false) }
 
-    // Cargar planes de suscripción desde el servidor
+    // Cargar planes de suscripción desde el servidor y cachear
     LaunchedEffect(activeGymUrl) {
         if (activeGymUrl.isNotBlank()) {
             try {
@@ -134,6 +163,7 @@ fun MemberDashboardSharedScreen(
                         }
                         if (plansList.isNotEmpty()) {
                             subscriptionPlans = plansList
+                            saveLocalStorageFlag("gym_plans_json", responseText)
                         }
                     }
                 }
@@ -1433,26 +1463,29 @@ fun SharedMembershipStatusCard(
 
 @Composable
 fun BroadcastMessageSharedDisplay(message: String) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF002F3D)),
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, PrimaryTurquoise),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(Icons.Default.Campaign, contentDescription = null, tint = PrimaryTurquoise, modifier = Modifier.size(24.dp))
-            Spacer(Modifier.width(12.dp))
-            Text(
-                text = message,
-                color = TextWhite,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.basicMarquee()
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                brush = Brush.horizontalGradient(
+                    0.0f to Color(0xFF6A1B9A), // Violeta lado izquierdo
+                    0.25f to Color(0xFF6A1B9A).copy(alpha = 0.5f),
+                    0.5f to Color(0xFF2E0814),
+                    0.75f to Color.Red.copy(alpha = 0.5f),
+                    1.0f to Color(0xFFB71C1C) // Rojo lado derecho
+                )
             )
-        }
+            .padding(vertical = 16.dp, horizontal = 24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = message,
+            color = TextWhite,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.basicMarquee()
+        )
     }
 }
 
