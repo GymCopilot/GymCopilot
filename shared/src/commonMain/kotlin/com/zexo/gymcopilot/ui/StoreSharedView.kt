@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.model.Product
@@ -466,6 +467,16 @@ fun StoreCategoryProductsSharedScreen(
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1
                                 )
+                                Spacer(Modifier.height(2.dp))
+                                if (product.description.isNotBlank()) {
+                                    Text(
+                                        text = product.description,
+                                        color = Color.DarkGray,
+                                        fontSize = 11.sp,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                                 Spacer(Modifier.height(4.dp))
                                 Text(
                                     text = "$${product.price}",
