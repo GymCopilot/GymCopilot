@@ -124,9 +124,11 @@ fun MemberDashboardSharedScreen(
                         for (i in 1 until dataArray.size) {
                             val row = dataArray[i] as? JsonArray
                             if (row != null && row.size >= 3) {
-                                val id = row[0].jsonPrimitive.content
-                                val name = row[1].jsonPrimitive.content
-                                val price = row[2].jsonPrimitive.content.toDoubleOrNull() ?: 0.0
+                                val id = row[0].jsonPrimitive.content.trim()
+                                val name = row[1].jsonPrimitive.content.trim()
+                                val rawPriceStr = row[2].jsonPrimitive.content.trim()
+                                val cleanPriceStr = rawPriceStr.replace(",", ".").replace(Regex("[^0-9.]"), "")
+                                val price = cleanPriceStr.toDoubleOrNull() ?: 0.0
                                 val days = if (row.size > 3) row[3].jsonPrimitive.content.toIntOrNull() ?: 30 else 30
                                 val desc = if (row.size > 4) row[4].jsonPrimitive.content else ""
                                 plansList.add(SubscriptionPlan(id = id, name = name, price = price, durationDays = days, description = desc))
@@ -182,8 +184,8 @@ fun MemberDashboardSharedScreen(
 
                     // 1. Búsqueda en planes cacheados
                     val trimmedPlan = activePlanName.trim()
-                    var resolvedPrice = subscriptionPlans.find { 
-                        it.name.trim().equals(trimmedPlan, ignoreCase = true) || 
+                    var resolvedPrice = subscriptionPlans.find {
+                        it.name.trim().equals(trimmedPlan, ignoreCase = true) ||
                         it.id.trim().equals(trimmedPlan, ignoreCase = true) ||
                         it.name.trim().lowercase().contains(trimmedPlan.lowercase()) ||
                         trimmedPlan.lowercase().contains(it.name.trim().lowercase())
@@ -203,7 +205,9 @@ fun MemberDashboardSharedScreen(
                                         val row = arr[i] as? JsonArray
                                         if (row != null && row.size >= 3) {
                                             val pName = row[1].jsonPrimitive.content.trim()
-                                            val pPrice = row[2].jsonPrimitive.content.toDoubleOrNull() ?: 0.0
+                                            val rawPPrice = row[2].jsonPrimitive.content.trim()
+                                            val cleanPPrice = rawPPrice.replace(",", ".").replace(Regex("[^0-9.]"), "")
+                                            val pPrice = cleanPPrice.toDoubleOrNull() ?: 0.0
                                             if (pName.equals(trimmedPlan, ignoreCase = true) || pName.lowercase().contains(trimmedPlan.lowercase()) || trimmedPlan.lowercase().contains(pName.lowercase())) {
                                                 resolvedPrice = pPrice
                                                 break
@@ -295,6 +299,16 @@ fun MemberDashboardSharedScreen(
                                         } else {
                                             activeAssignedTrainer = ""
                                         }
+                                        if (row.size > 14) {
+                                            val licStr = row[14].jsonPrimitive.content
+                                            val licTs = licStr.toLongOrNull() ?: 0L
+                                            if (licTs > 0L) {
+                                                gymLicenseVence = licTs
+                                                isGymLicensePaid = licTs > getCurrentTimeMillis()
+                                                saveLocalStorageFlag("gym_license_vence", licTs.toString())
+                                                saveLocalStorageFlag("gym_license_paid", if (isGymLicensePaid) "true" else "false")
+                                            }
+                                        }
                                         break
                                     }
                                 }
@@ -384,20 +398,22 @@ fun MemberDashboardSharedScreen(
                                             saveLocalStorageFlag("license_model_payer", cleanLicense)
                                         }
                                     }
-                                    if (row.size > 24) {
-                                        val rawStatus = row[24].jsonPrimitive.content
-                                        if (rawStatus.isNotBlank() && rawStatus != "null") {
-                                            val isPaid = rawStatus.trim().uppercase() == "ACTIVO"
-                                            isGymLicensePaid = isPaid
-                                            saveLocalStorageFlag("gym_license_paid", if (isPaid) "true" else "false")
+                                    if (gymLicenseVence <= 0L) {
+                                        if (row.size > 24) {
+                                            val rawStatus = row[24].jsonPrimitive.content
+                                            if (rawStatus.isNotBlank() && rawStatus != "null") {
+                                                val isPaid = rawStatus.trim().uppercase() == "ACTIVO"
+                                                isGymLicensePaid = isPaid
+                                                saveLocalStorageFlag("gym_license_paid", if (isPaid) "true" else "false")
+                                            }
                                         }
-                                    }
-                                    if (row.size > 25) {
-                                        val rawExpiry = row[25].jsonPrimitive.content
-                                        val expiryLong = rawExpiry.trim().toLongOrNull()
-                                        if (expiryLong != null && expiryLong > 0L) {
-                                            gymLicenseVence = expiryLong
-                                            saveLocalStorageFlag("gym_license_vence", expiryLong.toString())
+                                        if (row.size > 25) {
+                                            val rawExpiry = row[25].jsonPrimitive.content
+                                            val expiryLong = rawExpiry.trim().toLongOrNull()
+                                            if (expiryLong != null && expiryLong > 0L) {
+                                                gymLicenseVence = expiryLong
+                                                saveLocalStorageFlag("gym_license_vence", expiryLong.toString())
+                                            }
                                         }
                                     }
                                     break
