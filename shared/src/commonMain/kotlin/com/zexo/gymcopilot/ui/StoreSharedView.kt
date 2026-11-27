@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -418,13 +419,13 @@ fun StoreCategoryProductsSharedScreen(
                         modifier = Modifier.fillMaxWidth().height(260.dp)
                     ) {
                         Column(
-                            modifier = Modifier.fillMaxSize().padding(10.dp),
+                            modifier = Modifier.fillMaxSize().padding(12.dp),
                             verticalArrangement = Arrangement.SpaceBetween
                         ) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(130.dp)
+                                    .aspectRatio(1f)
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(Color.White),
                                 contentAlignment = Alignment.Center
@@ -435,7 +436,7 @@ fun StoreCategoryProductsSharedScreen(
                                 if (bitmap != null) {
                                     Image(bitmap = bitmap, contentDescription = product.name, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
                                 } else {
-                                    Icon(Icons.Default.FitnessCenter, null, tint = PrimaryTurquoise, modifier = Modifier.size(48.dp))
+                                    Icon(Icons.Default.ShoppingCart, null, tint = Color.LightGray, modifier = Modifier.size(48.dp))
                                 }
 
                                 val bannerText = product.bannerText?.takeIf { it.isNotBlank() } ?: product.bannerType ?: ""
@@ -459,13 +460,14 @@ fun StoreCategoryProductsSharedScreen(
                                 }
                             }
 
-                            Column {
+                            Column(modifier = Modifier.padding(top = 8.dp)) {
                                 Text(
-                                    text = product.name,
+                                    text = product.name.ifEmpty { "Nombre del Producto" },
                                     color = Color.Black,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
-                                    maxLines = 1
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                                 Spacer(Modifier.height(2.dp))
                                 if (product.description.isNotBlank()) {
@@ -477,7 +479,7 @@ fun StoreCategoryProductsSharedScreen(
                                         overflow = TextOverflow.Ellipsis
                                     )
                                 }
-                                Spacer(Modifier.height(4.dp))
+                                Spacer(Modifier.height(6.dp))
                                 Text(
                                     text = "$${product.price}",
                                     color = Color.Black,
@@ -499,23 +501,32 @@ fun StoreCategoryProductsSharedScreen(
                                             "line" -> painterResource(Res.drawable.line)
                                             else -> painterResource(Res.drawable.whatsapp)
                                         }
-                                        IconButton(
-                                            onClick = { /* Contact action */ },
-                                            modifier = Modifier.size(32.dp).background(Color.White, CircleShape)
+                                        Surface(
+                                            modifier = Modifier.size(34.dp).clip(CircleShape).clickable { /* contact */ },
+                                            color = Color(0xFFE6E6E6)
                                         ) {
-                                            Image(
-                                                painter = contactPainter,
-                                                contentDescription = product.contactMethod ?: "whatsapp",
-                                                modifier = Modifier.size(24.dp).clip(CircleShape),
-                                                contentScale = ContentScale.Crop
-                                            )
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Image(
+                                                    painter = contactPainter,
+                                                    contentDescription = "Contact",
+                                                    modifier = Modifier.size(20.dp),
+                                                    contentScale = ContentScale.Fit
+                                                )
+                                            }
                                         }
 
-                                        IconButton(
-                                            onClick = { onAddToCart(product) },
-                                            modifier = Modifier.size(32.dp).background(categoryColor.copy(alpha = 0.15f), CircleShape)
+                                        Surface(
+                                            modifier = Modifier.size(34.dp).clip(CircleShape).clickable { onAddToCart(product) },
+                                            color = categoryColor
                                         ) {
-                                            Icon(Icons.Default.AddShoppingCart, null, tint = categoryColor, modifier = Modifier.size(16.dp))
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Default.AddShoppingCart,
+                                                    contentDescription = null,
+                                                    tint = if (categoryColor.luminance() > 0.5f) Color.Black else Color.White,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }
