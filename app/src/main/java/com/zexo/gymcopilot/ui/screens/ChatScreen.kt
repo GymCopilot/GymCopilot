@@ -140,6 +140,37 @@ fun ChatScreen(
         }
     }
 
+    val unreadMap = remember { mutableStateMapOf<String, Boolean>() }
+
+    LaunchedEffect(myID, gymNameStore, myProfessor, assignedStudents) {
+        val adminSorted = listOf(myID.lowercase().trim(), "admin").sorted()
+        val adminKey = "${adminSorted[0]}_${adminSorted[1]}".replace(" ", "_")
+        val adminLastRead = dataStoreManager.getLastReadTimestamp(adminKey).first()
+        val adminCache = dataStoreManager.getChatCache(adminKey).first()
+        val adminGenLastRead = dataStoreManager.getLastReadTimestamp("chat_general_global").first()
+        val adminGenCache = dataStoreManager.getChatCache("chat_general_global").first()
+        val adminHasUnread = adminCache.any { !it.isMine && it.timestamp > adminLastRead } || adminGenCache.any { !it.isMine && it.timestamp > adminGenLastRead }
+        unreadMap["Admin"] = adminHasUnread
+
+        myProfessor?.let { prof ->
+            val profId = prof.email.ifBlank { prof.fullName }
+            val sorted = listOf(myID.lowercase().trim(), profId.lowercase().trim()).sorted()
+            val profKey = "${sorted[0]}_${sorted[1]}".replace(" ", "_")
+            val lastRead = dataStoreManager.getLastReadTimestamp(profKey).first()
+            val cache = dataStoreManager.getChatCache(profKey).first()
+            unreadMap[profId] = cache.any { !it.isMine && it.timestamp > lastRead }
+        }
+
+        assignedStudents.forEach { student ->
+            val studId = student.email.ifBlank { student.fullName }
+            val sorted = listOf(myID.lowercase().trim(), studId.lowercase().trim()).sorted()
+            val studKey = "${sorted[0]}_${sorted[1]}".replace(" ", "_")
+            val lastRead = dataStoreManager.getLastReadTimestamp(studKey).first()
+            val cache = dataStoreManager.getChatCache(studKey).first()
+            unreadMap[studId] = cache.any { !it.isMine && it.timestamp > lastRead }
+        }
+    }
+
     val otherInfo = remember(currentRecipient, members, professors) {
         val prof = professors.find { it.fullName.equals(currentRecipient, true) || it.email.equals(currentRecipient, true) }
         val member = members.find { it.fullName.equals(currentRecipient, true) || it.email.equals(currentRecipient, true) }
@@ -421,15 +452,21 @@ fun ChatScreen(
                                 text = { Text("Administrador (${gymNameStore})", color = TextWhite) },
                                 onClick = { currentRecipient = "Admin"; showSelector = false },
                                 leadingIcon = { 
-                                    if (gymLogoModel != null) {
-                                        AsyncImage(model = gymLogoModel, contentDescription = null, modifier = Modifier.size(24.dp).clip(RoundedCornerShape(4.dp)), contentScale = ContentScale.Fit)
-                                    } else {
-                                        Icon(Icons.Default.AccountBalance, null, tint = PrimaryTurquoise)
+                                    Box(modifier = Modifier.size(24.dp)) {
+                                        if (gymLogoModel != null) {
+                                            AsyncImage(model = gymLogoModel, contentDescription = null, modifier = Modifier.size(24.dp).clip(RoundedCornerShape(4.dp)), contentScale = ContentScale.Fit)
+                                        } else {
+                                            Icon(Icons.Default.AccountBalance, null, tint = PrimaryTurquoise)
+                                        }
+                                        if (unreadMap["Admin"] == true) {
+                                            Box(modifier = Modifier.size(8.dp).background(Color.Red, CircleShape).align(Alignment.TopEnd))
+                                        }
                                     }
                                 }
                             )
                             if (isProfessor) {
                                 assignedStudents.forEach { student ->
+                                    val studId = student.email.ifBlank { student.fullName }
                                     val studentPhoto = student.photoUri?.let { uri ->
                                         if (uri.startsWith("data:image")) {
                                             try {
@@ -443,24 +480,35 @@ fun ChatScreen(
                                         text = { Text(student.fullName, color = TextWhite) },
                                         onClick = { currentRecipient = student.email.ifBlank { student.fullName }; showSelector = false },
                                         leadingIcon = {
-                                            if (studentPhoto != null) {
-                                                AsyncImage(model = studentPhoto, null, modifier = Modifier.size(24.dp).clip(CircleShape), contentScale = ContentScale.Crop)
-                                            } else {
-                                                Icon(Icons.Default.Person, null, tint = PrimaryTurquoise)
+                                            Box(modifier = Modifier.size(24.dp)) {
+                                                if (studentPhoto != null) {
+                                                    AsyncImage(model = studentPhoto, null, modifier = Modifier.size(24.dp).clip(CircleShape), contentScale = ContentScale.Crop)
+                                                } else {
+                                                    Icon(Icons.Default.Person, null, tint = PrimaryTurquoise)
+                                                }
+                                                if (unreadMap[studId] == true) {
+                                                    Box(modifier = Modifier.size(8.dp).background(Color.Red, CircleShape).align(Alignment.TopEnd))
+                                                }
                                             }
                                         }
                                     )
                                 }
                             } else {
                                 myProfessor?.let { prof ->
+                                    val profId = prof.email.ifBlank { prof.fullName }
                                     DropdownMenuItem(
                                         text = { Text(prof.fullName.ifBlank { prof.email }, color = TextWhite) },
                                         onClick = { currentRecipient = prof.email.ifBlank { prof.fullName }; showSelector = false },
                                         leadingIcon = { 
-                                            if (myProfessorPhotoModel != null) {
-                                                AsyncImage(model = myProfessorPhotoModel, null, modifier = Modifier.size(24.dp).clip(CircleShape), contentScale = ContentScale.Crop)
-                                            } else {
-                                                Icon(Icons.Default.Person, null, tint = PrimaryTurquoise)
+                                            Box(modifier = Modifier.size(24.dp)) {
+                                                if (myProfessorPhotoModel != null) {
+                                                    AsyncImage(model = myProfessorPhotoModel, null, modifier = Modifier.size(24.dp).clip(CircleShape), contentScale = ContentScale.Crop)
+                                                } else {
+                                                    Icon(Icons.Default.Person, null, tint = PrimaryTurquoise)
+                                                }
+                                                if (unreadMap[profId] == true) {
+                                                    Box(modifier = Modifier.size(8.dp).background(Color.Red, CircleShape).align(Alignment.TopEnd))
+                                                }
                                             }
                                         }
                                     )
