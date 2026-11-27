@@ -36,6 +36,7 @@ import com.zexo.gymcopilot.utils.readLocalStorageFlag
 import com.zexo.gymcopilot.utils.saveLocalMemberProfile
 import com.zexo.gymcopilot.utils.saveLocalStorageFlag
 import com.zexo.gymcopilot.utils.triggerPwaInstall
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -111,9 +112,10 @@ fun SharedGymCopilotApp(
     gymName: String = "Tu Gimnasio"
 ) {
     val skipSplash = readLocalStorageFlag("gymcopilot_skip_splash") == "true"
-    var screenState by remember { mutableStateOf(if (skipSplash) AppScreenState.MAIN_APP else AppScreenState.SPLASH) }
-    var currentRole by remember { mutableStateOf(if (LockConfig.WEB_ROLE_LOCK_ENABLED == 1) "member" else initialRole.lowercase()) }
-    var activeGymName by remember { mutableStateOf(gymName) }
+    val isRoleLocked = LockConfig.WEB_ROLE_LOCK_ENABLED == 1
+    var screenState by remember { mutableStateOf(if (skipSplash || isRoleLocked) AppScreenState.MAIN_APP else AppScreenState.SPLASH) }
+    var currentRole by remember { mutableStateOf(if (isRoleLocked) "member" else initialRole.lowercase()) }
+    var activeGymName by remember { mutableStateOf(gymName.ifBlank { readLocalStorageFlag("gym_name") ?: "Tu Gimnasio" }) }
     var showInstallBanner by remember { mutableStateOf(false) }
     var showInstructionsDialog by remember { mutableStateOf(false) }
     var gymLogoUri by remember {
@@ -181,6 +183,42 @@ fun SharedGymCopilotApp(
                 gymLogoUri = localData.photoUri
             }
         }
+
+        try {
+            val gymIdVal = activeGymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+            val ssId = localData?.spreadsheetId.orEmpty()
+            val paramChar = if (LockConfig.activeApiUrl.contains("?")) "&" else "?"
+            val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+            val url = "${LockConfig.activeApiUrl}${paramChar}type=config&gymId=$gymIdVal$ssParam"
+            val responseText = GymKtorApiClient.getData(url)
+            if (responseText.isNotBlank() && responseText.contains("success")) {
+                val jsonElement = Json.parseToJsonElement(responseText)
+                val jsonObject = jsonElement as? JsonObject
+                val dataArray = jsonObject?.get("data") as? JsonArray
+                if (dataArray != null) {
+                    for (i in 0 until dataArray.size) {
+                        val row = dataArray[i] as? JsonArray
+                        if (row != null && row.size > 0 && row[0].jsonPrimitive.content == "GYM_CONFIG") {
+                            if (row.size > 1) {
+                                val rawGymName = row[1].jsonPrimitive.content
+                                if (rawGymName.isNotBlank() && rawGymName != "null") {
+                                    activeGymName = rawGymName
+                                    saveLocalStorageFlag("gym_name", rawGymName)
+                                }
+                            }
+                            if (row.size > 2) {
+                                val rawLogo = row[2].jsonPrimitive.content
+                                if (rawLogo.isNotBlank() && rawLogo != "null") {
+                                    gymLogoUri = rawLogo
+                                    saveLocalStorageFlag("gymcopilot_cache_logo", rawLogo)
+                                }
+                            }
+                            break
+                        }
+                    }
+                }
+            }
+        } catch (_: Throwable) {}
     }
 
     GymCopilotTheme {
