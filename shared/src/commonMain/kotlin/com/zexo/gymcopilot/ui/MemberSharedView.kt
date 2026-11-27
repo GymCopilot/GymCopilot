@@ -245,7 +245,12 @@ fun MemberDashboardSharedScreen(
                         } catch (_: Throwable) {}
                     }
 
-                    val amount = if (resolvedPrice > 0.0) resolvedPrice else 1500.0
+                    // 3. Fallback inteligente: si no hubo coincidencia exacta de nombre, usar el precio del primer plan disponible en la lista del gimnasio
+                    if (resolvedPrice <= 0.0 && subscriptionPlans.isNotEmpty()) {
+                        resolvedPrice = subscriptionPlans.first().price
+                    }
+
+                    val amount = if (resolvedPrice > 0.0) resolvedPrice else 0.0
 
                     val reqUrl = "$activeGymUrl${paramChar}action=create_mp_preference&gymId=$gymIdVal&gymName=${activeGymName}&memberEmail=$activeEmail&planId=$activePlanName&amount=$amount&operationType=MEMBERSHIP&paymentModality=$normLicense&spreadsheetId=$ssId&isSubscription=true&title=Cuota%20Membresía%20-%20${activeGymName}"
                     val responseText = apiClient.getData(reqUrl)
