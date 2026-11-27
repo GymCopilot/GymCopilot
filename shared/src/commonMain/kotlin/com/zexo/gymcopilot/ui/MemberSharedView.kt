@@ -252,6 +252,13 @@ fun MemberDashboardSharedScreen(
 
                     val amount = if (resolvedPrice > 0.0) resolvedPrice else 0.0
 
+                    if (amount <= 0.0) {
+                        infoBannerTitle = "Plan sin precio"
+                        infoBannerMessage = "El plan asignado ('$activePlanName') no tiene un valor o precio configurado en la base de datos. Por favor, comunícate con la administración del gimnasio."
+                        showInfoBanner = true
+                        return@launch
+                    }
+
                     val reqUrl = "$activeGymUrl${paramChar}action=create_mp_preference&gymId=$gymIdVal&gymName=${activeGymName}&memberEmail=$activeEmail&planId=$activePlanName&amount=$amount&operationType=MEMBERSHIP&paymentModality=$normLicense&spreadsheetId=$ssId&isSubscription=true&title=Cuota%20Membresía%20-%20${activeGymName}"
                     val responseText = apiClient.getData(reqUrl)
                     val regex = Regex("\"init_point\"\\s*:\\s*\"([^\"]+)\"")
