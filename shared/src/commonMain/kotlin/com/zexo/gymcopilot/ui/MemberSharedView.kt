@@ -98,8 +98,6 @@ fun MemberDashboardSharedScreen(
     var subscriptionPlans by remember { mutableStateOf<List<SubscriptionPlan>>(emptyList()) }
 
     var showBankTransferDialog by remember { mutableStateOf(false) }
-    var showPayUrlDialog by remember { mutableStateOf(false) }
-    var payUrlToDisplay by remember { mutableStateOf("") }
     var infoBannerTitle by remember { mutableStateOf("Estado de Cuenta") }
     var infoBannerMessage by remember { mutableStateOf("") }
     var showInfoBanner by remember { mutableStateOf(false) }
@@ -157,8 +155,6 @@ fun MemberDashboardSharedScreen(
                 val regex = Regex("\"init_point\"\\s*:\\s*\"([^\"]+)\"")
                 val initPoint = regex.find(responseText)?.groupValues?.get(1) ?: ""
                 if (initPoint.isNotBlank()) {
-                    payUrlToDisplay = initPoint
-                    showPayUrlDialog = true
                     openExternalUrl(initPoint)
                 } else {
                     openExternalUrl("https://www.mercadopago.com.ar")
@@ -226,8 +222,6 @@ fun MemberDashboardSharedScreen(
                     val regex = Regex("\"init_point\"\\s*:\\s*\"([^\"]+)\"")
                     val initPoint = regex.find(responseText)?.groupValues?.get(1) ?: ""
                     if (initPoint.isNotBlank()) {
-                        payUrlToDisplay = initPoint
-                        showPayUrlDialog = true
                         openExternalUrl(initPoint)
                     } else {
                         openExternalUrl("https://www.mercadopago.com.ar")
@@ -1169,56 +1163,7 @@ fun MemberDashboardSharedScreen(
         )
     }
 
-    if (showPayUrlDialog) {
-        AlertDialog(
-            onDismissRequest = { showPayUrlDialog = false },
-            containerColor = Color(0xFF081C24),
-            shape = RoundedCornerShape(20.dp),
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Payment,
-                        contentDescription = null,
-                        tint = PrimaryTurquoise,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Text("Ir a pagar a Mercado Pago", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                }
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        "Se ha generado tu orden de pago. Presiona el botón a continuación para ser redirigido al cobro en Mercado Pago:",
-                        color = TextWhite.copy(alpha = 0.85f),
-                        fontSize = 13.sp
-                    )
 
-                    Button(
-                        onClick = {
-                            val targetUrl = payUrlToDisplay.ifBlank { "https://www.mercadopago.com.ar" }
-                            openExternalUrl(targetUrl)
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().height(48.dp)
-                    ) {
-                        Icon(Icons.Default.Payment, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Black)
-                        Spacer(Modifier.width(8.dp))
-                        Text("IR A PAGAR A MERCADO PAGO", color = Color.Black, fontWeight = FontWeight.Bold)
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = { showPayUrlDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise)
-                ) {
-                    Text("CERRAR", color = Color.Black, fontWeight = FontWeight.Bold)
-                }
-            }
-        )
-    }
 
     if (showInfoBanner) {
         AlertDialog(
