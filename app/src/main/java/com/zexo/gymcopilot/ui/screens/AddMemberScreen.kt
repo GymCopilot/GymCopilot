@@ -83,7 +83,7 @@ fun AddMemberScreen(
     var height by remember { mutableStateOf("") }
     
     var planId by remember { mutableStateOf<String?>(null) }
-    var planType by remember { mutableStateOf(if (appLanguage == "Español") "Mensual" else "Monthly") }
+    var planType by remember { mutableStateOf("No asignado") }
     var nextRenewalDate by remember { mutableLongStateOf(System.currentTimeMillis() + (30L * 24 * 60 * 60 * 1000)) }
     var notes by remember { mutableStateOf("") }
     var routine by remember { mutableStateOf("") }

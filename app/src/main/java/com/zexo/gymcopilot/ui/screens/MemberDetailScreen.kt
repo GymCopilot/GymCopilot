@@ -125,7 +125,7 @@ fun MemberDetailScreen(
             weight = member.weight
             height = member.height
             planId = member.planId
-            planType = member.planType
+            planType = if (member.planType == "Monthly" || member.planType == "Mensual" || member.planType.isBlank()) "No asignado" else member.planType
             nextRenewalDate = member.nextRenewalDate
             routine = member.routine
             assignedTrainer = member.assignedTrainer

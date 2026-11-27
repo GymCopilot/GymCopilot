@@ -70,7 +70,7 @@ fun RealAdminDashboardView(
                     email = "pe@gmail.com",
                     phone = "123456789",
                     membershipStatus = "DEUDOR",
-                    planType = "Monthly"
+                    planType = "No asignado"
                 )
             )
         )

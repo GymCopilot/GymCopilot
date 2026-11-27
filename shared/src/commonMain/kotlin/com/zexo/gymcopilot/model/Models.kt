@@ -14,7 +14,7 @@ data class Member(
     val registrationDate: Long = 0L,
     val membershipStatus: String = "ACTIVO",
     val planId: String? = null,
-    val planType: String = "Mensual",
+    val planType: String = "No asignado",
     val nextRenewalDate: Long = 0L,
     val notes: String = "",
     val routine: String = "",

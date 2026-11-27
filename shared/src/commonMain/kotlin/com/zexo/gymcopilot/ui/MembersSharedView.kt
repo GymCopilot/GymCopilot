@@ -367,7 +367,7 @@ fun AddMemberSharedScreen(
     var address by remember { mutableStateOf("") }
     var weight by remember { mutableStateOf("") }
     var height by remember { mutableStateOf("") }
-    var planType by remember { mutableStateOf(plans.firstOrNull()?.name ?: "Mensual") }
+    var planType by remember { mutableStateOf(plans.firstOrNull()?.name ?: "No asignado") }
     var notes by remember { mutableStateOf("") }
     var routine by remember { mutableStateOf("") }
     var assignedTrainer by remember { mutableStateOf("") }

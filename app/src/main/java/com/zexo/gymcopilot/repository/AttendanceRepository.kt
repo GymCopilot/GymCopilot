@@ -1052,7 +1052,8 @@ class AttendanceRepository(
                     } else 0L
 
                     val pId = if (row.size() > 11) row[11].asString else null
-                    val pType = if (row.size() > 12) row[12].asString else "Mensual"
+                    val rawPType = if (row.size() > 12) row[12].asString else ""
+                    val pType = if (rawPType.isNotBlank() && rawPType != "null" && rawPType != "Monthly" && rawPType != "Mensual") rawPType else "No asignado"
                     val profAssigned = if (row.size() > 13) row[13].asString else ""
 
                     val licenseRenewalTs = if (row.size() > 14) {
