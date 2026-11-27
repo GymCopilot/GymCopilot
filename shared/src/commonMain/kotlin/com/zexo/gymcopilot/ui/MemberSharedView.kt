@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.LockConfig
+import com.zexo.gymcopilot.model.Routine
 import com.zexo.gymcopilot.model.SubscriptionPlan
 import kotlin.collections.*
 import com.zexo.gymcopilot.shared.network.CheckInRequest
@@ -893,6 +894,35 @@ fun MemberDashboardSharedScreen(
 
                 // 5. TARJETA "RUTINA DE HOY"
                 item {
+                    val todayRoutine = remember(activeEmail) {
+                        val now = getCurrentTimeMillis()
+                        val days = now / (24 * 60 * 60 * 1000L)
+                        val dayIndex = ((days + 3) % 7).toInt()
+                        val todayTag = when (dayIndex) {
+                            0 -> "LU"
+                            1 -> "MA"
+                            2 -> "MI"
+                            3 -> "JU"
+                            4 -> "VI"
+                            5 -> "SÁ"
+                            6 -> "DO"
+                            else -> ""
+                        }
+                        val savedJson = readLocalStorageFlag("gymcopilot_user_routines")
+                        val userRoutines = if (!savedJson.isNullOrBlank()) {
+                            try {
+                                Json.decodeFromString<List<Routine>>(savedJson)
+                            } catch (_: Throwable) { emptyList() }
+                        } else { emptyList() }
+
+                        val normalizedEmail = activeEmail.lowercase().trim()
+                        val myRoutines = userRoutines.filter { 
+                            it.creatorEmail.lowercase().trim() == normalizedEmail || 
+                            it.assignedMemberEmails.any { e -> e.lowercase().trim() == normalizedEmail } 
+                        }
+                        myRoutines.find { it.days.contains(todayTag) }
+                    }
+
                     Box(modifier = Modifier.padding(horizontal = 20.dp)) {
                         Card(
                             colors = CardDefaults.cardColors(containerColor = Color(0xFF001F29)),
@@ -909,15 +939,47 @@ fun MemberDashboardSharedScreen(
                                     letterSpacing = 1.sp
                                 )
                                 Spacer(modifier = Modifier.height(10.dp))
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(text = "🏆", fontSize = 28.sp)
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(
-                                        text = "¡Día de Descanso!",
-                                        color = TextWhite,
-                                        fontSize = 22.sp,
-                                        fontWeight = FontWeight.Black
-                                    )
+                                
+                                if (todayRoutine != null) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.FitnessCenter, contentDescription = null, tint = PrimaryTurquoise, modifier = Modifier.size(24.dp))
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(
+                                            text = todayRoutine.name,
+                                            color = TextWhite,
+                                            fontSize = 22.sp,
+                                            fontWeight = FontWeight.Black
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Button(
+                                        onClick = { onTabSelected(3) },
+                                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise),
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.fillMaxWidth().height(42.dp)
+                                    ) {
+                                        Text("VER DETALLE DE RUTINA", color = Color.Black, fontWeight = FontWeight.Bold)
+                                    }
+                                } else {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(text = "🏆", fontSize = 28.sp)
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(
+                                            text = "¡Día de Descanso!",
+                                            color = TextWhite,
+                                            fontSize = 22.sp,
+                                            fontWeight = FontWeight.Black
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Button(
+                                        onClick = { onTabSelected(3) },
+                                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryTurquoise),
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.fillMaxWidth().height(42.dp)
+                                    ) {
+                                        Text("VER TODAS MIS RUTINAS", color = Color.Black, fontWeight = FontWeight.Bold)
+                                    }
                                 }
                             }
                         }
