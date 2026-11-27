@@ -124,6 +124,22 @@ fun ChatScreen(
             ?: Professor(id = "fallback_prof", firstName = assignedTrainerName, lastName = "", email = assignedTrainerName, specialty = "Entrenador Asignado")
     }
 
+    val isProfessor = remember(userRole, userName, userEmail, professors) {
+        val role = userRole?.lowercase() ?: ""
+        role == "profesor" || professors.any { it.fullName.equals(userName, true) || it.email.equals(userEmail, true) }
+    }
+
+    val assignedStudents = remember(members, userName, userEmail) {
+        members.filter { m ->
+            val t = m.assignedTrainer.lowercase().trim()
+            val profName = userName.lowercase().trim()
+            val profEmail = userEmail.lowercase().trim()
+            t.isNotBlank() && t != "sin asignar" && t != "n/a" && (
+                t == profName || t == profEmail || (profName.isNotBlank() && t.contains(profName)) || (profName.isNotBlank() && profName.contains(t))
+            )
+        }
+    }
+
     val otherInfo = remember(currentRecipient, members, professors) {
         val prof = professors.find { it.fullName.equals(currentRecipient, true) || it.email.equals(currentRecipient, true) }
         val member = members.find { it.fullName.equals(currentRecipient, true) || it.email.equals(currentRecipient, true) }
@@ -412,18 +428,43 @@ fun ChatScreen(
                                     }
                                 }
                             )
-                            myProfessor?.let { prof ->
-                                DropdownMenuItem(
-                                    text = { Text(prof.fullName, color = TextWhite) },
-                                    onClick = { currentRecipient = prof.email; showSelector = false },
-                                    leadingIcon = { 
-                                        if (myProfessorPhotoModel != null) {
-                                            AsyncImage(model = myProfessorPhotoModel, null, modifier = Modifier.size(24.dp).clip(CircleShape), contentScale = ContentScale.Crop)
-                                        } else {
-                                            Icon(Icons.Default.Person, null, tint = PrimaryTurquoise)
-                                        }
+                            if (isProfessor) {
+                                assignedStudents.forEach { student ->
+                                    val studentPhoto = student.photoUri?.let { uri ->
+                                        if (uri.startsWith("data:image")) {
+                                            try {
+                                                val b64 = uri.substringAfter("base64,")
+                                                val bytes = Base64.decode(b64, Base64.DEFAULT)
+                                                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                                            } catch (_: Exception) { null }
+                                        } else uri
                                     }
-                                )
+                                    DropdownMenuItem(
+                                        text = { Text(student.fullName, color = TextWhite) },
+                                        onClick = { currentRecipient = student.email.ifBlank { student.fullName }; showSelector = false },
+                                        leadingIcon = {
+                                            if (studentPhoto != null) {
+                                                AsyncImage(model = studentPhoto, null, modifier = Modifier.size(24.dp).clip(CircleShape), contentScale = ContentScale.Crop)
+                                            } else {
+                                                Icon(Icons.Default.Person, null, tint = PrimaryTurquoise)
+                                            }
+                                        }
+                                    )
+                                }
+                            } else {
+                                myProfessor?.let { prof ->
+                                    DropdownMenuItem(
+                                        text = { Text(prof.fullName.ifBlank { prof.email }, color = TextWhite) },
+                                        onClick = { currentRecipient = prof.email.ifBlank { prof.fullName }; showSelector = false },
+                                        leadingIcon = { 
+                                            if (myProfessorPhotoModel != null) {
+                                                AsyncImage(model = myProfessorPhotoModel, null, modifier = Modifier.size(24.dp).clip(CircleShape), contentScale = ContentScale.Crop)
+                                            } else {
+                                                Icon(Icons.Default.Person, null, tint = PrimaryTurquoise)
+                                            }
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
