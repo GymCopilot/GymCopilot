@@ -105,6 +105,7 @@ fun GymNavGraph(
 ) {
     val userRole by dataStoreManager.getUserRole().collectAsState(initial = initialUserRole)
     val isSubscribed by billingManager.isSubscribed.collectAsState(initial = initialIsSubscribed)
+    val effectiveIsSubscribed = isSubscribed || LockConfig.BILLING_ENABLED == 0 || LockConfig.ANDROID_ROLE_LOCK_ENABLED == 0
     val coroutineScope = rememberCoroutineScope()
     
     val attendanceViewModel: AttendanceViewModel = viewModel(
@@ -127,7 +128,7 @@ fun GymNavGraph(
     val onAdminSettings = { navController.navigate(Screen.AppSettings.route) }
 
     val onMemberHome = { 
-        if (isSubscribed || LockConfig.ANDROID_ROLE_LOCK_ENABLED == 0) {
+        if (effectiveIsSubscribed) {
             navController.navigate(Screen.MemberDashboard.route) { popUpTo(0) }
         } else {
             navController.navigate(Screen.Paywall.route)
@@ -151,13 +152,14 @@ fun GymNavGraph(
     NavHost(
         navController = navController,
         startDestination = remember(initialUserRole, initialIsSubscribed) {
+            val effectiveSub = initialIsSubscribed || LockConfig.BILLING_ENABLED == 0 || LockConfig.ANDROID_ROLE_LOCK_ENABLED == 0
             if (LockConfig.ANDROID_ROLE_LOCK_ENABLED == 0) {
                 Screen.Login.route
             } else {
                 when (initialUserRole) {
                     "admin" -> Screen.AdminDashboard.route
                     "professor" -> Screen.ProfessorDashboard.route
-                    "member" -> if (initialIsSubscribed) Screen.MemberDashboard.route else Screen.Paywall.route
+                    "member" -> if (effectiveSub) Screen.MemberDashboard.route else Screen.Paywall.route
                     else -> Screen.Login.route
                 }
             }
