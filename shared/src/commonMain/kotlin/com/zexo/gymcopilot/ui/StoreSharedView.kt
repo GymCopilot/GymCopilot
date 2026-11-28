@@ -416,7 +416,7 @@ fun StoreCategoryProductsSharedScreen(
                         colors = CardDefaults.cardColors(containerColor = Color(0xFFF9F9F9)),
                         shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, Color.Black),
-                        modifier = Modifier.fillMaxWidth().height(260.dp)
+                        modifier = Modifier.fillMaxWidth().wrapContentHeight()
                     ) {
                         Column(
                             modifier = Modifier.fillMaxSize().padding(12.dp),
