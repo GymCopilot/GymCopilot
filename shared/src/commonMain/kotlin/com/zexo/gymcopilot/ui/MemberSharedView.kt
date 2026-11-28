@@ -668,7 +668,7 @@ fun MemberDashboardSharedScreen(
 
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 val savedVersion = readLocalStorageFlag("gymcopilot_web_update_version")?.toIntOrNull() ?: 0
-                                val hasUpdatePending = LockConfig.WEB_UPDATE_VERSION > savedVersion && LockConfig.WEB_UPDATE_STATUS == 0
+                                val hasUpdatePending = LockConfig.WEB_UPDATE_VERSION > savedVersion && LockConfig.WEB_UPDATE_STATUS == 1
 
                                 Box {
                                     IconButton(onClick = { showMemberProfileScreen = true }) {
