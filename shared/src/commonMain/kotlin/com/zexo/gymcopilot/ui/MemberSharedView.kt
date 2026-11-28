@@ -667,8 +667,22 @@ fun MemberDashboardSharedScreen(
                             }
 
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                IconButton(onClick = { showMemberProfileScreen = true }) {
-                                    Icon(Icons.Default.Person, contentDescription = "Mi Perfil", tint = TextWhite)
+                                val savedVersion = readLocalStorageFlag("gymcopilot_web_update_version")?.toIntOrNull() ?: 0
+                                val hasUpdatePending = LockConfig.WEB_UPDATE_VERSION > savedVersion && LockConfig.WEB_UPDATE_STATUS == 0
+
+                                Box {
+                                    IconButton(onClick = { showMemberProfileScreen = true }) {
+                                        Icon(Icons.Default.Person, contentDescription = "Mi Perfil", tint = TextWhite)
+                                    }
+                                    if (hasUpdatePending) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(10.dp)
+                                                .background(Color.Red, CircleShape)
+                                                .align(Alignment.TopEnd)
+                                                .offset(x = (-4).dp, y = 4.dp)
+                                        )
+                                    }
                                 }
                                 IconButton(onClick = { showHelpScreen = true }) {
                                     Icon(Icons.Default.Info, contentDescription = "Ayuda", tint = TextWhite)
@@ -967,7 +981,7 @@ fun MemberDashboardSharedScreen(
                                     }
                                 } else {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(text = "🏆", fontSize = 28.sp)
+                                        Icon(Icons.Default.EmojiEvents, contentDescription = null, tint = Color(0xFFFFD700), modifier = Modifier.size(28.dp))
                                         Spacer(modifier = Modifier.width(12.dp))
                                         Text(
                                             text = "¡Día de Descanso!",

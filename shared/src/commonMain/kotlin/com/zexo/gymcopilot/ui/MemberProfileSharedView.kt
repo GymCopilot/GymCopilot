@@ -24,7 +24,9 @@ import androidx.compose.ui.unit.sp
 import com.zexo.gymcopilot.LockConfig
 import com.zexo.gymcopilot.utils.decodeBase64ToBitmap
 import com.zexo.gymcopilot.utils.launchImagePicker
+import com.zexo.gymcopilot.utils.readLocalStorageFlag
 import com.zexo.gymcopilot.utils.reloadWebApp
+import com.zexo.gymcopilot.utils.saveLocalStorageFlag
 import com.zexo.gymcopilot.utils.triggerPwaInstall
 import gymcopilot.shared.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
@@ -211,7 +213,10 @@ fun MemberProfileSharedScreen(
                     HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
                     Spacer(Modifier.height(16.dp))
 
-                    if (LockConfig.WEB_UPDATE_STATUS == 0) {
+                    val savedVersion = readLocalStorageFlag("gymcopilot_web_update_version")?.toIntOrNull() ?: 0
+                    val hasUpdatePending = LockConfig.WEB_UPDATE_VERSION > savedVersion && LockConfig.WEB_UPDATE_STATUS == 0
+
+                    if (hasUpdatePending) {
                         Card(
                             colors = CardDefaults.cardColors(containerColor = Color(0xFFC62828).copy(alpha = 0.25f)),
                             shape = RoundedCornerShape(16.dp),
@@ -240,6 +245,7 @@ fun MemberProfileSharedScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
+                                    saveLocalStorageFlag("gymcopilot_web_update_version", LockConfig.WEB_UPDATE_VERSION.toString())
                                     reloadWebApp()
                                 }
                         ) {

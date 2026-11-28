@@ -66,6 +66,7 @@ object LockConfig {
      * 1: Aprobada (al día).
      */
     const val WEB_UPDATE_STATUS = 0
+    const val WEB_UPDATE_VERSION = 1
 
     /**
      * Devuelve la URL activa según el entorno configurado (0 = Pruebas, 1 = Trabajo).
