@@ -50,6 +50,12 @@ actual fun openExternalUrl(url: String) {
     } catch (_: Throwable) {}
 }
 
+actual fun reloadWebApp() {
+    try {
+        window.location.reload()
+    } catch (_: Throwable) {}
+}
+
 actual fun updateWebPageBranding(gymName: String, gymLogoUri: String?) {
     try {
         val cleanName = if (gymName.isNotBlank() && gymName != "Gym 19" && gymName != "Nombre del Gimnasio") gymName else "GymCopilot"

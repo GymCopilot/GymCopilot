@@ -61,6 +61,13 @@ object LockConfig {
     const val PRODUCTION_API_URL = "https://script.google.com/macros/s/AKfycbyz74p36j9wu0c8R4Qzs0sxYuFPfN68lboA0K-2Cvzhvnt8pQ394diablRYw4B-TPs0/exec"
 
     /**
+     * Estado de actualización de la App Web.
+     * 0: Desaprobada (hay nueva actualización pendiente para actualizar).
+     * 1: Aprobada (al día).
+     */
+    const val WEB_UPDATE_STATUS = 1
+
+    /**
      * Devuelve la URL activa según el entorno configurado (0 = Pruebas, 1 = Trabajo).
      */
     val activeApiUrl: String

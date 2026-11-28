@@ -21,8 +21,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.zexo.gymcopilot.LockConfig
 import com.zexo.gymcopilot.utils.decodeBase64ToBitmap
 import com.zexo.gymcopilot.utils.launchImagePicker
+import com.zexo.gymcopilot.utils.reloadWebApp
 import com.zexo.gymcopilot.utils.triggerPwaInstall
 import gymcopilot.shared.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
@@ -203,11 +205,68 @@ fun MemberProfileSharedScreen(
                     }
                 }
 
-                // 3. SEPARADOR Y BOTÓN "INSTALAR ICONO EN INICIO"
+                // 3. SEPARADOR Y BOTÓN "ACTUALIZAR APP" Y "INSTALAR ICONO EN INICIO"
                 item {
                     Spacer(Modifier.height(8.dp))
                     HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
                     Spacer(Modifier.height(16.dp))
+
+                    if (LockConfig.WEB_UPDATE_STATUS == 0) {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFC62828).copy(alpha = 0.25f)),
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.5.dp, Color.Red),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Warning, null, tint = Color.Red, modifier = Modifier.size(28.dp))
+                                Spacer(Modifier.width(12.dp))
+                                Column {
+                                    Text("¡Nueva actualización disponible!", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                    Spacer(Modifier.height(2.dp))
+                                    Text("Hay una nueva versión aprobada del sistema pendiente.", color = TextWhite.copy(alpha = 0.8f), fontSize = 12.sp)
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(12.dp))
+
+                        Surface(
+                            color = Color(0xFFC62828),
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.5.dp, Color.Red),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    reloadWebApp()
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 16.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.SystemUpdate,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Text(
+                                    text = "⚡ ACTUALIZAR AHORA",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 15.sp
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(12.dp))
+                    }
 
                     Surface(
                         color = Color(0xFF001F29),

@@ -18,3 +18,4 @@ actual fun triggerRoutinePdfExport(
 
 actual fun updateWebPageBranding(gymName: String, gymLogoUri: String?) {}
 actual fun openExternalUrl(url: String) {}
+actual fun reloadWebApp() {}

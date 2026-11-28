@@ -16,3 +16,4 @@ expect fun triggerRoutinePdfExport(
 )
 expect fun updateWebPageBranding(gymName: String, gymLogoUri: String?)
 expect fun openExternalUrl(url: String)
+expect fun reloadWebApp()
