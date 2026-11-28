@@ -35,28 +35,43 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
 
-    // Network First for all requests (API & static assets) to ensure updates arrive instantly without needing incognito mode
-    event.respondWith(
-        fetch(event.request)
-            .then((response) => {
-                if (response && response.status === 200) {
-                    const responseClone = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(event.request, responseClone);
-                    });
-                }
-                return response;
-            })
-            .catch(() => {
-                return caches.match(event.request).then((cachedResponse) => {
-                    if (cachedResponse) return cachedResponse;
-                    if (url.hostname.includes('script.google.com') || url.pathname.includes('exec') || url.search.includes('type=')) {
-                        return new Response(JSON.stringify({ status: "success", data: [], offline: true }), {
-                            headers: { 'Content-Type': 'application/json' }
+    // For Google Script API requests / dynamic data: Network first, fallback to Cache
+    if (url.hostname.includes('script.google.com') || url.pathname.includes('exec') || url.search.includes('type=')) {
+        event.respondWith(
+            fetch(event.request)
+                .then((response) => {
+                    if (response && response.status === 200) {
+                        const responseClone = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(event.request, responseClone);
                         });
                     }
-                    return caches.match('./index.html');
-                });
-            })
-    );
+                    return response;
+                })
+                .catch(() => {
+                    return caches.match(event.request).then((cachedResponse) => {
+                        return cachedResponse || new Response(JSON.stringify({ status: "success", data: [], offline: true }), {
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                    });
+                })
+        );
+    } else {
+        // For static assets: Cache First (prevents automatic/casual updates in test mode while WEB_UPDATE_STATUS == 0)
+        event.respondWith(
+            caches.match(event.request)
+                .then((cachedResponse) => {
+                    return cachedResponse || fetch(event.request).then((response) => {
+                        if (response && response.status === 200) {
+                            const responseClone = response.clone();
+                            caches.open(CACHE_NAME).then((cache) => {
+                                cache.put(event.request, responseClone);
+                            });
+                        }
+                        return response;
+                    });
+                })
+                .catch(() => caches.match('./index.html'))
+        );
+    }
 });
