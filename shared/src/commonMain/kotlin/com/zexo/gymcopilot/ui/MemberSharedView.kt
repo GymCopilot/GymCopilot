@@ -502,13 +502,14 @@ fun MemberDashboardSharedScreen(
                         val trainerTrim = activeAssignedTrainer.lowercase().trim()
                         for (i in 1 until dataArray.size) {
                             val row = dataArray[i] as? JsonArray
-                            if (row != null && row.size > 1) {
-                                val nameInRow = row[1].jsonPrimitive.content.lowercase().trim()
-                                if (nameInRow == trainerTrim) {
-                                    if (row.size > 3) {
-                                        val photo = row[3].jsonPrimitive.content
-                                        if (photo.isNotBlank() && photo != "null") assignedProfPhotoUri = photo
-                                    }
+                            if (row != null && row.size > 2) {
+                                val fn = row[1].jsonPrimitive.content.trim()
+                                val ln = row[2].jsonPrimitive.content.trim()
+                                val fullName = "$fn $ln".lowercase().trim()
+                                val revName = "$ln $fn".lowercase().trim()
+                                val email = if (row.size > 3) row[3].jsonPrimitive.content.lowercase().trim() else ""
+
+                                if (trainerTrim == fullName || trainerTrim == revName || trainerTrim.contains(fn.lowercase()) || trainerTrim.contains(ln.lowercase()) || fullName.contains(trainerTrim) || (email.isNotBlank() && trainerTrim.contains(email))) {
                                     if (row.size > 4) {
                                         val spec = row[4].jsonPrimitive.content
                                         if (spec.isNotBlank() && spec != "null") assignedProfSpecialty = spec
@@ -517,6 +518,10 @@ fun MemberDashboardSharedScreen(
                                         val colorStr = row[5].jsonPrimitive.content
                                         val colorVal = colorStr.toIntOrNull()
                                         if (colorVal != null && colorVal != 0) assignedProfColorInt = colorVal
+                                    }
+                                    if (row.size > 6) {
+                                        val photo = row[6].jsonPrimitive.content
+                                        if (photo.isNotBlank() && photo != "null") assignedProfPhotoUri = photo
                                     }
                                     break
                                 }

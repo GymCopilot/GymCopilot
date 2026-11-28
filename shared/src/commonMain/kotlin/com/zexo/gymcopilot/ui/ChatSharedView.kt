@@ -72,6 +72,47 @@ fun ChatSharedScreen(
         }
     }
 
+    LaunchedEffect(activeGymUrl, userEmail) {
+        if (activeGymUrl.isNotBlank() && userEmail.isNotBlank()) {
+            while (true) {
+                try {
+                    val gymIdVal = activeGymName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+                    val localProfile = readLocalMemberProfile()
+                    val ssId = localProfile?.spreadsheetId.orEmpty()
+                    val paramChar = if (activeGymUrl.contains("?")) "&" else "?"
+                    val ssParam = if (ssId.isNotBlank()) "&spreadsheetId=$ssId" else ""
+                    val url = "$activeGymUrl${paramChar}type=members&gymId=$gymIdVal$ssParam"
+                    val responseText = apiClient.getData(url)
+                    if (responseText.isNotBlank() && responseText.contains("success")) {
+                        val jsonElement = apiClient.jsonInstance.parseToJsonElement(responseText)
+                        val jsonObject = jsonElement as? JsonObject
+                        val dataArray = jsonObject?.get("data") as? JsonArray
+                        if (dataArray != null) {
+                            val myEmailTrim = userEmail.lowercase().trim()
+                            for (i in 1 until dataArray.size) {
+                                val row = dataArray[i] as? JsonArray
+                                if (row != null && row.size > 3) {
+                                    val emailInRow = row[2].jsonPrimitive.content.lowercase().trim()
+                                    if (emailInRow == myEmailTrim) {
+                                        if (row.size > 13) {
+                                            val trainerInCol = row[13].jsonPrimitive.content
+                                            val t = if (trainerInCol.isNotBlank() && trainerInCol != "null") trainerInCol else ""
+                                            if (t.isNotBlank() && !t.equals("Sin asignar", true) && !t.equals("N/A", true)) {
+                                                assignedTrainer = t
+                                            }
+                                        }
+                                        break
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (_: Throwable) {}
+                delay(10000)
+            }
+        }
+    }
+
     LaunchedEffect(activeGymUrl, assignedTrainer) {
         if (activeGymUrl.isNotBlank()) {
             try {
