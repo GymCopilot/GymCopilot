@@ -55,7 +55,7 @@ object LockConfig {
      * 0: Entorno de Pruebas (Staging).
      * 1: Entorno de Trabajo (Producción).
      */
-    const val APP_ENVIRONMENT = 0
+    const val APP_ENVIRONMENT = 1
 
     const val TEST_API_URL = "https://script.google.com/macros/s/AKfycbwq0ckKGgVuyM-HyShu85KLv0y7BbGsokX4vAU7VdtHH27seFYRqu61sedLlp3wgApG/exec"
     const val PRODUCTION_API_URL = "https://script.google.com/macros/s/AKfycbyz74p36j9wu0c8R4Qzs0sxYuFPfN68lboA0K-2Cvzhvnt8pQ394diablRYw4B-TPs0/exec"
