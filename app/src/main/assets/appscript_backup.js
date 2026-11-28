@@ -1347,12 +1347,12 @@ function updateRow(sheet, id, idColIndex, rowData) {
 
 function getSheetData(ss, name, fixFunction) {
   var sheet = getOrCreateSheet(ss, name);
-  if (fixFunction) fixFunction(sheet);
+  if (fixFunction && !isMasterSS(ss)) fixFunction(sheet);
   return sheet.getDataRange().getValues();
 }
 
 function getOrCreateSheet(ss, name) {
-  if (isMasterSS(ss)) {
+  if (isMasterSS(ss) && (!name || name === "GymsRegistry" || name === "Gyms")) {
     cleanMasterSS(ss);
     var regSheet = ss.getSheetByName("GymsRegistry");
     if (!regSheet) {
